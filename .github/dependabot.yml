@@ -1,0 +1,27 @@
+# GitHub Dependabot configuration
+# Note: there is no interaction between this
+# configuration and dependabot security updates.
+# See here for more information:
+# https://docs.github.com/en/code-security/dependabot/dependabot-security-updates/about-dependabot-security-updates#about-dependabot-security-updates
+
+version: 2
+updates:
+  # GitHub Actions checks
+  # See here for more information:
+  # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuring-dependabot-version-updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      # Check for updates to GitHub Actions every week
+      interval: "weekly"
+
+  # Perform checks and updates for python uv environment.
+  # This depends on changes to dependabot via:
+  # https://github.com/dependabot/dependabot-core/pull/10040
+  # See here for more information:
+  # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#pip-and-pip-compile
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      # Check for updates to uv environment files every week
+      interval: "weekly"
