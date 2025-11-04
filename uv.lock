@@ -188,6 +188,28 @@ wheels = [
 ]
 
 [[package]]
+name = "bioio-ome-tiff"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bioio-base" },
+    { name = "dask", extra = ["array"] },
+    { name = "fsspec" },
+    { name = "imagecodecs" },
+    { name = "numpy" },
+    { name = "ome-types", extra = ["lxml"] },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "tifffile", extra = ["zarr"] },
+    { name = "xarray" },
+    { name = "xmlschema" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b3/95/fd5ccfb07c5159983a40746b1c0da1c7648918bcfdb940189bf52f7340d1/bioio_ome_tiff-1.4.0.tar.gz", hash = "sha256:0073ff612926ea17c72a32f378d62361e282dd7afbc561e8c0a53316fd8d2e29", size = 34520, upload-time = "2025-07-10T21:34:52.763Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/88/cdfc59ac1fb3db84d59d47b8afa3bcf539b8afabc86d8b5230909b6487f9/bioio_ome_tiff-1.4.0-py3-none-any.whl", hash = "sha256:98107a847244a7b515c7a8c39b5119e67f4047b63661238b49b3d0cc36a86cd9", size = 27034, upload-time = "2025-07-10T21:34:51.509Z" },
+]
+
+[[package]]
 name = "bioio-tifffile"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -663,6 +685,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/25/71/80cc718ff6d7abfbabacb1f57aaa42e9c1552bfdd01e64ddd704e4a03638/donfig-0.8.1.post1.tar.gz", hash = "sha256:3bef3413a4c1c601b585e8d297256d0c1470ea012afa6e8461dc28bfb7c23f52", size = 19506, upload-time = "2024-05-23T14:14:31.513Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0c/d5/c5db1ea3394c6e1732fb3286b3bd878b59507a8f77d32a2cebda7d7b7cd4/donfig-0.8.1.post1-py3-none-any.whl", hash = "sha256:2a3175ce74a06109ff9307d90a230f81215cbac9a751f4d1c6194644b8204f9d", size = 21592, upload-time = "2024-05-23T14:13:55.283Z" },
+]
+
+[[package]]
+name = "elementpath"
+version = "5.0.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/bc/ccadb197f8ed565c0e39f5ee4302ffe96c81abb1f20a0979798a6271b668/elementpath-5.0.4.tar.gz", hash = "sha256:85ed93565d6e94aefa160b12f36b12cbe4be6bf9bbde06b80f2c5c94829a25fb", size = 365851, upload-time = "2025-08-16T18:19:55.717Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/b6/f85666707b9f9ff94ada851cbaa6f1c91a0f5802aa5e498772251e1e7772/elementpath-5.0.4-py3-none-any.whl", hash = "sha256:75d6f31c614d57e50eb749fc50806e3102880cd1f6552da3f2265f8eb8d3bbc6", size = 245512, upload-time = "2025-08-16T18:19:52.903Z" },
 ]
 
 [[package]]
@@ -1931,9 +1962,11 @@ name = "ome-arrow"
 source = { editable = "." }
 dependencies = [
     { name = "bioio" },
+    { name = "bioio-ome-tiff" },
     { name = "bioio-tifffile" },
     { name = "fire" },
     { name = "matplotlib" },
+    { name = "numpy" },
     { name = "pandas" },
     { name = "pyarrow" },
 ]
@@ -1959,9 +1992,11 @@ notebooks = [
 [package.metadata]
 requires-dist = [
     { name = "bioio", specifier = ">=3.0.0" },
+    { name = "bioio-ome-tiff", specifier = ">=1.4.0" },
     { name = "bioio-tifffile", specifier = ">=1.3.0" },
     { name = "fire", specifier = ">=0.7.0" },
     { name = "matplotlib", specifier = ">=3.10.7" },
+    { name = "numpy", specifier = ">=2.2.6" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pyarrow", specifier = ">=22.0.0" },
 ]
@@ -3270,6 +3305,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7b/ce/f5dd613ddd0b3f839c59e6c2fa20c62469bf671bf4c92a12b09dc0972326/xarray-2025.10.1.tar.gz", hash = "sha256:3c2b5ad7389825bd624ada5ff26b01ac54b1aae72e2fe0d724d81d40a2bf5785", size = 3058736, upload-time = "2025-10-07T20:25:56.708Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/78/4d6d68555a92cb97b4c192759c4ab585c5cb23490f64d4ddf12c66a3b051/xarray-2025.10.1-py3-none-any.whl", hash = "sha256:a4e699433b87a7fac340951bc36648645eeef72bdd915ff055ac2fd99865a73d", size = 1365202, upload-time = "2025-10-07T20:25:54.964Z" },
+]
+
+[[package]]
+name = "xmlschema"
+version = "4.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "elementpath" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/84/f8/33b43a53503d0892e7555d16c593cf001d5aaa5b0ad7d53c68098235805b/xmlschema-4.2.0.tar.gz", hash = "sha256:b1f88c53493b2e75471977cbf218d939b872d0c7046bb63d48cc219fa7e241b9", size = 643756, upload-time = "2025-10-14T09:19:32.253Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dc/1a/81ac398d35be848f3655893b6260f227b29ca6acf5c2674dc5ed9af63027/xmlschema-4.2.0-py3-none-any.whl", hash = "sha256:82d24a50eea5e7f2d603312813848cd66fddf8fa2b6730839c6aa3d66312e3b6", size = 467246, upload-time = "2025-10-14T09:19:28.359Z" },
 ]
 
 [[package]]

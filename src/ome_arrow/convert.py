@@ -2,9 +2,11 @@
 Converting to and from OME-Arrow formats.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Sequence, List, Dict, Any
 
+import pyarrow as pa
+import numpy as np
 import pyarrow as pa
 
 from datetime import datetime
@@ -14,13 +16,14 @@ from typing import Optional, Sequence
 import numpy as np
 import pyarrow as pa
 from bioio import BioImage
+import bioio_tifffile
+import bioio_ome_tiff
 
-from ome_arrow.meta import OME_ARROW_STRUCT
-
+from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
 
 def to_ome_arrow(
-    type_: str = "ome.arrow",
-    version: str = "1.0.0",
+    type_: str = OME_ARROW_TAG_TYPE,
+    version: str = OME_ARROW_TAG_VERSION,
     image_id: str = "unnamed",
     name: str = "unknown",
     acquisition_datetime: Optional[datetime] = None,
@@ -39,7 +42,8 @@ def to_ome_arrow(
     planes: Optional[List[Dict[str, Any]]] = None,
     masks: Any = None,
 ) -> pa.StructScalar:
-    """Create a typed OME-Arrow StructScalar with sensible defaults.
+    """
+    Create a typed OME-Arrow StructScalar with sensible defaults.
 
     This builds and validates a nested dict that conforms to the given
     StructType (e.g., OME_ARROW_STRUCT). You can override any field
@@ -68,6 +72,15 @@ def to_ome_arrow(
         >>> s.type == OME_ARROW_STRUCT
         True
     """
+
+    type_ = str(type_)
+    version = str(version)
+    image_id = str(image_id)
+    name = str(name)
+    dimension_order = str(dimension_order)
+    dtype = str(dtype)
+    physical_size_unit = str(physical_size_unit)
+
     # Sensible defaults for channels and planes
     if channels is None:
         channels = [
@@ -80,17 +93,25 @@ def to_ome_arrow(
                 "color_rgba": 0xFFFFFFFF,
             }
         ]
+    else:
+        # --- NEW: coerce channel text fields to str ------------------
+        for ch in channels:
+            if "id" in ch:
+                ch["id"] = str(ch["id"])
+            if "name" in ch:
+                ch["name"] = str(ch["name"])
+            if "illumination" in ch:
+                ch["illumination"] = str(ch["illumination"])
+
     if planes is None:
-        planes = [
-            {"z": 0, "t": 0, "c": 0, "pixels": [0] * (size_x * size_y)}
-        ]
+        planes = [{"z": 0, "t": 0, "c": 0, "pixels": [0] * (size_x * size_y)}]
 
     record = {
         "type": type_,
         "version": version,
         "id": image_id,
         "name": name,
-        "acquisition_datetime": acquisition_datetime or datetime.utcnow(),
+        "acquisition_datetime": acquisition_datetime or datetime.now(timezone.utc),
         "pixels_meta": {
             "dimension_order": dimension_order,
             "type": dtype,
@@ -111,7 +132,6 @@ def to_ome_arrow(
         "masks": masks,
     }
 
-    # Validate against struct (raises if mismatched)
     return pa.scalar(record, type=OME_ARROW_STRUCT)
 
 
@@ -123,7 +143,8 @@ def tiff_to_ome_arrow(
     acquisition_datetime: Optional[datetime] = None,
     clamp_to_uint16: bool = True,
 ) -> pa.StructScalar:
-    """Read a TIFF via bioio and return a typed OME-Arrow StructScalar.
+    """
+    Read a TIFF and return a typed OME-Arrow StructScalar.
 
     Uses bioio to read TCZYX (or XY) data, flattens each YX plane, and
     delegates struct creation to `to_struct_scalar`.
@@ -139,11 +160,19 @@ def tiff_to_ome_arrow(
     Returns:
         pa.StructScalar validated against `struct`.
     """
-    p = Path(tiff_path)
-    img = BioImage(str(p))
 
-    # BioIO data is TCZYX (broadcasting missing dims to length 1).
-    arr = np.asarray(img.data)            # shape: (T, C, Z, Y, X)
+    p = Path(tiff_path)
+
+    img = BioImage(
+        image=str(p),
+        reader=(
+            bioio_ome_tiff.Reader
+            if str(p).lower().endswith(("ome.tif", "ome.tiff"))
+            else bioio_tifffile.Reader
+        ),
+    )
+
+    arr = np.asarray(img.data)  # (T, C, Z, Y, X)
     dims = img.dims
     size_t = int(dims.T or 1)
     size_c = int(dims.C or 1)
@@ -153,7 +182,6 @@ def tiff_to_ome_arrow(
     if size_x <= 0 or size_y <= 0:
         raise ValueError("Image must have positive Y and X dims.")
 
-    # Physical pixel sizes (µm); default to 1.0 if unavailable.
     pps = getattr(img, "physical_pixel_sizes", None)
     try:
         psize_x = float(getattr(pps, "X", None) or 1.0)
@@ -162,38 +190,44 @@ def tiff_to_ome_arrow(
     except Exception:
         psize_x = psize_y = psize_z = 1.0
 
-    # Channels block.
+    # --- NEW: coerce top-level strings --------------------------------
+    img_id = str(image_id or p.stem)
+    display_name = str(name or p.name)
+
+    # --- NEW: ensure channel_names is list[str] ------------------------
     if not channel_names or len(channel_names) != size_c:
         channel_names = [f"C{i}" for i in range(size_c)]
-    channels = [{
-        "id": f"ch-{i}", "name": channel_names[i],
-        "emission_um": 0.0, "excitation_um": 0.0,
-        "illumination": "Unknown", "color_rgba": 0xFFFFFFFF
-    } for i in range(size_c)]
+    channel_names = [str(x) for x in channel_names]
 
-    # Planes: flattened YX per (t, c, z).
+    channels = [
+        {
+            "id": f"ch-{i}",
+            "name": channel_names[i],
+            "emission_um": 0.0,
+            "excitation_um": 0.0,
+            "illumination": "Unknown",
+            "color_rgba": 0xFFFFFFFF,
+        }
+        for i in range(size_c)
+    ]
+
     planes: List[Dict[str, Any]] = []
     for t in range(size_t):
         for c in range(size_c):
             for z in range(size_z):
-                plane = arr[t, c, z]      # (Y, X)
+                plane = arr[t, c, z]
                 if clamp_to_uint16 and plane.dtype != np.uint16:
                     plane = np.clip(plane, 0, 65535).astype(np.uint16)
-                planes.append({
-                    "z": z, "t": t, "c": c,
-                    "pixels": plane.ravel().tolist()
-                })
+                planes.append(
+                    {"z": z, "t": t, "c": c, "pixels": plane.ravel().tolist()}
+                )
 
-    # Dimension order: no Z implies XYCT.
     dim_order = "XYCT" if size_z == 1 else "XYZCT"
 
-    # Delegate final struct creation + type validation.
     return to_ome_arrow(
-        type_="ome.arrow",
-        version="1.0.0",
-        image_id=image_id or p.stem,
-        name=name or p.name,
-        acquisition_datetime=acquisition_datetime or datetime.utcnow(),
+        image_id=img_id,
+        name=display_name,
+        acquisition_datetime=acquisition_datetime or datetime.now(timezone.utc),
         dimension_order=dim_order,
         dtype="uint16",
         size_x=size_x,
@@ -209,3 +243,105 @@ def tiff_to_ome_arrow(
         planes=planes,
         masks=None,
     )
+
+
+def to_numpy(
+    data: Dict[str, Any] | pa.StructScalar,
+    dtype: np.dtype = np.uint16,
+    strict: bool = True,
+    clamp: bool = False,
+) -> np.ndarray:
+    """
+    Convert an OME-Arrow record into a NumPy array shaped (T,C,Z,Y,X).
+
+    The OME-Arrow "planes" are flattened YX slices indexed by (z, t, c).
+    This function reconstitutes them into a dense TCZYX ndarray.
+
+    Args:
+        data:
+            OME-Arrow data as a Python dict or a `pa.StructScalar`.
+        dtype:
+            Output dtype (default: np.uint16). If different from plane
+            values, a cast (and optional clamp) is applied.
+        strict:
+            When True, raise if a plane has wrong pixel length. When
+            False, truncate/pad that plane to the expected length.
+        clamp:
+            If True, clamp values to the valid range of the target
+            dtype before casting.
+
+    Returns:
+        np.ndarray: Dense array with shape (T, C, Z, Y, X).
+
+    Raises:
+        KeyError: If required OME-Arrow fields are missing.
+        ValueError: If dimensions are invalid or planes are malformed.
+
+    Examples:
+        >>> arr = ome_arrow_to_tczyx(my_row)  # (T, C, Z, Y, X)
+        >>> arr.shape
+        (1, 2, 1, 512, 512)
+    """
+    # Unwrap Arrow scalar to plain Python dict if needed.
+    if isinstance(data, pa.StructScalar):
+        data = data.as_py()
+
+    pm = data["pixels_meta"]
+    sx, sy = int(pm["size_x"]), int(pm["size_y"])
+    sz, sc, st = int(pm["size_z"]), int(pm["size_c"]), int(pm["size_t"])
+    if sx <= 0 or sy <= 0 or sz <= 0 or sc <= 0 or st <= 0:
+        raise ValueError("All size_* fields must be positive integers.")
+
+    expected_len = sx * sy
+
+    # Prepare target array (T,C,Z,Y,X), zero-filled by default.
+    out = np.zeros((st, sc, sz, sy, sx), dtype=dtype)
+
+    # Helper: cast (with optional clamp) to the output dtype.
+    if np.issubdtype(dtype, np.integer):
+        info = np.iinfo(dtype)
+        lo, hi = info.min, info.max
+    elif np.issubdtype(dtype, np.floating):
+        lo, hi = -np.inf, np.inf
+    else:
+        # Rare dtypes: no clamping logic; rely on astype.
+        lo, hi = -np.inf, np.inf
+
+    def _cast_plane(a: np.ndarray) -> np.ndarray:
+        if clamp:
+            a = np.clip(a, lo, hi)
+        return a.astype(dtype, copy=False)
+
+    # Fill planes.
+    for i, p in enumerate(data.get("planes", [])):
+        z = int(p["z"])
+        t = int(p["t"])
+        c = int(p["c"])
+
+        if not (0 <= z < sz and 0 <= t < st and 0 <= c < sc):
+            raise ValueError(f"planes[{i}] index out of range: (z,t,c)=({z},{t},{c})")
+
+        pix = p["pixels"]
+        # Ensure sequence-like and correct length.
+        try:
+            n = len(pix)
+        except Exception as e:
+            raise ValueError(f"planes[{i}].pixels is not a sequence") from e
+
+        if n != expected_len:
+            if strict:
+                raise ValueError(
+                    f"planes[{i}].pixels length {n} != size_x*size_y {expected_len}"
+                )
+            # Lenient mode: fix length by truncation or zero-pad.
+            if n > expected_len:
+                pix = pix[:expected_len]
+            else:
+                pix = list(pix) + [0] * (expected_len - n)
+
+        # Reshape to (Y,X) and cast.
+        arr2d = np.asarray(pix).reshape(sy, sx)
+        arr2d = _cast_plane(arr2d)
+        out[t, c, z] = arr2d
+
+    return out

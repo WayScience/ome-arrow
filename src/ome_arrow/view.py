@@ -8,23 +8,25 @@ import numpy as np
 import pyarrow as pa
 import matplotlib.pyplot as plt
 
+import warnings
+
 
 def view_matplotlib(
-    row: Dict[str, Any] | pa.StructScalar,
+    data: Dict[str, Any] | pa.StructScalar,
     ztc: Tuple[int, int, int] = (0, 0, 0),
     autoscale: bool = True,
     vmin: int | None = None,
     vmax: int | None = None,
     cmap: str = "gray",
     show: bool = True,
-) -> None:
+) -> plt:
     """Display a single (z,t,c) plane from an OME-Arrow record.
 
     Minimal deps: pyarrow (if scalar), numpy, matplotlib.
 
     Args:
-      row:
-        OME-Arrow row as a Python dict (recommended) or StructScalar.
+      data:
+        OME-Arrow data as a Python dict or StructScalar.
       ztc:
         (z, t, c) indices of the plane to display. Defaults to (0,0,0).
       autoscale:
@@ -42,20 +44,20 @@ def view_matplotlib(
       ValueError: If the requested plane is not found or shapes mismatch.
 
     Notes:
-      * Expects row["pixels_meta"] with size_x, size_y.
-      * Expects row["planes"] list of {z,t,c,pixels}, where pixels is a
+      * Expects data["pixels_meta"] with size_x, size_y.
+      * Expects data["planes"] list of {z,t,c,pixels}, where pixels is a
         flat uint16 sequence of length size_x * size_y.
     """
     # Unwrap Arrow scalar to plain Python dict if needed.
-    if isinstance(row, pa.StructScalar):
-        row = row.as_py()
+    if isinstance(data, pa.StructScalar):
+        data = data.as_py()
 
-    pm = row["pixels_meta"]
+    pm = data["pixels_meta"]
     sx, sy = int(pm["size_x"]), int(pm["size_y"])
     target = tuple(int(x) for x in ztc)
 
     plane = None
-    for p in row["planes"]:
+    for p in data["planes"]:
         if (int(p["z"]), int(p["t"]), int(p["c"])) == target:
             plane = p
             break
@@ -68,7 +70,7 @@ def view_matplotlib(
             f"pixels len {len(pix)} != size_x*size_y ({sx*sy})"
         )
 
-    # Make 2D array (row-major). Cast to uint16; copy avoids view traps.
+    # Make 2D array. Cast to uint16; copy avoids view traps.
     img = np.asarray(pix, dtype=np.uint16).reshape(sy, sx).copy()
 
     # Decide intensity scaling.
