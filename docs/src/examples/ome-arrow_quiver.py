@@ -16,20 +16,32 @@
 #
 
 from ome_arrow import OMEArrow
+OMEArrow(
+    data="../../../tests/data/ome-artificial-5d-datasets/z-series.ome.tiff"
+).view(how="pyvista")
+
+OMEArrow(
+    data="../../../tests/data/nviz-artificial-4d-dataset/Z99_111_ZS005.tif"
+)
 
 oa_image = OMEArrow(
     data="../../../tests/data/examplehuman/AS_09125_050116030001_D03f00d0.tif"
 )
 oa_image
 
+oa_image = OMEArrow(
+    data="../../../tests/data/examplehuman/AS_09125_050116030001_D03f00d0.tif"
+)
+oa_image
+
+oa_image.info()
+
 oa_image.view(how="matplotlib")
-
-OMEArrow(data=oa_image.data)
-
-oa_image.export(how="numpy")
 
 OMEArrow(
     data="../../../tests/data/ome-artificial-5d-datasets/z-series.ome.tiff"
-).view(how="matplotlib", cmap="binary")
+).view(how="pyvista")
+
+oa_image.export(how="numpy")
 
 

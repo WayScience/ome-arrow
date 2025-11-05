@@ -19,6 +19,18 @@ from bioio import BioImage
 import bioio_tifffile
 import bioio_ome_tiff
 
+
+import re
+import itertools
+from pathlib import Path
+from typing import Dict, List, Tuple, Optional, Any
+
+import numpy as np
+import pyarrow as pa
+from bioio import BioImage
+import bioio_tifffile
+import bioio_ome_tiff
+
 from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
 
 def to_ome_arrow(
@@ -345,3 +357,325 @@ def to_numpy(
         out[t, c, z] = arr2d
 
     return out
+
+def stack_from_pattern_path(
+    pattern_path: str | Path,
+    *,
+    default_dim_for_unspecified: str = "C",
+    map_series_to: Optional[str] = "T",
+    clamp_to_uint16: bool = True,
+    channel_names: Optional[List[str]] = None,
+    image_id: Optional[str] = None,
+    name: Optional[str] = None,
+) -> pa.StructScalar:
+    """
+    Construct an OME-Arrow image stack directly from a file pattern path.
+    This mimics the Bio-Formats 'pattern file' behavior, but without needing
+    an external `.pattern` file.
+
+    Example usage:
+        stack_from_pattern_path("frames/<red,green,blue>.tiff")
+        stack_from_pattern_path("images/test_Z<0-1>_C<0-2:2>.png")
+        stack_from_pattern_path("images/test_.*\\.png")  # regex mode
+
+    Parameters
+    ----------
+    pattern_path : str | Path
+        A string containing both the folder and the filename pattern.
+        Examples:
+            "images/<red,green,blue>.tiff"
+            "frames/test_Z<0-1>_C<0-2:2>.png"
+            "data/experiment_.*\\.tif"
+    default_dim_for_unspecified : str, optional
+        The default dimension to assign for any placeholder with no preceding
+        token (e.g., "<0-5>" → default is "C" = channels).
+    map_series_to : str or None, optional
+        If placeholders use the "series" token (S, sp, series),
+        remap that dimension to another axis (default "T" for time).
+        Set to None to disable series handling.
+    clamp_to_uint16 : bool, optional
+        Clamp and cast non-uint16 images to uint16 before embedding in Arrow.
+    channel_names : list[str], optional
+        Optional explicit names for channels. If not provided, inferred from
+        literal placeholders (e.g. "<red,green,blue>") or defaulted to "C0..Cn".
+    image_id : str, optional
+        Optional OME image identifier.
+    name : str, optional
+        Human-friendly display name. Defaults to the pattern string itself.
+
+    Returns
+    -------
+    pa.StructScalar
+        An OME-Arrow-compatible StructScalar, ready for conversion, storage,
+        or in-memory visualization.
+
+    Notes
+    -----
+    - This function only supports single-plane image files (2D YX).
+      Multi-page TIFFs will raise a ValueError.
+    - Missing files are silently skipped and zero-filled to preserve shape.
+    - The folder is inferred from the prefix of `pattern_path`.
+    - Regex mode is used if the pattern contains no '<' or '>'.
+    """
+
+    # ------------------------------------------------------------
+    # Separate folder and pattern components from the input path.
+    # Example: "images/test_Z<0-1>_C<0-2:2>.png"
+    #   folder = "images", line = "test_Z<0-1>_C<0-2:2>.png"
+    # ------------------------------------------------------------
+    path = Path(pattern_path)
+    folder = path.parent
+    line = path.name.strip()
+
+    if not line:
+        raise ValueError("Pattern path string is empty or malformed")
+
+    # ------------------------------------------------------------
+    # Dimension token map and range parsing regex
+    # (matches Bio-Formats conventions)
+    # ------------------------------------------------------------
+    DIM_TOKENS = {
+        "C": {"c", "ch", "w", "wavelength"},
+        "T": {"t", "tl", "tp", "timepoint"},
+        "Z": {"z", "zs", "sec", "fp", "focal", "focalplane"},
+        "S": {"s", "sp", "series"},
+    }
+    NUM_RANGE_RE = re.compile(r"^(?P<a>\d+)\-(?P<b>\d+)(?::(?P<step>\d+))?$")
+
+    # ------------------------------------------------------------
+    # Helper: detect dimension type preceding a '<...>' placeholder.
+    # ------------------------------------------------------------
+    def detect_dim(before_text: str) -> Optional[str]:
+        """Look back from '<' to detect a preceding token (e.g., '_Z<0-1>')"""
+        m = re.search(r"([A-Za-z]+)$", before_text)
+        if not m:
+            return None
+        token = m.group(1).lower()
+        for dim, names in DIM_TOKENS.items():
+            if token in names:
+                return dim
+        return None
+
+    # ------------------------------------------------------------
+    # Helper: expand a '<...>' block into a concrete list of values.
+    # Examples:
+    #   "<red,green,blue>" → ["red", "green", "blue"]
+    #   "<00-03:2>" → ["00", "02"]
+    # ------------------------------------------------------------
+    def expand_raw_token(raw: str) -> Tuple[List[str], bool]:
+        raw = raw.strip()
+        # Case 1: explicit comma-separated list
+        if "," in raw and not NUM_RANGE_RE.match(raw):
+            parts = [p.strip() for p in raw.split(",")]
+            return parts, all(p.isdigit() for p in parts)
+        # Case 2: numeric range (with optional step)
+        m = NUM_RANGE_RE.match(raw)
+        if m:
+            a, b = m.group("a"), m.group("b")
+            step = int(m.group("step") or "1")
+            start, stop = int(a), int(b)
+            if stop < start:
+                raise ValueError(f"Inverted range not supported: <{raw}>")
+            width = max(len(a), len(b))
+            nums = [str(v).zfill(width) for v in range(start, stop + 1, step)]
+            return nums, True
+        # Case 3: single literal (string or number)
+        return [raw], raw.isdigit()
+
+    # ------------------------------------------------------------
+    # Helper: parse the string pattern and extract placeholders
+    # Returns:
+    #   - a template string, e.g., "test_Z{0}_C{1}.tif"
+    #   - a list of placeholder dicts (choices, dim, etc.)
+    # ------------------------------------------------------------
+    def parse_bracket_pattern(s: str) -> Tuple[str, List[Dict[str, Any]]]:
+        placeholders, out = [], []
+        i = ph_i = 0
+        while i < len(s):
+            if s[i] == "<":
+                j = s.find(">", i + 1)
+                if j == -1:
+                    raise ValueError("Unclosed '<' in pattern.")
+                raw_inside = s[i + 1 : j]
+                before = "".join(out)
+                dim = detect_dim(before) or "?"
+                choices, is_num = expand_raw_token(raw_inside)
+                placeholders.append(
+                    {
+                        "idx": ph_i,
+                        "raw": raw_inside,
+                        "choices": choices,
+                        "dim": dim,
+                        "is_numeric": is_num,
+                    }
+                )
+                out.append(f"{{{ph_i}}}")
+                ph_i += 1
+                i = j + 1
+            else:
+                out.append(s[i])
+                i += 1
+        return "".join(out), placeholders
+
+    # ------------------------------------------------------------
+    # Helper: regex fallback (no <...> present)
+    # ------------------------------------------------------------
+    def regex_match(folder: Path, regex: str) -> List[Path]:
+        """Find all files in folder whose names fully match the regex."""
+        r = re.compile(regex)
+        return sorted([p for p in folder.iterdir() if p.is_file() and r.fullmatch(p.name)])
+
+    # ------------------------------------------------------------
+    # Step 1. Expand the pattern into a mapping (t, c, z) → Path
+    # ------------------------------------------------------------
+    matched: Dict[Tuple[int, int, int], Path] = {}
+    literal_channel_names: Optional[List[str]] = None
+
+    if "<" in line and ">" in line:
+        # Bracket-pattern mode
+        template, placeholders = parse_bracket_pattern(line)
+
+        # Normalize missing dims to default (e.g., C if unspecified)
+        for ph in placeholders:
+            ph["dim"] = (ph["dim"] or "?").upper()
+            if ph["dim"] == "?":
+                ph["dim"] = default_dim_for_unspecified.upper()
+
+        # Cartesian product across all placeholders → all possible filenames
+        for combo in itertools.product(*[ph["choices"] for ph in placeholders]):
+            fname = template.format(*combo)
+            fpath = folder / fname
+            if not fpath.exists():
+                continue  # silently skip missing combinations (Bio-Formats behavior)
+
+            # Initialize coordinates
+            t = c = z = 0
+            for ph, val in zip(placeholders, combo):
+                idx = ph["choices"].index(val)
+                dim = ph["dim"]
+                # Convert 'S' (series) into another dimension, e.g., T
+                if dim == "S":
+                    if not map_series_to:
+                        raise ValueError("Encountered 'series' but map_series_to=None")
+                    dim = map_series_to.upper()
+                if dim == "T": t = idx
+                elif dim == "C": c = idx
+                elif dim == "Z": z = idx
+
+            # Capture literal channel names once (e.g., <red,green,blue>)
+            if literal_channel_names is None:
+                for ph in placeholders:
+                    dim_eff = ph["dim"] if ph["dim"] != "S" else (map_series_to or "S")
+                    if dim_eff == "C" and not ph["is_numeric"]:
+                        literal_channel_names = ph["choices"]
+                        break
+
+            matched[(t, c, z)] = fpath
+
+    else:
+        # Regex mode — treat entire string as a filename regex
+        for z, p in enumerate(regex_match(folder, line)):
+            matched[(0, 0, z)] = p
+
+    if not matched:
+        raise FileNotFoundError(f"No files matched pattern: {pattern_path}")
+
+    # ------------------------------------------------------------
+    # Step 2. Infer stack dimensions (T, C, Z)
+    # ------------------------------------------------------------
+    size_t = max(k[0] for k in matched) + 1
+    size_c = max(k[1] for k in matched) + 1
+    size_z = max(k[2] for k in matched) + 1
+
+    # Resolve channel naming
+    if channel_names and len(channel_names) != size_c:
+        raise ValueError(f"channel_names length {len(channel_names)} != size_c {size_c}")
+    if not channel_names:
+        channel_names = literal_channel_names or [f"C{i}" for i in range(size_c)]
+
+    # ------------------------------------------------------------
+    # Step 3. Probe first image to determine size and physical scale
+    # ------------------------------------------------------------
+    sample = next(iter(matched.values()))
+    is_ome = sample.suffix.lower() in (".ome.tif", ".ome.tiff")
+    img0 = BioImage(image=str(sample), reader=(bioio_ome_tiff.Reader if is_ome else bioio_tifffile.Reader))
+    a0 = np.asarray(img0.data)
+    if a0.ndim != 2:
+        raise ValueError(f"{sample.name} is not single-plane (YX); got {a0.shape}")
+    size_y, size_x = a0.shape
+
+    pps = getattr(img0, "physical_pixel_sizes", None)
+    try:
+        psize_x = float(getattr(pps, "X", None) or 1.0)
+        psize_y = float(getattr(pps, "Y", None) or 1.0)
+        psize_z = float(getattr(pps, "Z", None) or 1.0)
+    except Exception:
+        # Missing or malformed physical scale metadata
+        psize_x = psize_y = psize_z = 1.0
+
+    # ------------------------------------------------------------
+    # Step 4. Load each plane into the Arrow struct representation
+    # ------------------------------------------------------------
+    planes: List[Dict[str, Any]] = []
+    for t in range(size_t):
+        for c in range(size_c):
+            for z in range(size_z):
+                path = matched.get((t, c, z))
+                if not path:
+                    # If a plane is missing, fill with zeros
+                    plane2d = np.zeros((size_y, size_x), dtype=np.uint16)
+                else:
+                    reader = bioio_ome_tiff.Reader if path.suffix.lower() in (".ome.tif", ".ome.tiff") else bioio_tifffile.Reader
+                    im = BioImage(image=str(path), reader=reader)
+                    a = np.asarray(im.data)
+                    if a.ndim != 2:
+                        raise ValueError(f"{path.name} is not single-plane; got {a.shape}")
+                    if a.shape != (size_y, size_x):
+                        raise ValueError(f"Shape mismatch for {path.name}: {a.shape} vs {(size_y, size_x)}")
+                    if clamp_to_uint16 and a.dtype != np.uint16:
+                        # Safely cast to uint16, clamping to valid range
+                        a = np.clip(a, 0, 65535).astype(np.uint16)
+                    plane2d = a
+                planes.append({"z": z, "t": t, "c": c, "pixels": plane2d.ravel().tolist()})
+
+    # ------------------------------------------------------------
+    # Step 5. Construct OME-Arrow metadata (channels, pixels, etc.)
+    # ------------------------------------------------------------
+    channels_meta = [
+        {
+            "id": f"ch-{i}",
+            "name": str(channel_names[i]),
+            "emission_um": 0.0,
+            "excitation_um": 0.0,
+            "illumination": "Unknown",
+            "color_rgba": 0xFFFFFFFF,
+        }
+        for i in range(size_c)
+    ]
+
+    dim_order = "XYZCT" if size_z > 1 else "XYCT"
+    display_name = name or str(pattern_path)
+    img_id = image_id or path.stem
+
+    # ------------------------------------------------------------
+    # Step 6. Delegate to to_ome_arrow() to build StructScalar
+    # ------------------------------------------------------------
+    return to_ome_arrow(
+        image_id=str(img_id),
+        name=str(display_name),
+        acquisition_datetime=None,
+        dimension_order=dim_order,
+        dtype="uint16",
+        size_x=size_x,
+        size_y=size_y,
+        size_z=size_z,
+        size_c=size_c,
+        size_t=size_t,
+        physical_size_x=psize_x,
+        physical_size_y=psize_y,
+        physical_size_z=psize_z,
+        physical_size_unit="µm",
+        channels=channels_meta,
+        planes=planes,
+        masks=None,
+    )

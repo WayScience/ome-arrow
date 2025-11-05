@@ -4,13 +4,14 @@ Core of the ome_arrow package, used for classes and such.
 from __future__ import annotations
 
 import pathlib
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Dict
 
 import pyarrow as pa
 import numpy as np
 from ome_arrow.meta import OME_ARROW_STRUCT
-from ome_arrow.view import view_matplotlib
+from ome_arrow.view import view_matplotlib, view_pyvista
 from ome_arrow.convert import tiff_to_ome_arrow, to_numpy
+from ome_arrow.utils import describe_ome_arrow
 
 
 class OMEArrow:
@@ -89,6 +90,19 @@ class OMEArrow:
             return self.data
         raise ValueError(f"Unknown export method: {how}")
 
+    def info(self) -> Dict[str, Any]:
+        """
+        Describe the OME-Arrow data structure.
+
+        Returns:
+            dict with keys:
+                - shape: (T, C, Z, Y, X)
+                - type: classification string
+                - summary: human-readable text
+        """
+        return describe_ome_arrow(self.data)
+        
+
     def view(
         self,
         how: str = "matplotlib",
@@ -98,33 +112,36 @@ class OMEArrow:
         vmax: Optional[int] = None,
         cmap: str = "gray",
         show: bool = True,
+        c: Optional[int] = None,
+        downsample: int = 1,
+        opacity: str | float = "sigmoid",
+        clim: Optional[Tuple[float, float]] = None,
+        show_axes: bool = True,
+        export_html: Optional[str] = None,
     ) -> Any:
-        """
-        Render a (z, t, c) plane with various tools.
-
-        Args:
-            ztc: Tuple of (z, t, c). Defaults to (0, 0, 0).
-            autoscale: When True and vmin/vmax unset, use data min/max.
-            vmin: Optional lower display bound.
-            vmax: Optional upper display bound.
-            cmap: Matplotlib colormap (single-channel).
-
-        Returns:
-            A visualization of the object.
-        """
-
         if how == "matplotlib":
-            view_matplotlib(
+            return view_matplotlib(
                 self.data,
                 ztc=ztc,
                 autoscale=autoscale,
                 vmin=vmin,
                 vmax=vmax,
                 cmap=cmap,
-                show=show
+                show=show,
             )
-        else:
-            raise ValueError(f"Unknown view method: {how}")
+
+        if how == "pyvista":
+            c_idx = int(ztc[2] if c is None else c)
+            return view_pyvista(
+                data=self.data,
+                c=c_idx,
+                downsample=downsample,
+                opacity=opacity,
+                clim=clim,
+                show_axes=show_axes,
+            )
+
+        raise ValueError(f"Unknown view method: {how}")
         
     def _repr_html_(self) -> str:
         """
@@ -141,7 +158,7 @@ class OMEArrow:
                 show=False
             )
             # return blank string to avoid showing class representation below image
-            return ""
+            return self.info()["summary"]
         except Exception as e:
             # Fallback to a tiny text status if rendering fails.
             return f"<pre>OMEArrowKit: render failed: {e}</pre>"

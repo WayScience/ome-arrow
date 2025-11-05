@@ -7,8 +7,10 @@ from typing import Any, Dict, Tuple
 import numpy as np
 import pyarrow as pa
 import matplotlib.pyplot as plt
-
-import warnings
+from typing import Any, Dict, Optional, Sequence
+import numpy as np
+import pyarrow as pa
+import pyvista as pv
 
 
 def view_matplotlib(
@@ -86,11 +88,110 @@ def view_matplotlib(
 
     plt.figure()
     plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
-    z, t, c = target
-    plt.title(f"OME-Arrow plane z={z} t={t} c={c}  ({sx}×{sy})")
     plt.axis("off")
 
     if show:
         plt.show()
 
     return plt
+
+
+
+def view_pyvista(
+    data: dict | pa.StructScalar,
+    c: int = 0,
+    downsample: int = 1,
+    *,
+    opacity: str | float = "sigmoid",
+    clim: tuple[float, float] | None = None,
+    show_axes: bool = True,
+    backend: str = "auto",  # "auto" | "trame" | "html" | "static"
+):
+    """
+    Jupyter-inline interactive volume view using PyVista 0.46+ backends.
+    Tries 'trame' → 'html' → 'static' when backend='auto'.
+    """
+    import warnings
+    import numpy as np
+    import pyvista as pv
+
+    # ---- unwrap OME-Arrow row
+    row = data.as_py() if isinstance(data, pa.StructScalar) else data
+    pm = row["pixels_meta"]
+    sx, sy, sz = int(pm["size_x"]), int(pm["size_y"]), int(pm["size_z"])
+    sc, st = int(pm["size_c"]), int(pm["size_t"])
+    if not (0 <= c < sc):
+        raise ValueError(f"Channel out of range: 0..{sc-1}")
+
+    dx = float(pm.get("physical_size_x", 1.0) or 1.0)
+    dy = float(pm.get("physical_size_y", 1.0) or 1.0)
+    dz = float(pm.get("physical_size_z", 1.0) or 1.0)
+
+    # ---- rebuild (Z,Y,X) for T=0, channel c
+    vol_zyx = np.zeros((sz, sy, sx), dtype=np.uint16)
+    for p in row["planes"]:
+        if int(p["t"]) == 0 and int(p["c"]) == c:
+            z = int(p["z"])
+            vol_zyx[z] = np.asarray(p["pixels"], dtype=np.uint16).reshape(sy, sx)
+
+    if downsample > 1:
+        vol_zyx = vol_zyx[::downsample, ::downsample, ::downsample]
+        dz, dy, dx = dz * downsample, dy * downsample, dx * downsample
+
+    # VTK expects (X,Y,Z); provide Fortran-ordered scalars on points
+    vol_xyz = vol_zyx.transpose(2, 1, 0)   # (nx, ny, nz)
+    nx, ny, nz = map(int, vol_xyz.shape)
+
+    if clim is None:
+        vmin, vmax = float(vol_xyz.min()), float(vol_xyz.max())
+        if vmax <= vmin:
+            vmax = vmin + 1.0
+        clim = (vmin, vmax)
+
+    # ---- select backend (PyVista 0.46+: "trame" | "html" | "static")
+    def _try_backend(name: str) -> bool:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*notebook backend.*",
+                                    category=UserWarning)
+            try:
+                pv.set_jupyter_backend(name)
+                return True
+            except Exception:
+                return False
+
+    if backend == "auto":
+        backend_used = "trame" if _try_backend("trame") \
+                       else "html" if _try_backend("html") \
+                       else "static"
+    else:
+        backend_used = backend if _try_backend(backend) else "static"
+
+    # Ensure we are not off-screen when trying to show a widget
+    pv.OFF_SCREEN = False
+
+    # ---- build dataset as ImageData (UniformGrid)
+    import pyvista as pv
+    img = pv.ImageData()
+    img.dimensions = (nx, ny, nz)       # points per axis (X,Y,Z)
+    img.spacing   = (dx, dy, dz)        # voxel spacing (physical units)
+    img.origin    = (0.0, 0.0, 0.0)
+    img.point_data.clear()
+    img.point_data["scalars"] = np.asfortranarray(vol_xyz).ravel(order="F")
+
+    # ---- render inline (no timers / no play loop)
+    pl = pv.Plotter()
+    pl.set_background("#555555")
+    pl.add_volume(
+        img,
+        cmap="binary",
+        opacity=opacity,
+        clim=clim,
+        scalar_bar_args={"title": "intensity"},
+    )
+    if show_axes:
+        pl.add_axes()
+    pl.add_text(f"T=0 / {max(0, st-1)}  C={c}  [{backend_used}]",
+                font_size=10)
+
+    # return the backend-specific display object (widget or HTML or PNG)
+    return pl.show()

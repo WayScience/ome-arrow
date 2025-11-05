@@ -2,7 +2,7 @@
 Utility functions for ome-arrow.
 """
 
-from typing import Any
+from typing import Any, Dict
 import pyarrow as pa
 
 def verify_ome_arrow(data: Any, struct: pa.StructType) -> bool:
@@ -23,3 +23,46 @@ def verify_ome_arrow(data: Any, struct: pa.StructType) -> bool:
         return True
     except (TypeError, pa.ArrowInvalid, pa.ArrowTypeError):
         return False
+    
+def describe_ome_arrow(data: pa.StructScalar | dict) -> Dict[str, Any]:
+    """
+    Describe the structure of an OME-Arrow image record.
+
+    Reads `pixels_meta` from the OME-Arrow struct to report TCZYX
+    dimensions and classify whether it's a 2D image, 3D z-stack,
+    movie/timelapse, or 4D timelapse-volume.
+
+    Args:
+        data: OME-Arrow row as a pa.StructScalar or plain dict.
+
+    Returns:
+        dict with keys:
+            - shape: (T, C, Z, Y, X)
+            - type: classification string
+            - summary: human-readable text
+    """
+    # Unwrap StructScalar if needed
+    if isinstance(data, pa.StructScalar):
+        data = data.as_py()
+
+    pm = data.get("pixels_meta", {})
+    t = int(pm.get("size_t", 1))
+    c = int(pm.get("size_c", 1))
+    z = int(pm.get("size_z", 1))
+    y = int(pm.get("size_y", 1))
+    x = int(pm.get("size_x", 1))
+
+    # Basic classification rules
+    if t == 1 and z == 1:
+        kind = "2D image"
+    elif t == 1 and z > 1:
+        kind = "3D image (z-stack)"
+    elif t > 1 and z == 1:
+        kind = "movie / timelapse"
+    elif t > 1 and z > 1:
+        kind = "4D timelapse-volume"
+    else:
+        kind = "unknown"
+
+    summary = f"{kind} - shape (T={t}, C={c}, Z={z}, Y={y}, X={x})"
+    return {"shape": (t, c, z, y, x), "type": kind, "summary": summary}
