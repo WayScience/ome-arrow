@@ -17,26 +17,19 @@
 
 from ome_arrow import OMEArrow
 
-camtest = OMEArrow(
-    data="../../../tests/data/camtest/C2-7_405.tif"
-)
-camtest
-
-camtest.view(how="pyvista")
-
 stack = OMEArrow(
     data="../../../tests/data/nviz-artificial-4d-dataset/E99_C<111,222>_ZS<000-047>.tif"
 )
-stack.export(how="ome-zarr", out="example.ome.zarr")
 stack
-
-OMEArrow(data="example.ome.zarr")
 
 stack.export(how="ome-tiff", out="example.ome.tiff")
 OMEArrow(data="example.ome.tiff")
 
 stack.export(how="ome-zarr", out="example.ome.zarr")
 OMEArrow(data="example.ome.zarr")
+
+stack.export(how="ome-parquet", out="example.ome.parquet")
+OMEArrow(data="example.ome.parquet")
 
 stack.view(how="pyvista")
 
@@ -50,10 +43,6 @@ oa_image
 oa_image.info()
 
 oa_image.view(how="matplotlib")
-
-OMEArrow(data="../../../tests/data/ome-artificial-5d-datasets/z-series.ome.tiff").view(
-    how="pyvista"
-)
 
 oa_image.export(how="numpy")
 

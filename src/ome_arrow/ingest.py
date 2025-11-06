@@ -8,6 +8,7 @@ from typing import Optional, Sequence, List, Dict, Any
 import pyarrow as pa
 import numpy as np
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from bioio_ome_zarr import Reader as OMEZarrReader
 from datetime import datetime
@@ -631,3 +632,130 @@ def from_ome_zarr(
         planes=planes,
         masks=None,
     )
+
+def from_parquet(
+    parquet_path: str | Path,
+    *,
+    column_name: Optional[str] = "ome_arrow",
+    row_index: int = 0,
+    strict_schema: bool = False,
+) -> pa.StructScalar:
+    """
+    Read an OME-Arrow record from a Parquet file and return a typed StructScalar.
+
+    Expected layout (as produced by `to_ome_parquet`):
+      - single Parquet file
+      - a single column (default name "ome_arrow") of `OME_ARROW_STRUCT` type
+      - one row (row_index=0)
+
+    This function is forgiving:
+      - If `column_name` is None or not found, it will auto-detect a struct column
+        that matches the OME-Arrow field names.
+      - If the table has multiple rows, you can choose which record to read
+        via `row_index`.
+
+    Parameters
+    ----------
+    parquet_path : str | Path
+        Path to the .parquet file.
+    column_name : Optional[str], default "ome_arrow"
+        Name of the column that stores the OME-Arrow struct. If None, auto-detect.
+    row_index : int, default 0
+        Which row to read if the table contains multiple rows.
+    strict_schema : bool, default False
+        If True, require the column's type to equal `OME_ARROW_STRUCT` exactly.
+        If False, we only require the column to be a Struct with the same field
+        names (order can vary).
+
+    Returns
+    -------
+    pa.StructScalar
+        A validated OME-Arrow struct scalar.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist.
+    ValueError
+        If a suitable column/row cannot be found or schema checks fail.
+    """
+    p = Path(parquet_path)
+    if not p.exists():
+        raise FileNotFoundError(f"No such file: {p}")
+
+    table = pq.read_table(p)
+
+    if table.num_rows == 0:
+        raise ValueError("Parquet file contains 0 rows; expected at least 1.")
+    if not (0 <= row_index < table.num_rows):
+        raise ValueError(
+            f"row_index {row_index} out of range [0, {table.num_rows})."
+        )
+
+    # 1) Locate the OME-Arrow column
+    def _struct_matches_ome_fields(t: pa.StructType) -> bool:
+        ome_fields = {f.name for f in OME_ARROW_STRUCT}
+        col_fields = {f.name for f in t}
+        return ome_fields == col_fields
+
+    candidate_col = None
+
+    if column_name is not None and column_name in table.column_names:
+        arr = table[column_name]
+        if not pa.types.is_struct(arr.type):
+            raise ValueError(
+                f"Column '{column_name}' is not a Struct; got {arr.type}."
+            )
+        if strict_schema and arr.type != OME_ARROW_STRUCT:
+            raise ValueError(
+                f"Column '{column_name}' schema != OME_ARROW_STRUCT.\n"
+                f"Got:   {arr.type}\n"
+                f"Expect:{OME_ARROW_STRUCT}"
+            )
+        if not strict_schema and not _struct_matches_ome_fields(arr.type):
+            raise ValueError(
+                f"Column '{column_name}' does not have the expected OME-Arrow fields."
+            )
+        candidate_col = arr
+    else:
+        # Auto-detect a struct column that matches OME-Arrow fields
+        for name in table.column_names:
+            arr = table[name]
+            if pa.types.is_struct(arr.type):
+                if strict_schema and arr.type == OME_ARROW_STRUCT:
+                    candidate_col = arr
+                    column_name = name
+                    break
+                if not strict_schema and _struct_matches_ome_fields(arr.type):
+                    candidate_col = arr
+                    column_name = name
+                    break
+        if candidate_col is None:
+            if column_name is None:
+                hint = "no struct column with OME-Arrow fields was found."
+            else:
+                hint = f"column '{column_name}' not found and auto-detection failed."
+            raise ValueError(
+                f"Could not locate an OME-Arrow struct column: {hint}"
+            )
+
+    # 2) Extract the row as a Python dict
+    #    (Using to_pylist() for the single element slice is simple & reliable.)
+    record_dict: Dict[str, Any] = candidate_col.slice(row_index, 1).to_pylist()[0]
+
+    # 3) Reconstruct a typed StructScalar using the canonical schema
+    #    (this validates field names/types and normalizes order)
+    scalar = pa.scalar(record_dict, type=OME_ARROW_STRUCT)
+
+    # Optional: soft validation via file-level metadata (if present)
+    try:
+        meta = table.schema.metadata or {}
+        tag_ok = (
+            meta.get(b"ome.arrow.type", b"").decode() == str(OME_ARROW_TAG_TYPE)
+            and meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
+        )
+        # You could log/print a warning if tag_ok is False, but don't fail.
+    except Exception:
+        pass
+
+    return scalar

@@ -11,7 +11,7 @@ import numpy as np
 from ome_arrow.meta import OME_ARROW_STRUCT
 from ome_arrow.view import view_matplotlib, view_pyvista
 from ome_arrow.ingest import from_tiff, from_stack_pattern_path, from_ome_zarr
-from ome_arrow.export import to_numpy, to_ome_tiff, to_ome_zarr
+from ome_arrow.export import to_numpy, to_ome_tiff, to_ome_zarr, to_ome_parquet
 from ome_arrow.utils import describe_ome_arrow
 
 
@@ -41,11 +41,18 @@ class OMEArrow:
         - a Bio-Formats-style stack pattern string (contains '<', '>', or '*')
         - a path/URL to an OME-TIFF (.tif/.tiff)
         - a path/URL to an OME-Zarr store (.zarr / .ome.zarr)
+        - a path/URL to an OME-Parquet file (.parquet / .pq)
         - a dict already matching the OME-Arrow schema
         - a pa.StructScalar already typed to OME_ARROW_STRUCT
         """
         import pathlib
-        from ome_arrow.ingest import from_tiff, from_ome_zarr, from_stack_pattern_path
+        from ome_arrow.meta import OME_ARROW_STRUCT
+        from ome_arrow.ingest import (
+            from_tiff,
+            from_ome_zarr,
+            from_stack_pattern_path,
+            from_parquet,        # ← NEW
+        )
 
         # --- 1) Stack pattern (Bio-Formats-style) --------------------------------
         if isinstance(data, str) and any(c in data for c in "<>*"):
@@ -57,7 +64,7 @@ class OMEArrow:
             )
             return
 
-        # --- 2) String path/URL: OME-Zarr or OME-TIFF -----------------------------
+        # --- 2) String path/URL: OME-Zarr / OME-Parquet / OME-TIFF ---------------
         if isinstance(data, str):
             s = data.strip()
             path = pathlib.Path(s)
@@ -70,6 +77,12 @@ class OMEArrow:
                 or (path.exists() and path.is_dir() and path.suffix.lower() == ".zarr")
             ):
                 self.data = from_ome_zarr(s)
+                return
+
+            # OME-Parquet detection (single-file parquet container)
+            if s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {".parquet", ".pq"}:
+                # Uses defaults: column_name="ome_arrow", row_index=0
+                self.data = from_parquet(s)
                 return
 
             # TIFF ingest
@@ -87,6 +100,7 @@ class OMEArrow:
                 "String input must be one of:\n"
                 "  • Bio-Formats pattern string (contains '<', '>' or '*')\n"
                 "  • OME-Zarr path/URL ending with '.zarr' or '.ome.zarr'\n"
+                "  • OME-Parquet file ending with '.parquet' or '.pq'\n"
                 "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
             )
 
@@ -102,27 +116,30 @@ class OMEArrow:
 
         # --- otherwise ------------------------------------------------------------
         raise TypeError("input data must be str, dict, or pa.StructScalar")
-
     def export(
-    self,
-    how: str = "numpy",
-    dtype: np.dtype = np.uint16,
-    strict: bool = True,
-    clamp: bool = False,
-    *,
-    # common writer args
-    out: str | None = None,
-    dim_order: str = "TCZYX",
-    # OME-TIFF args
-    compression: str | None = "zlib",
-    compression_level: int = 6,
-    tile: tuple[int, int] | None = None,
-    # OME-Zarr args
-    chunks: tuple[int, int, int, int, int] | None = None,   # (T,C,Z,Y,X)
-    zarr_compressor: str | None = "zstd",
-    zarr_level: int = 7,
-    # optional display metadata (both paths guard/ignore if unsafe)
-    use_channel_colors: bool = False,
+        self,
+        how: str = "numpy",
+        dtype: np.dtype = np.uint16,
+        strict: bool = True,
+        clamp: bool = False,
+        *,
+        # common writer args
+        out: str | None = None,
+        dim_order: str = "TCZYX",
+        # OME-TIFF args
+        compression: str | None = "zlib",
+        compression_level: int = 6,
+        tile: tuple[int, int] | None = None,
+        # OME-Zarr args
+        chunks: tuple[int, int, int, int, int] | None = None,   # (T,C,Z,Y,X)
+        zarr_compressor: str | None = "zstd",
+        zarr_level: int = 7,
+        # optional display metadata (both paths guard/ignore if unsafe)
+        use_channel_colors: bool = False,
+        # Parquet args
+        parquet_column_name: str = "ome_arrow",
+        parquet_compression: str | None = "zstd",
+        parquet_metadata: dict[str, str] | None = None,
     ) -> Any:
         """
         Export the OME-Arrow content in a chosen representation.
@@ -135,6 +152,7 @@ class OMEArrow:
             "scalar"    → pa.StructScalar (as-is)
             "ome-tiff"  → write OME-TIFF via BioIO
             "ome-zarr"  → write OME-Zarr (OME-NGFF) via BioIO
+            "parquet"   → write a single-row Parquet with one struct column
         dtype:
             Target dtype for "numpy"/writers (default: np.uint16).
         strict:
@@ -145,7 +163,7 @@ class OMEArrow:
         Keyword-only (writer specific)
         ------------------------------
         out:
-            Output path (required for 'ome-tiff' and 'ome-zarr').
+            Output path (required for 'ome-tiff', 'ome-zarr', and 'parquet').
         dim_order:
             Axes string for BioIO writers; default "TCZYX".
         compression / compression_level / tile:
@@ -154,6 +172,8 @@ class OMEArrow:
             OME-Zarr options (chunk shape, compressor hint, level).
         use_channel_colors:
             Try to embed per-channel display colors when safe; otherwise omitted.
+        parquet_*:
+            Options for Parquet export (column name, compression, file metadata).
 
         Returns
         -------
@@ -163,6 +183,7 @@ class OMEArrow:
             - "scalar": pa.StructScalar
             - "ome-tiff": output path (str)
             - "ome-zarr": output path (str)
+            - "parquet": output path (str)
 
         Raises
         ------
@@ -180,7 +201,7 @@ class OMEArrow:
         mode = how.lower().replace("_", "-")
 
         # OME-TIFF via BioIO
-        if mode in {"ome-tiff", "ometiff"}:
+        if mode in {"ome-tiff", "ometiff", "tiff"}:
             if not out:
                 raise ValueError("export(how='ome-tiff') requires 'out' path.")
             to_ome_tiff(
@@ -197,7 +218,7 @@ class OMEArrow:
             return out
 
         # OME-Zarr via BioIO
-        if mode == "ome-zarr":
+        if mode in {"ome-zarr", "omezarr", "zarr"}:
             if not out:
                 raise ValueError("export(how='ome-zarr') requires 'out' path.")
             to_ome_zarr(
@@ -209,6 +230,19 @@ class OMEArrow:
                 chunks=chunks,
                 compressor=zarr_compressor,
                 compressor_level=int(zarr_level),
+            )
+            return out
+
+        # Parquet (single row, single struct column)
+        if mode in {"ome-parquet", "omeparquet", "parquet"}:
+            if not out:
+                raise ValueError("export(how='parquet') requires 'out' path.")
+            to_ome_parquet(
+                data=self.data,
+                out_path=out,
+                column_name=parquet_column_name,
+                compression=parquet_compression,   # default 'zstd'
+                file_metadata=parquet_metadata,
             )
             return out
 

@@ -5,9 +5,10 @@ Module for exporting OME-Arrow data to other formats.
 import pyarrow as pa
 import numpy as np
 import pyarrow as pa
-
+import pyarrow.parquet as pq
 from typing import Dict, Any, Sequence, Tuple, Optional, List
 import numpy as np
+from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
 
 
 def to_numpy(
@@ -339,3 +340,50 @@ def to_ome_zarr(
 
     # 8) Write full-resolution; writer will build & fill lower levels
     writer.write_full_volume(arr)
+
+def to_ome_parquet(
+    data: Dict[str, Any] | pa.StructScalar,
+    out_path: str,
+    column_name: str = "image",
+    file_metadata: Optional[Dict[str, str]] = None,
+    compression: Optional[str] = "zstd",
+    row_group_size: Optional[int] = None,
+) -> None:
+    """
+    Export an OME-Arrow record to a Parquet file as a single-row, single-column table.
+    The single column holds a struct with the OME-Arrow schema.
+    """
+
+    # 1) Normalize to a plain Python dict (works better with pyarrow builders,
+    #    especially when the struct has a `null`-typed field like "masks").
+    if isinstance(data, pa.StructScalar):
+        record_dict = data.as_py()
+    else:
+        # Validate by round-tripping through a typed scalar, then back to dict.
+        record_dict = pa.scalar(data, type=OME_ARROW_STRUCT).as_py()
+
+    # 2) Build a single-row struct array from the dict, explicitly passing the schema
+    struct_array = pa.array([record_dict], type=OME_ARROW_STRUCT)  # len=1
+
+    # 3) Wrap into a one-column table
+    table = pa.table({column_name: struct_array})
+
+    # 4) Attach optional file-level metadata
+    meta: Dict[bytes, bytes] = dict(table.schema.metadata or {})
+    try:
+        meta[b"ome.arrow.type"] = str(OME_ARROW_TAG_TYPE).encode("utf-8")
+        meta[b"ome.arrow.version"] = str(OME_ARROW_TAG_VERSION).encode("utf-8")
+    except Exception:
+        pass
+    if file_metadata:
+        for k, v in file_metadata.items():
+            meta[str(k).encode("utf-8")] = str(v).encode("utf-8")
+    table = table.replace_schema_metadata(meta)
+
+    # 5) Write Parquet (single row, single column)
+    pq.write_table(
+        table,
+        out_path,
+        compression=compression,
+        row_group_size=row_group_size,
+    )

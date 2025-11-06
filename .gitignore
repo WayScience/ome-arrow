@@ -211,3 +211,4 @@ _version.py
 *.tiff
 *.tif
 *.zarr
+*.parquet
