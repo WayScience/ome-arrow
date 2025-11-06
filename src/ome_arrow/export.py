@@ -1,0 +1,222 @@
+"""
+Module for exporting OME-Arrow data to other formats.
+"""
+
+import pyarrow as pa
+import numpy as np
+import pyarrow as pa
+
+from typing import Dict, Any, Sequence, Tuple, Optional
+import numpy as np
+from bioio_ome_tiff.writers import OmeTiffWriter
+from bioio import PhysicalPixelSizes
+
+
+def to_numpy(
+    data: Dict[str, Any] | pa.StructScalar,
+    dtype: np.dtype = np.uint16,
+    strict: bool = True,
+    clamp: bool = False,
+) -> np.ndarray:
+    """
+    Convert an OME-Arrow record into a NumPy array shaped (T,C,Z,Y,X).
+
+    The OME-Arrow "planes" are flattened YX slices indexed by (z, t, c).
+    This function reconstitutes them into a dense TCZYX ndarray.
+
+    Args:
+        data:
+            OME-Arrow data as a Python dict or a `pa.StructScalar`.
+        dtype:
+            Output dtype (default: np.uint16). If different from plane
+            values, a cast (and optional clamp) is applied.
+        strict:
+            When True, raise if a plane has wrong pixel length. When
+            False, truncate/pad that plane to the expected length.
+        clamp:
+            If True, clamp values to the valid range of the target
+            dtype before casting.
+
+    Returns:
+        np.ndarray: Dense array with shape (T, C, Z, Y, X).
+
+    Raises:
+        KeyError: If required OME-Arrow fields are missing.
+        ValueError: If dimensions are invalid or planes are malformed.
+
+    Examples:
+        >>> arr = ome_arrow_to_tczyx(my_row)  # (T, C, Z, Y, X)
+        >>> arr.shape
+        (1, 2, 1, 512, 512)
+    """
+    # Unwrap Arrow scalar to plain Python dict if needed.
+    if isinstance(data, pa.StructScalar):
+        data = data.as_py()
+
+    pm = data["pixels_meta"]
+    sx, sy = int(pm["size_x"]), int(pm["size_y"])
+    sz, sc, st = int(pm["size_z"]), int(pm["size_c"]), int(pm["size_t"])
+    if sx <= 0 or sy <= 0 or sz <= 0 or sc <= 0 or st <= 0:
+        raise ValueError("All size_* fields must be positive integers.")
+
+    expected_len = sx * sy
+
+    # Prepare target array (T,C,Z,Y,X), zero-filled by default.
+    out = np.zeros((st, sc, sz, sy, sx), dtype=dtype)
+
+    # Helper: cast (with optional clamp) to the output dtype.
+    if np.issubdtype(dtype, np.integer):
+        info = np.iinfo(dtype)
+        lo, hi = info.min, info.max
+    elif np.issubdtype(dtype, np.floating):
+        lo, hi = -np.inf, np.inf
+    else:
+        # Rare dtypes: no clamping logic; rely on astype.
+        lo, hi = -np.inf, np.inf
+
+    def _cast_plane(a: np.ndarray) -> np.ndarray:
+        if clamp:
+            a = np.clip(a, lo, hi)
+        return a.astype(dtype, copy=False)
+
+    # Fill planes.
+    for i, p in enumerate(data.get("planes", [])):
+        z = int(p["z"])
+        t = int(p["t"])
+        c = int(p["c"])
+
+        if not (0 <= z < sz and 0 <= t < st and 0 <= c < sc):
+            raise ValueError(f"planes[{i}] index out of range: (z,t,c)=({z},{t},{c})")
+
+        pix = p["pixels"]
+        # Ensure sequence-like and correct length.
+        try:
+            n = len(pix)
+        except Exception as e:
+            raise ValueError(f"planes[{i}].pixels is not a sequence") from e
+
+        if n != expected_len:
+            if strict:
+                raise ValueError(
+                    f"planes[{i}].pixels length {n} != size_x*size_y {expected_len}"
+                )
+            # Lenient mode: fix length by truncation or zero-pad.
+            if n > expected_len:
+                pix = pix[:expected_len]
+            else:
+                pix = list(pix) + [0] * (expected_len - n)
+
+        # Reshape to (Y,X) and cast.
+        arr2d = np.asarray(pix).reshape(sy, sx)
+        arr2d = _cast_plane(arr2d)
+        out[t, c, z] = arr2d
+
+    return out
+
+def to_ome_tiff(
+    data: Dict[str, Any] | pa.StructScalar,
+    out_path: str,
+    *,
+    dtype: np.dtype = np.uint16,
+    clamp: bool = False,
+    dim_order: str = "TCZYX",
+    compression: Optional[str] = "zlib",   # "zlib","lzma","jpegxl", or None
+    compression_level: int = 6,
+    tile: Optional[Tuple[int, int]] = None,  # (Y, X)
+    use_channel_colors: bool = False,
+) -> None:
+    """
+    Export an OME-Arrow record to OME-TIFF using BioIO's OmeTiffWriter.
+
+    Notes
+    -----
+    - No 'bigtiff' kwarg is passed (invalid for tifffile.TiffWriter.write()).
+      BigTIFF selection is automatic based on file size.
+    """
+    from ome_arrow.export import to_numpy  # your existing function
+
+    try:
+        from bioio.writers import OmeTiffWriter
+    except Exception:
+        from bioio_ome_tiff.writers import OmeTiffWriter  # type: ignore
+
+    # PhysicalPixelSizes (robust import or shim)
+    try:
+        from bioio import PhysicalPixelSizes  # modern bioio
+    except Exception:
+        try:
+            from bioio.types import PhysicalPixelSizes
+        except Exception:
+            try:
+                from aicsimageio.types import PhysicalPixelSizes
+            except Exception:
+                from typing import NamedTuple, Optional as _Opt
+                class PhysicalPixelSizes(NamedTuple):  # type: ignore
+                    Z: _Opt[float] = None
+                    Y: _Opt[float] = None
+                    X: _Opt[float] = None
+
+    # 1) Dense array (T,C,Z,Y,X)
+    arr = to_numpy(data, dtype=dtype, clamp=clamp)
+
+    # 2) Metadata
+    row = data.as_py() if isinstance(data, pa.StructScalar) else data
+    pm = row["pixels_meta"]
+    st, sc, sz, sy, sx = arr.shape
+
+    # Channel names
+    chs: Sequence[Dict[str, Any]] = pm.get("channels", []) or []
+    channel_names = [f"C{i}" for i in range(sc)]
+    if len(chs) == sc:
+        for i, ch in enumerate(chs):
+            nm = ch.get("name")
+            if nm is not None:
+                channel_names[i] = str(nm)
+
+    # Optional channel colors (guarded)
+    channel_colors_for_writer = None
+    if use_channel_colors and len(chs) == sc:
+        def _rgba_to_rgb(rgba: int) -> int:
+            r = (rgba >> 24) & 0xFF
+            g = (rgba >> 16) & 0xFF
+            b = (rgba >>  8) & 0xFF
+            return (r << 16) | (g << 8) | b
+        flat_colors: list[int] = []
+        for ch in chs:
+            rgba = ch.get("color_rgba")
+            flat_colors.append(_rgba_to_rgb(int(rgba)) if isinstance(rgba, int) else 0xFFFFFF)
+        if len(flat_colors) == sc:
+            channel_colors_for_writer = [flat_colors]  # list-per-image
+
+    # Physical sizes (µm) in Z, Y, X order for BioIO
+    p_dx = float(pm.get("physical_size_x", 1.0) or 1.0)
+    p_dy = float(pm.get("physical_size_y", 1.0) or 1.0)
+    p_dz = float(pm.get("physical_size_z", 1.0) or 1.0)
+    pps_list = [PhysicalPixelSizes(Z=p_dz, Y=p_dy, X=p_dx)]
+
+    # tifffile passthrough (NO 'bigtiff' here)
+    tifffile_kwargs: Dict[str, Any] = {}
+    if compression is not None:
+        tifffile_kwargs["compression"] = compression
+        if compression == "zlib":
+            tifffile_kwargs["compressionargs"] = {"level": int(compression_level)}
+    if tile is not None:
+        tifffile_kwargs["tile"] = (int(tile[0]), int(tile[1]))
+
+    # list-per-image payloads
+    data_list        = [arr]
+    dim_order_list   = [dim_order]
+    image_name_list  = [str(row.get("name") or row.get("id") or "image")]
+    ch_names_list    = [channel_names]
+
+    # 3) Write
+    OmeTiffWriter.save(
+        data_list,
+        out_path,
+        dim_order=dim_order_list,
+        image_name=image_name_list,
+        channel_names=ch_names_list,
+        channel_colors=channel_colors_for_writer,  # None or [flat list len=sc]
+        physical_pixel_sizes=pps_list,
+        tifffile_kwargs=tifffile_kwargs,
+    )

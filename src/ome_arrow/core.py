@@ -10,7 +10,8 @@ import pyarrow as pa
 import numpy as np
 from ome_arrow.meta import OME_ARROW_STRUCT
 from ome_arrow.view import view_matplotlib, view_pyvista
-from ome_arrow.convert import tiff_to_ome_arrow, to_numpy
+from ome_arrow.ingest import from_tiff, from_stack_pattern_path
+from ome_arrow.export import to_numpy, to_ome_tiff
 from ome_arrow.utils import describe_ome_arrow
 
 
@@ -36,10 +37,18 @@ class OMEArrow:
         data: str | dict | pa.StructScalar,
     ):
 
-        if isinstance(data, str):
+        if isinstance(data, str) and any(c in data for c in "<>*"):
+            self.data = from_stack_pattern_path(
+                data,
+                default_dim_for_unspecified="C",
+                map_series_to="T",
+                clamp_to_uint16=True,
+            )
+            
+        elif isinstance(data, str):
             path = pathlib.Path(data)
             if path.suffix.lower() in {".tif", ".tiff"}:
-                self.data = tiff_to_ome_arrow(path, OME_ARROW_STRUCT)
+                self.data = from_tiff(path, OME_ARROW_STRUCT)
             else:
                 raise ValueError(
                     "String input data must be a .tif/.tiff path."
@@ -58,36 +67,79 @@ class OMEArrow:
         dtype: np.dtype = np.uint16,
         strict: bool = True,
         clamp: bool = False,
+        out: str | None = None,
+        dim_order: str = "TCZYX",
+        compression: str | None = "zlib",
+        compression_level: int = 6,
+        tile: tuple[int, int] | None = None,
     ) -> Any:
         """
         Export the OME-Arrow content in a chosen representation.
 
-        Args:
-            how:
-                "numpy"  → TCZYX np.ndarray
-                "dict"   → plain Python dict
-                "scalar" → pa.StructScalar (as-is)
-            dtype:
-                Target dtype for "numpy" export (default: np.uint16).
-            strict:
-                For "numpy": raise if a plane has wrong pixel length.
-            clamp:
-                For "numpy": clamp values into dtype range before cast.
+        Args
+        ----
+        how:
+            "numpy"   → TCZYX np.ndarray
+            "dict"    → plain Python dict
+            "scalar"  → pa.StructScalar (as-is)
+            "ome-tiff" (or "ometiff", "ome_tiff") → write an OME-TIFF file via BioIO
+        dtype:
+            Target dtype for "numpy" export (default: np.uint16) and for OME-TIFF pixels.
+        strict:
+            For "numpy": raise if a plane has wrong pixel length.
+        clamp:
+            For "numpy" and "ome-tiff": clamp values into dtype range before cast.
 
-        Returns:
-            The exported object per the `how` argument.
+        Keyword-only (OME-TIFF specific)
+        --------------------------------
+        out:
+            Output path for the OME-TIFF file (required when how='ome-tiff').
+        dim_order:
+            Axes string for BioIO writer; default "TCZYX".
+        compression:
+            TIFF compression (e.g., "zlib", "lzma", "jpegxl", or None).
+        compression_level:
+            Compression level for zlib (if used).
+        tile:
+            Optional tile size as (Y, X), e.g., (512, 512).
 
-        Raises:
-            ValueError: If `how` is unknown.
+        Returns
+        -------
+        Any
+            - "numpy": np.ndarray (T, C, Z, Y, X)
+            - "dict":  dict
+            - "scalar": pa.StructScalar
+            - "ome-tiff": the output path (str)
+
+        Raises
+        ------
+        ValueError:
+            Unknown 'how' or missing parameters for 'ome-tiff'.
         """
+        # existing modes
         if how == "numpy":
-            return to_numpy(
-                self.data, dtype=dtype, strict=strict, clamp=clamp
-            )
+            return to_numpy(self.data, dtype=dtype, strict=strict, clamp=clamp)
         if how == "dict":
             return self.data.as_py()
         if how == "scalar":
             return self.data
+
+        # NEW: OME-TIFF via BioIO OmeTiffWriter
+        if how.lower().replace("_", "-") in {"ome-tiff", "ometiff"}:
+            if not out:
+                raise ValueError("export(how='ome-tiff') requires 'out' path.")
+            to_ome_tiff(
+                self.data,
+                out,
+                dtype=dtype,
+                clamp=clamp,
+                dim_order=dim_order,
+                compression=compression,
+                compression_level=int(compression_level),
+                tile=tile,
+            )
+            return out
+
         raise ValueError(f"Unknown export method: {how}")
 
     def info(self) -> Dict[str, Any]:
@@ -117,7 +169,7 @@ class OMEArrow:
         opacity: str | float = "sigmoid",
         clim: Optional[Tuple[float, float]] = None,
         show_axes: bool = True,
-        export_html: Optional[str] = None,
+        scaling_values: Optional[tuple[float, float, float]] = (1.0, 0.1, 0.1),
     ) -> Any:
         if how == "matplotlib":
             return view_matplotlib(
@@ -139,6 +191,7 @@ class OMEArrow:
                 opacity=opacity,
                 clim=clim,
                 show_axes=show_axes,
+                scaling_values=scaling_values,
             )
 
         raise ValueError(f"Unknown view method: {how}")

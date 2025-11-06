@@ -101,7 +101,7 @@ def view_pyvista(
     data: dict | pa.StructScalar,
     c: int = 0,
     downsample: int = 1,
-    *,
+    scaling_values: tuple[float, float, float] | None = None,  # NEW: (Z, Y, X)
     opacity: str | float = "sigmoid",
     clim: tuple[float, float] | None = None,
     show_axes: bool = True,
@@ -110,6 +110,12 @@ def view_pyvista(
     """
     Jupyter-inline interactive volume view using PyVista 0.46+ backends.
     Tries 'trame' → 'html' → 'static' when backend='auto'.
+
+    Parameters
+    ----------
+    scaling_values : (Z, Y, X) or None
+        Legacy-style voxel spacing tuple (Z, Y, X). If provided, overrides
+        pixels_meta.physical_size_{x,y,z}. If None, uses pixels_meta.
     """
     import warnings
     import numpy as np
@@ -123,9 +129,23 @@ def view_pyvista(
     if not (0 <= c < sc):
         raise ValueError(f"Channel out of range: 0..{sc-1}")
 
+    # ---- spacing (PyVista expects (dx, dy, dz) ≡ world units along X,Y,Z)
+    # default from OME-Arrow metadata
     dx = float(pm.get("physical_size_x", 1.0) or 1.0)
     dy = float(pm.get("physical_size_y", 1.0) or 1.0)
     dz = float(pm.get("physical_size_z", 1.0) or 1.0)
+
+    # optional override from legacy scaling tuple (Z, Y, X)
+    if scaling_values is None and "scaling_values" in pm:
+        # if you stored it in pixels_meta before, honor it
+        try:
+            sz_legacy, sy_legacy, sx_legacy = pm["scaling_values"]
+            dz, dy, dx = float(sz_legacy), float(sy_legacy), float(sx_legacy)
+        except Exception:
+            pass
+    elif scaling_values is not None:
+        sz_legacy, sy_legacy, sx_legacy = scaling_values
+        dz, dy, dx = float(sz_legacy), float(sy_legacy), float(sx_legacy)
 
     # ---- rebuild (Z,Y,X) for T=0, channel c
     vol_zyx = np.zeros((sz, sy, sx), dtype=np.uint16)
@@ -134,11 +154,12 @@ def view_pyvista(
             z = int(p["z"])
             vol_zyx[z] = np.asarray(p["pixels"], dtype=np.uint16).reshape(sy, sx)
 
+    # optional downsampling: scale both data and spacing
     if downsample > 1:
         vol_zyx = vol_zyx[::downsample, ::downsample, ::downsample]
         dz, dy, dx = dz * downsample, dy * downsample, dx * downsample
 
-    # VTK expects (X,Y,Z); provide Fortran-ordered scalars on points
+    # VTK expects (X,Y,Z) memory order and spacing=(dx,dy,dz)
     vol_xyz = vol_zyx.transpose(2, 1, 0)   # (nx, ny, nz)
     nx, ny, nz = map(int, vol_xyz.shape)
 
@@ -148,7 +169,7 @@ def view_pyvista(
             vmax = vmin + 1.0
         clim = (vmin, vmax)
 
-    # ---- select backend (PyVista 0.46+: "trame" | "html" | "static")
+    # ---- select backend
     def _try_backend(name: str) -> bool:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message=".*notebook backend.*",
@@ -166,19 +187,17 @@ def view_pyvista(
     else:
         backend_used = backend if _try_backend(backend) else "static"
 
-    # Ensure we are not off-screen when trying to show a widget
     pv.OFF_SCREEN = False
 
     # ---- build dataset as ImageData (UniformGrid)
-    import pyvista as pv
     img = pv.ImageData()
-    img.dimensions = (nx, ny, nz)       # points per axis (X,Y,Z)
-    img.spacing   = (dx, dy, dz)        # voxel spacing (physical units)
-    img.origin    = (0.0, 0.0, 0.0)
+    img.dimensions = (nx, ny, nz)   # number of points along each axis (X,Y,Z)
+    img.spacing = (dx, dy, dz)      # physical spacing along each axis (X,Y,Z)
+    img.origin = (0.0, 0.0, 0.0)
     img.point_data.clear()
     img.point_data["scalars"] = np.asfortranarray(vol_xyz).ravel(order="F")
 
-    # ---- render inline (no timers / no play loop)
+    # ---- render
     pl = pv.Plotter()
     pl.set_background("#555555")
     pl.add_volume(
@@ -192,6 +211,4 @@ def view_pyvista(
         pl.add_axes()
     pl.add_text(f"T=0 / {max(0, st-1)}  C={c}  [{backend_used}]",
                 font_size=10)
-
-    # return the backend-specific display object (widget or HTML or PNG)
     return pl.show()

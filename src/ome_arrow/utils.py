@@ -30,7 +30,8 @@ def describe_ome_arrow(data: pa.StructScalar | dict) -> Dict[str, Any]:
 
     Reads `pixels_meta` from the OME-Arrow struct to report TCZYX
     dimensions and classify whether it's a 2D image, 3D z-stack,
-    movie/timelapse, or 4D timelapse-volume.
+    movie/timelapse, or 4D timelapse-volume. Also flags whether it is
+    multi-channel (C > 1) or single-channel.
 
     Args:
         data: OME-Arrow row as a pa.StructScalar or plain dict.
@@ -41,7 +42,7 @@ def describe_ome_arrow(data: pa.StructScalar | dict) -> Dict[str, Any]:
             - type: classification string
             - summary: human-readable text
     """
-    # Unwrap StructScalar if needed
+    # --- Unwrap StructScalar if needed ---
     if isinstance(data, pa.StructScalar):
         data = data.as_py()
 
@@ -52,7 +53,7 @@ def describe_ome_arrow(data: pa.StructScalar | dict) -> Dict[str, Any]:
     y = int(pm.get("size_y", 1))
     x = int(pm.get("size_x", 1))
 
-    # Basic classification rules
+    # --- Basic dimensional classification ---
     if t == 1 and z == 1:
         kind = "2D image"
     elif t == 1 and z > 1:
@@ -64,5 +65,19 @@ def describe_ome_arrow(data: pa.StructScalar | dict) -> Dict[str, Any]:
     else:
         kind = "unknown"
 
-    summary = f"{kind} - shape (T={t}, C={c}, Z={z}, Y={y}, X={x})"
-    return {"shape": (t, c, z, y, x), "type": kind, "summary": summary}
+    # --- Channel classification ---
+    if c > 1:
+        channel_info = f"multi-channel ({c} channels)"
+    else:
+        channel_info = "single-channel"
+
+    # --- Summary ---
+    summary = f"{kind}, {channel_info} - shape (T={t}, C={c}, Z={z}, Y={y}, X={x})"
+
+    return {
+        "shape": (t, c, z, y, x),
+        "type": kind,
+        "channels": c,
+        "is_multichannel": c > 1,
+        "summary": summary,
+    }
