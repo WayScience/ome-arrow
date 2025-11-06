@@ -32,6 +32,7 @@ dependencies = [
   "trame-vuetify>=3.1.0",
   "ipywidgets>=8.1.8",
   "jupyterlab-widgets>=3.0.16",
+  "bioio-ome-zarr>=3.0.3",
 ]
 
 [dependency-groups]

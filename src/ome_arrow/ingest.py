@@ -9,6 +9,7 @@ import pyarrow as pa
 import numpy as np
 import pyarrow as pa
 
+from bioio_ome_zarr import Reader as OMEZarrReader
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Sequence
@@ -507,6 +508,126 @@ def from_stack_pattern_path(
         physical_size_z=psize_z,
         physical_size_unit="µm",
         channels=channels_meta,
+        planes=planes,
+        masks=None,
+    )
+
+
+
+def from_ome_zarr(
+    zarr_path: str | Path,
+    image_id: Optional[str] = None,
+    name: Optional[str] = None,
+    channel_names: Optional[Sequence[str]] = None,
+    acquisition_datetime: Optional[datetime] = None,
+    clamp_to_uint16: bool = True,
+) -> pa.StructScalar:
+    """
+    Read an OME-Zarr directory and return a typed OME-Arrow StructScalar.
+
+    Uses BioIO with the OMEZarrReader backend to read TCZYX (or XY) data,
+    flattens each YX plane into OME-Arrow planes, and builds a validated
+    StructScalar via `to_ome_arrow`.
+
+    Args:
+        zarr_path:
+            Path to the OME-Zarr directory (e.g., "image.ome.zarr").
+        image_id:
+            Optional stable image identifier (defaults to directory stem).
+        name:
+            Optional display name (defaults to directory name).
+        channel_names:
+            Optional list of channel names. Defaults to C0, C1, ...
+        acquisition_datetime:
+            Optional datetime (defaults to UTC now).
+        clamp_to_uint16:
+            If True, cast pixels to uint16.
+
+    Returns:
+        pa.StructScalar: Validated OME-Arrow struct for this image.
+    """
+    p = Path(zarr_path)
+
+    img = BioImage(image=str(p), reader=OMEZarrReader)
+
+    arr = np.asarray(img.data)  # shape (T, C, Z, Y, X)
+    dims = img.dims
+
+    size_t = int(dims.T or 1)
+    size_c = int(dims.C or 1)
+    size_z = int(dims.Z or 1)
+    size_y = int(dims.Y or arr.shape[-2])
+    size_x = int(dims.X or arr.shape[-1])
+
+    if size_x <= 0 or size_y <= 0:
+        raise ValueError("Image must have positive Y and X dimensions.")
+
+    pps = getattr(img, "physical_pixel_sizes", None)
+    try:
+        psize_x = float(getattr(pps, "X", None) or 1.0)
+        psize_y = float(getattr(pps, "Y", None) or 1.0)
+        psize_z = float(getattr(pps, "Z", None) or 1.0)
+    except Exception:
+        psize_x = psize_y = psize_z = 1.0
+
+    img_id = str(image_id or p.stem)
+    display_name = str(name or p.name)
+
+    # Infer or assign channel names
+    if not channel_names or len(channel_names) != size_c:
+        try:
+            chs = getattr(img, "channel_names", None)
+            if chs is None:
+                chs = [getattr(ch, "name", None) for ch in getattr(img, "channels", [])]
+            if chs and len(chs) == size_c and all(c is not None for c in chs):
+                channel_names = [str(c) for c in chs]
+            else:
+                channel_names = [f"C{i}" for i in range(size_c)]
+        except Exception:
+            channel_names = [f"C{i}" for i in range(size_c)]
+    channel_names = [str(x) for x in channel_names]
+
+    channels = [
+        {
+            "id": f"ch-{i}",
+            "name": channel_names[i],
+            "emission_um": 0.0,
+            "excitation_um": 0.0,
+            "illumination": "Unknown",
+            "color_rgba": 0xFFFFFFFF,
+        }
+        for i in range(size_c)
+    ]
+
+    planes: List[Dict[str, Any]] = []
+    for t in range(size_t):
+        for c in range(size_c):
+            for z in range(size_z):
+                plane = arr[t, c, z]
+                if clamp_to_uint16 and plane.dtype != np.uint16:
+                    plane = np.clip(plane, 0, 65535).astype(np.uint16)
+                planes.append(
+                    {"z": z, "t": t, "c": c, "pixels": plane.ravel().tolist()}
+                )
+
+    dim_order = "XYCT" if size_z == 1 else "XYZCT"
+
+    return to_ome_arrow(
+        image_id=img_id,
+        name=display_name,
+        acquisition_datetime=acquisition_datetime or datetime.now(timezone.utc),
+        dimension_order=dim_order,
+        dtype="uint16",
+        size_x=size_x,
+        size_y=size_y,
+        size_z=size_z,
+        size_c=size_c,
+        size_t=size_t,
+        physical_size_x=psize_x,
+        physical_size_y=psize_y,
+        physical_size_z=psize_z,
+        physical_size_unit="µm",
+        channels=channels,
         planes=planes,
         masks=None,
     )

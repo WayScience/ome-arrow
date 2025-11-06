@@ -15,15 +15,30 @@
 # # OME-Arrow quiver
 #
 
-# +
 from ome_arrow import OMEArrow
 
-OMEArrow(
-    data="../../../tests/data/nviz-artificial-4d-dataset/E99_C<111-222>_ZS<000-047>.tif"
-).export(how="ome-tiff", out="example.ome.tiff")
-# -
+camtest = OMEArrow(
+    data="../../../tests/data/camtest/C2-7_405.tif"
+)
+camtest
 
+camtest.view(how="pyvista")
+
+stack = OMEArrow(
+    data="../../../tests/data/nviz-artificial-4d-dataset/E99_C<111,222>_ZS<000-047>.tif"
+)
+stack.export(how="ome-zarr", out="example.ome.zarr")
+stack
+
+OMEArrow(data="example.ome.zarr")
+
+stack.export(how="ome-tiff", out="example.ome.tiff")
 OMEArrow(data="example.ome.tiff")
+
+stack.export(how="ome-zarr", out="example.ome.zarr")
+OMEArrow(data="example.ome.zarr")
+
+stack.view(how="pyvista")
 
 OMEArrow(data="../../../tests/data/nviz-artificial-4d-dataset/E99_C111_ZS040.tif")
 

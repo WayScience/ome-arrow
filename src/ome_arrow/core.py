@@ -10,8 +10,8 @@ import pyarrow as pa
 import numpy as np
 from ome_arrow.meta import OME_ARROW_STRUCT
 from ome_arrow.view import view_matplotlib, view_pyvista
-from ome_arrow.ingest import from_tiff, from_stack_pattern_path
-from ome_arrow.export import to_numpy, to_ome_tiff
+from ome_arrow.ingest import from_tiff, from_stack_pattern_path, from_ome_zarr
+from ome_arrow.export import to_numpy, to_ome_tiff, to_ome_zarr
 from ome_arrow.utils import describe_ome_arrow
 
 
@@ -36,7 +36,18 @@ class OMEArrow:
         self,
         data: str | dict | pa.StructScalar,
     ):
+        """
+        Construct an OMEArrow from:
+        - a Bio-Formats-style stack pattern string (contains '<', '>', or '*')
+        - a path/URL to an OME-TIFF (.tif/.tiff)
+        - a path/URL to an OME-Zarr store (.zarr / .ome.zarr)
+        - a dict already matching the OME-Arrow schema
+        - a pa.StructScalar already typed to OME_ARROW_STRUCT
+        """
+        import pathlib
+        from ome_arrow.ingest import from_tiff, from_ome_zarr, from_stack_pattern_path
 
+        # --- 1) Stack pattern (Bio-Formats-style) --------------------------------
         if isinstance(data, str) and any(c in data for c in "<>*"):
             self.data = from_stack_pattern_path(
                 data,
@@ -44,34 +55,74 @@ class OMEArrow:
                 map_series_to="T",
                 clamp_to_uint16=True,
             )
-            
-        elif isinstance(data, str):
-            path = pathlib.Path(data)
-            if path.suffix.lower() in {".tif", ".tiff"}:
-                self.data = from_tiff(path, OME_ARROW_STRUCT)
-            else:
+            return
+
+        # --- 2) String path/URL: OME-Zarr or OME-TIFF -----------------------------
+        if isinstance(data, str):
+            s = data.strip()
+            path = pathlib.Path(s)
+
+            # Inline Zarr detection: suffix or substring check
+            if (
+                s.lower().endswith(".zarr")
+                or s.lower().endswith(".ome.zarr")
+                or ".zarr/" in s.lower()
+                or (path.exists() and path.is_dir() and path.suffix.lower() == ".zarr")
+            ):
+                self.data = from_ome_zarr(s)
+                return
+
+            # TIFF ingest
+            if path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith((".tif", ".tiff")):
+                self.data = from_tiff(s)
+                return
+
+            if path.exists() and path.is_dir():
                 raise ValueError(
-                    "String input data must be a .tif/.tiff path."
+                    f"Directory '{s}' exists but does not look like an OME-Zarr store "
+                    "(expected suffix '.zarr' or '.ome.zarr')."
                 )
-        elif isinstance(data, pa.StructScalar):
+
+            raise ValueError(
+                "String input must be one of:\n"
+                "  • Bio-Formats pattern string (contains '<', '>' or '*')\n"
+                "  • OME-Zarr path/URL ending with '.zarr' or '.ome.zarr'\n"
+                "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
+            )
+
+        # --- 3) Already-typed Arrow scalar ---------------------------------------
+        if isinstance(data, pa.StructScalar):
             self.data = data
-        elif isinstance(data, dict):
-            # Assumes dict matches the schema (or raises).
+            return
+
+        # --- 4) Plain dict matching the schema -----------------------------------
+        if isinstance(data, dict):
             self.data = pa.scalar(data, type=OME_ARROW_STRUCT)
-        else:
-            raise TypeError("input data must be str, dict, or pa.StructScalar")
+            return
+
+        # --- otherwise ------------------------------------------------------------
+        raise TypeError("input data must be str, dict, or pa.StructScalar")
 
     def export(
-        self,
-        how: str = "numpy",
-        dtype: np.dtype = np.uint16,
-        strict: bool = True,
-        clamp: bool = False,
-        out: str | None = None,
-        dim_order: str = "TCZYX",
-        compression: str | None = "zlib",
-        compression_level: int = 6,
-        tile: tuple[int, int] | None = None,
+    self,
+    how: str = "numpy",
+    dtype: np.dtype = np.uint16,
+    strict: bool = True,
+    clamp: bool = False,
+    *,
+    # common writer args
+    out: str | None = None,
+    dim_order: str = "TCZYX",
+    # OME-TIFF args
+    compression: str | None = "zlib",
+    compression_level: int = 6,
+    tile: tuple[int, int] | None = None,
+    # OME-Zarr args
+    chunks: tuple[int, int, int, int, int] | None = None,   # (T,C,Z,Y,X)
+    zarr_compressor: str | None = "zstd",
+    zarr_level: int = 7,
+    # optional display metadata (both paths guard/ignore if unsafe)
+    use_channel_colors: bool = False,
     ) -> Any:
         """
         Export the OME-Arrow content in a chosen representation.
@@ -79,29 +130,30 @@ class OMEArrow:
         Args
         ----
         how:
-            "numpy"   → TCZYX np.ndarray
-            "dict"    → plain Python dict
-            "scalar"  → pa.StructScalar (as-is)
-            "ome-tiff" (or "ometiff", "ome_tiff") → write an OME-TIFF file via BioIO
+            "numpy"     → TCZYX np.ndarray
+            "dict"      → plain Python dict
+            "scalar"    → pa.StructScalar (as-is)
+            "ome-tiff"  → write OME-TIFF via BioIO
+            "ome-zarr"  → write OME-Zarr (OME-NGFF) via BioIO
         dtype:
-            Target dtype for "numpy" export (default: np.uint16) and for OME-TIFF pixels.
+            Target dtype for "numpy"/writers (default: np.uint16).
         strict:
             For "numpy": raise if a plane has wrong pixel length.
         clamp:
-            For "numpy" and "ome-tiff": clamp values into dtype range before cast.
+            For "numpy"/writers: clamp values into dtype range before cast.
 
-        Keyword-only (OME-TIFF specific)
-        --------------------------------
+        Keyword-only (writer specific)
+        ------------------------------
         out:
-            Output path for the OME-TIFF file (required when how='ome-tiff').
+            Output path (required for 'ome-tiff' and 'ome-zarr').
         dim_order:
-            Axes string for BioIO writer; default "TCZYX".
-        compression:
-            TIFF compression (e.g., "zlib", "lzma", "jpegxl", or None).
-        compression_level:
-            Compression level for zlib (if used).
-        tile:
-            Optional tile size as (Y, X), e.g., (512, 512).
+            Axes string for BioIO writers; default "TCZYX".
+        compression / compression_level / tile:
+            OME-TIFF options (passed through to tifffile via BioIO).
+        chunks / zarr_compressor / zarr_level :
+            OME-Zarr options (chunk shape, compressor hint, level).
+        use_channel_colors:
+            Try to embed per-channel display colors when safe; otherwise omitted.
 
         Returns
         -------
@@ -109,12 +161,13 @@ class OMEArrow:
             - "numpy": np.ndarray (T, C, Z, Y, X)
             - "dict":  dict
             - "scalar": pa.StructScalar
-            - "ome-tiff": the output path (str)
+            - "ome-tiff": output path (str)
+            - "ome-zarr": output path (str)
 
         Raises
         ------
         ValueError:
-            Unknown 'how' or missing parameters for 'ome-tiff'.
+            Unknown 'how' or missing required params.
         """
         # existing modes
         if how == "numpy":
@@ -124,8 +177,10 @@ class OMEArrow:
         if how == "scalar":
             return self.data
 
-        # NEW: OME-TIFF via BioIO OmeTiffWriter
-        if how.lower().replace("_", "-") in {"ome-tiff", "ometiff"}:
+        mode = how.lower().replace("_", "-")
+
+        # OME-TIFF via BioIO
+        if mode in {"ome-tiff", "ometiff"}:
             if not out:
                 raise ValueError("export(how='ome-tiff') requires 'out' path.")
             to_ome_tiff(
@@ -137,6 +192,23 @@ class OMEArrow:
                 compression=compression,
                 compression_level=int(compression_level),
                 tile=tile,
+                use_channel_colors=use_channel_colors,
+            )
+            return out
+
+        # OME-Zarr via BioIO
+        if mode == "ome-zarr":
+            if not out:
+                raise ValueError("export(how='ome-zarr') requires 'out' path.")
+            to_ome_zarr(
+                self.data,
+                out,
+                dtype=dtype,
+                clamp=clamp,
+                dim_order=dim_order,
+                chunks=chunks,
+                compressor=zarr_compressor,
+                compressor_level=int(zarr_level),
             )
             return out
 
