@@ -29,6 +29,7 @@ dependencies = [
   "matplotlib>=3.10.7",
   "numpy>=2.2.6",
   "pandas>=2.2.3",
+  "pillow>=12",
   "pyarrow>=22",
   "pyvista>=0.46.4",
   "trame>=3.12",
@@ -93,6 +94,8 @@ lint.select = [
   "SIM",
   "W",
 ]
+# ignore various rules for all
+lint.per-file-ignores."*" = [ "ANN401", "C901", "PLC0415", "PLR0912", "PLR0913", "PLR0915", "PLR2004" ]
 # Ignore `F401` (unused imports) for `__init__.py` file
 lint.per-file-ignores."__init__.py" = [ "F401" ]
 # ignore typing rules for tests

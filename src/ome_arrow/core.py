@@ -7,8 +7,10 @@ from __future__ import annotations
 import pathlib
 from typing import Any, Dict, Iterable, Optional, Tuple
 
+import matplotlib
 import numpy as np
 import pyarrow as pa
+import pyvista
 
 from ome_arrow.export import to_numpy, to_ome_parquet, to_ome_tiff, to_ome_zarr
 from ome_arrow.ingest import (
@@ -45,14 +47,15 @@ class OMEArrow:
         self,
         data: str | dict | pa.StructScalar | "np.ndarray",
         tcz: Tuple[int, int, int] = (0, 0, 0),
-    ):
+    ) -> None:
         """
         Construct an OMEArrow from:
         - a Bio-Formats-style stack pattern string (contains '<', '>', or '*')
         - a path/URL to an OME-TIFF (.tif/.tiff)
         - a path/URL to an OME-Zarr store (.zarr / .ome.zarr)
         - a path/URL to an OME-Parquet file (.parquet / .pq)
-        - a NumPy ndarray (2D–5D; interpreted with from_numpy defaults)
+        - a NumPy ndarray (2D-5D; interpreted
+            with from_numpy defaults)
         - a dict already matching the OME-Arrow schema
         - a pa.StructScalar already typed to OME_ARROW_STRUCT
         """
@@ -113,7 +116,8 @@ class OMEArrow:
         # --- 3) NumPy ndarray ----------------------------------------------------
         elif isinstance(data, np.ndarray):
             # Uses from_numpy defaults: dim_order="TCZYX", clamp_to_uint16=True, etc.
-            # If the array is YX/ZYX/CYX/etc., from_numpy will expand/reorder accordingly.
+            # If the array is YX/ZYX/CYX/etc.,
+            # from_numpy will expand/reorder accordingly.
             self.data = from_numpy(data)
 
         # --- 4) Already-typed Arrow scalar ---------------------------------------
@@ -154,7 +158,7 @@ class OMEArrow:
         parquet_column_name: str = "ome_arrow",
         parquet_compression: str | None = "zstd",
         parquet_metadata: dict[str, str] | None = None,
-    ) -> Any:
+    ) -> np.array | dict | pa.StructScalar | str:
         """
         Export the OME-Arrow content in a chosen representation.
 
@@ -289,7 +293,7 @@ class OMEArrow:
         clim: tuple[float, float] | None = None,
         show_axes: bool = True,
         scaling_values: tuple[float, float, float] | None = (1.0, 0.1, 0.1),
-    ):
+    ) -> matplotlib.figure.Figure | pyvista.Plotter:
         """
         Display via PyVista interactively in Jupyter,
         and embed a hidden PNG snapshot for static web renderers.
@@ -364,7 +368,7 @@ class OMEArrow:
         c_indices: Optional[Iterable[int]] = None,
         z_indices: Optional[Iterable[int]] = None,
         fill_missing: bool = True,
-    ):
+    ) -> OMEArrow:
         """
         Create a cropped copy of an OME-Arrow record.
 

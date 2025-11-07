@@ -164,7 +164,7 @@ def to_ome_tiff(
     # 2) Metadata
     row = data.as_py() if isinstance(data, pa.StructScalar) else data
     pm = row["pixels_meta"]
-    st, sc, sz, sy, sx = arr.shape
+    _st, sc, _sz, _sy, _sx = arr.shape
 
     # Channel names
     chs: Sequence[Dict[str, Any]] = pm.get("channels", []) or []
@@ -337,7 +337,8 @@ def to_ome_zarr(
         multiscale_levels
     )
 
-    # 5) Chunking / shards (can be single-shape or per-level; we pass single-shape if provided)
+    # 5) Chunking / shards (can be single-shape or per-level;
+    # we pass single-shape if provided)
     chunk_shape: Optional[List[Tuple[int, ...]]] = None
     if chunks is not None:
         chunk_shape = [tuple(int(v) for v in chunks)] * multiscale_levels
@@ -349,7 +350,7 @@ def to_ome_zarr(
     # 6) Image name default
     img_name = image_name or str(row.get("name") or row.get("id") or "Image")
 
-    # 7) Instantiate writer with your class’ constructor
+    # 7) Instantiate writer with your class constructor
     writer = OMEZarrWriter(
         store=out_path,
         level_shapes=level_shapes,

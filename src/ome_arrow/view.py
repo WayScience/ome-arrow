@@ -2,6 +2,7 @@
 Viewing utilities for OME-Arrow data.
 """
 
+import contextlib
 from typing import Any, Dict, Tuple
 
 import matplotlib.pyplot as plt
@@ -97,7 +98,7 @@ def view_pyvista(
     percentile_clim: tuple[float, float] = (1.0, 99.9),  # robust contrast
     sampling_scale: float = 0.5,  # smaller = denser rays (sharper, slower)
     show: bool = True,
-):
+) -> pv.Plotter:
     """
     Jupyter-inline interactive volume view using PyVista backends.
     Tries 'trame' → 'html' → 'static' when backend='auto'.
@@ -112,7 +113,7 @@ def view_pyvista(
     row = data.as_py() if isinstance(data, pa.StructScalar) else data
     pm = row["pixels_meta"]
     sx, sy, sz = int(pm["size_x"]), int(pm["size_y"]), int(pm["size_z"])
-    sc, st = int(pm["size_c"]), int(pm["size_t"])
+    sc, _st = int(pm["size_c"]), int(pm["size_t"])
     if not (0 <= c < sc):
         raise ValueError(f"Channel out of range: 0..{sc - 1}")
 
@@ -168,7 +169,7 @@ def view_pyvista(
                 return False
 
     if backend == "auto":
-        backend_used = (
+        (
             "trame"
             if _try_backend("trame")
             else "html"
@@ -176,7 +177,7 @@ def view_pyvista(
             else "static"
         )
     else:
-        backend_used = backend if _try_backend(backend) else "static"
+        backend if _try_backend(backend) else "static"
 
     pv.OFF_SCREEN = False
 
@@ -258,7 +259,7 @@ def view_pyvista(
         ztitle="Z (µm)",
     )
 
-    def _force_white_bounds(*_args, **_kwargs):
+    def _force_white_bounds(*_args: object, **_kwargs: object) -> None:
         try:
             ren = pl.renderer
 
@@ -287,18 +288,16 @@ def view_pyvista(
         except Exception:
             pass
 
-    # run BEFORE drawing the frame so it’s visible immediately
+    # run BEFORE drawing the frame so it's visible immediately
     pl.ren_win.AddObserver("StartEvent", _force_white_bounds)
 
     # keep the old safety net if you like (optional):
     pl.iren.add_observer("RenderEvent", _force_white_bounds)
 
-    def _recolor_and_render():
+    def _recolor_and_render() -> None:
         _force_white_bounds()
-        try:
+        with contextlib.suppress(Exception):
             pl.render()  # immediate redraw so you see the white bounds now
-        except Exception:
-            pass
 
     pl.add_key_event("r", _recolor_and_render)
 

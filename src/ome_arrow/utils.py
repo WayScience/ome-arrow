@@ -69,10 +69,7 @@ def describe_ome_arrow(data: pa.StructScalar | dict) -> Dict[str, Any]:
         kind = "unknown"
 
     # --- Channel classification ---
-    if c > 1:
-        channel_info = f"multi-channel ({c} channels)"
-    else:
-        channel_info = "single-channel"
+    channel_info = f"multi-channel ({c} channels)" if c > 1 else "single-channel"
 
     # --- Summary ---
     summary = f"{kind}, {channel_info} - shape (T={t}, C={c}, Z={z}, Y={y}, X={x})"

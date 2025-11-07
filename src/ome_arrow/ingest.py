@@ -552,13 +552,13 @@ def from_stack_pattern_path(
     a0 = np.asarray(img0.data)
     # bioio returns TCZYX or YX; normalize to TCZYX
     if a0.ndim == 2:
-        T0, C0, Z0, Y0, X0 = 1, 1, 1, a0.shape[0], a0.shape[1]
+        _T0, _C0, _Z0, Y0, X0 = 1, 1, 1, a0.shape[0], a0.shape[1]
     else:
         # Heuristic: last two are (Y,X); leading dims are (T,C,Z) possibly singleton
         Y0, X0 = a0.shape[-2], a0.shape[-1]
         lead = a0.shape[:-2]
         # Pad leading dims to T,C,Z (left-aligned)
-        T0, C0, Z0 = (list(lead) + [1, 1, 1])[:3]
+        _T0, _C0, _Z0 = ([*list(lead), 1, 1, 1])[:3]
     size_y, size_x = Y0, X0
 
     # physical pixel sizes
@@ -601,7 +601,8 @@ def from_stack_pattern_path(
                     # Direct YX
                     if arr.shape != (size_y, size_x):
                         raise ValueError(
-                            f"Shape mismatch for {fpath.name}: {arr.shape} vs {(size_y, size_x)}"
+                            f"Shape mismatch for {fpath.name}:"
+                            f" {arr.shape} vs {(size_y, size_x)}"
                         )
                     arr = _ensure_u16(arr)
                     planes.append(
@@ -611,10 +612,11 @@ def from_stack_pattern_path(
                     # Treat as TCZYX; extract dims
                     Y, X = arr.shape[-2], arr.shape[-1]
                     lead = arr.shape[:-2]
-                    Tn, Cn, Zn = (list(lead) + [1, 1, 1])[:3]
+                    Tn, Cn, Zn = ([*list(lead), 1, 1, 1])[:3]
                     if (size_y, size_x) != (Y, X):
                         raise ValueError(
-                            f"Shape mismatch for {fpath.name}: {(Y, X)} vs {(size_y, size_x)}"
+                            f"Shape mismatch for {fpath.name}:"
+                            f" {(Y, X)} vs {(size_y, size_x)}"
                         )
 
                     # Case A: singleton TCZ -> squeeze to YX
@@ -642,10 +644,12 @@ def from_stack_pattern_path(
                         # bump global size_z if we exceeded it
                         size_z = max(size_z, z + Zn)
                     else:
-                        # For now, we require multi-T/C pages to be expressed by the filename pattern,
+                        # For now, we require multi-T/C pages to be
+                        # expressed by the filename pattern,
                         # not embedded inside a single file.
                         raise ValueError(
-                            f"{fpath.name} contains multiple pages across T/C/Z={Tn, Cn, Zn}; "
+                            f"{fpath.name} contains "
+                            f"multiple pages across T/C/Z={Tn, Cn, Zn}; "
                             f"only Z>1 with T=C=1 is supported inside one file. "
                             f"Please express T/C via the filename pattern."
                         )
@@ -918,7 +922,7 @@ def from_ome_parquet(
     # Optional: soft validation via file-level metadata (if present)
     try:
         meta = table.schema.metadata or {}
-        tag_ok = meta.get(b"ome.arrow.type", b"").decode() == str(
+        meta.get(b"ome.arrow.type", b"").decode() == str(
             OME_ARROW_TAG_TYPE
         ) and meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
         # You could log/print a warning if tag_ok is False, but don't fail.
