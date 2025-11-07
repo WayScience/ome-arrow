@@ -329,11 +329,10 @@ class OMEArrow:
                     from PIL import Image as PILImage  # pillow is a light dep most envs have
                     PILImage.fromarray(img).save(buf, format="PNG")
                     b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-
                     display(HTML(
                         f"""
                         <details>
-                        <summary>Static snapshot (for GitHub/nbviewer)</summary>
+                        <summary>Static snapshot (for non-interactive view)</summary>
                         <img src="data:image/png;base64,{b64}" />
                         </details>
                         """
