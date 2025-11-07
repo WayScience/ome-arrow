@@ -101,21 +101,21 @@ def view_pyvista(
     data: dict | pa.StructScalar,
     c: int = 0,
     downsample: int = 1,
-    scaling_values: tuple[float, float, float] | None = None,  # NEW: (Z, Y, X)
+    scaling_values: tuple[float, float, float] | None = None,  # (Z, Y, X)
     opacity: str | float = "sigmoid",
     clim: tuple[float, float] | None = None,
     show_axes: bool = True,
     backend: str = "auto",  # "auto" | "trame" | "html" | "static"
+    interpolation: str = "nearest",  # "nearest" or "linear"
+    background: str = "black",
+    percentile_clim: tuple[float, float] = (1.0, 99.9),  # robust contrast
+    sampling_scale: float = 0.5,  # smaller = denser rays (sharper, slower)
 ):
     """
-    Jupyter-inline interactive volume view using PyVista 0.46+ backends.
+    Jupyter-inline interactive volume view using PyVista backends.
     Tries 'trame' → 'html' → 'static' when backend='auto'.
 
-    Parameters
-    ----------
-    scaling_values : (Z, Y, X) or None
-        Legacy-style voxel spacing tuple (Z, Y, X). If provided, overrides
-        pixels_meta.physical_size_{x,y,z}. If None, uses pixels_meta.
+    sampling_scale controls ray step via the mapper after add_volume.
     """
     import warnings
     import numpy as np
@@ -129,15 +129,13 @@ def view_pyvista(
     if not (0 <= c < sc):
         raise ValueError(f"Channel out of range: 0..{sc-1}")
 
-    # ---- spacing (PyVista expects (dx, dy, dz) ≡ world units along X,Y,Z)
-    # default from OME-Arrow metadata
+    # ---- spacing (dx, dy, dz) in world units
     dx = float(pm.get("physical_size_x", 1.0) or 1.0)
     dy = float(pm.get("physical_size_y", 1.0) or 1.0)
     dz = float(pm.get("physical_size_z", 1.0) or 1.0)
 
     # optional override from legacy scaling tuple (Z, Y, X)
     if scaling_values is None and "scaling_values" in pm:
-        # if you stored it in pixels_meta before, honor it
         try:
             sz_legacy, sy_legacy, sx_legacy = pm["scaling_values"]
             dz, dy, dx = float(sz_legacy), float(sy_legacy), float(sx_legacy)
@@ -154,22 +152,23 @@ def view_pyvista(
             z = int(p["z"])
             vol_zyx[z] = np.asarray(p["pixels"], dtype=np.uint16).reshape(sy, sx)
 
-    # optional downsampling: scale both data and spacing
+    # optional downsampling (keep spacing consistent)
     if downsample > 1:
         vol_zyx = vol_zyx[::downsample, ::downsample, ::downsample]
         dz, dy, dx = dz * downsample, dy * downsample, dx * downsample
 
-    # VTK expects (X,Y,Z) memory order and spacing=(dx,dy,dz)
-    vol_xyz = vol_zyx.transpose(2, 1, 0)   # (nx, ny, nz)
+    # VTK expects (X,Y,Z) memory order
+    vol_xyz = vol_zyx.transpose(2, 1, 0)  # (nx, ny, nz)
     nx, ny, nz = map(int, vol_xyz.shape)
 
+    # ---- contrast limits (robust percentiles, like napari)
     if clim is None:
-        vmin, vmax = float(vol_xyz.min()), float(vol_xyz.max())
-        if vmax <= vmin:
-            vmax = vmin + 1.0
-        clim = (vmin, vmax)
+        lo, hi = np.percentile(vol_xyz, percentile_clim)
+        lo = float(lo)
+        hi = float(hi if hi > lo else lo + 1.0)
+        clim = (lo, hi)
 
-    # ---- select backend
+    # ---- backend selection
     def _try_backend(name: str) -> bool:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message=".*notebook backend.*",
@@ -189,26 +188,126 @@ def view_pyvista(
 
     pv.OFF_SCREEN = False
 
-    # ---- build dataset as ImageData (UniformGrid)
+    # ---- build dataset
     img = pv.ImageData()
-    img.dimensions = (nx, ny, nz)   # number of points along each axis (X,Y,Z)
-    img.spacing = (dx, dy, dz)      # physical spacing along each axis (X,Y,Z)
+    img.dimensions = (nx, ny, nz)
+    img.spacing = (dx, dy, dz)
     img.origin = (0.0, 0.0, 0.0)
     img.point_data.clear()
     img.point_data["scalars"] = np.asfortranarray(vol_xyz).ravel(order="F")
 
+    # Make "scalars" active across PyVista versions
+    try:
+        img.point_data.set_active_scalars("scalars")
+    except AttributeError:
+        try:
+            img.point_data.active_scalars_name = "scalars"
+        except Exception:
+            img.set_active_scalars("scalars")
+
     # ---- render
     pl = pv.Plotter()
-    pl.set_background("#555555")
-    pl.add_volume(
+    pl.set_background(background)
+
+    # sensible opacity behavior relative to spacing
+    base_sample = max(min(dx, dy, dz), 1e-6)  # avoid zero
+
+    vol_actor = pl.add_volume(
         img,
-        cmap="binary",
+        cmap="gray",                   # napari-like
         opacity=opacity,
         clim=clim,
+        shade=False,                   # microscopy usually unshaded
         scalar_bar_args={"title": "intensity"},
+        opacity_unit_distance=base_sample,   # keep opacity consistent
+        # no sampling_distance kwarg here (set via mapper below)
     )
+
+    # -- crispness & interpolation (version-safe)
+    try:
+        prop = getattr(vol_actor, "prop", None) or vol_actor.GetProperty()
+        # nearest vs linear sampling
+        if interpolation.lower().startswith("near"):
+            prop.SetInterpolationTypeToNearest()
+        else:
+            prop.SetInterpolationTypeToLinear()
+        # stop pre-map smoothing if available (big win for microscopy)
+        if hasattr(prop, "SetInterpolateScalarsBeforeMapping"):
+            prop.SetInterpolateScalarsBeforeMapping(False)
+        # also expose scalar opacity unit distance in case kwarg unsupported
+        if hasattr(prop, "SetScalarOpacityUnitDistance"):
+            prop.SetScalarOpacityUnitDistance(base_sample)
+    except Exception:
+        pass
+
+    # -- ray sampling density via mapper (works across many VTK versions)
+    try:
+        mapper = getattr(vol_actor, "mapper", None) or vol_actor.GetMapper()
+        # lock sample distance if API allows
+        if hasattr(mapper, "SetAutoAdjustSampleDistances"):
+            mapper.SetAutoAdjustSampleDistances(False)
+        if hasattr(mapper, "SetUseJittering"):
+            mapper.SetUseJittering(False)
+        if hasattr(mapper, "SetSampleDistance"):
+            mapper.SetSampleDistance(float(base_sample * sampling_scale))
+    except Exception:
+        pass
+
     if show_axes:
         pl.add_axes()
-    pl.add_text(f"T=0 / {max(0, st-1)}  C={c}  [{backend_used}]",
-                font_size=10)
+    
+    pl.show_bounds(
+        color="white",
+        grid="front",
+        location="outer",
+        ticks="both",
+        xtitle="X (µm)",
+        ytitle="Y (µm)",
+        ztitle="Z (µm)",
+    )
+
+    def _force_white_bounds(*_args, **_kwargs):
+        try:
+            ren = pl.renderer
+
+            # Modern cube-axes path
+            if getattr(ren, "cube_axes_actor", None):
+                ca = ren.cube_axes_actor
+                # axis line colors
+                for prop in (
+                    ca.GetXAxesLinesProperty(),
+                    ca.GetYAxesLinesProperty(),
+                    ca.GetZAxesLinesProperty(),
+                ):
+                    prop.SetColor(1, 1, 1)
+                # titles and tick labels
+                for i in (0, 1, 2):  # 0:X, 1:Y, 2:Z
+                    ca.GetTitleTextProperty(i).SetColor(1, 1, 1)
+                    ca.GetLabelTextProperty(i).SetColor(1, 1, 1)
+                ca.Modified()
+
+            # Older/internal bounds actors
+            if getattr(ren, "_bounds_actors", None):
+                for actor in ren._bounds_actors.values():
+                    actor.GetProperty().SetColor(1, 1, 1)
+                    actor.Modified()
+
+        except Exception:
+            pass
+
+    # run BEFORE drawing the frame so it’s visible immediately
+    pl.ren_win.AddObserver("StartEvent", _force_white_bounds)
+
+    # keep the old safety net if you like (optional):
+    pl.iren.add_observer("RenderEvent", _force_white_bounds)
+
+    def _recolor_and_render():
+        _force_white_bounds()
+        try:
+            pl.render()  # immediate redraw so you see the white bounds now
+        except Exception:
+            pass
+
+    pl.add_key_event("r", _recolor_and_render)
+
     return pl.show()
