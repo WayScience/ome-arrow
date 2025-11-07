@@ -3,46 +3,25 @@ Viewing utilities for OME-Arrow data.
 """
 
 import contextlib
-from typing import Any, Dict, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow as pa
 import pyvista as pv
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
 
 
 def view_matplotlib(
-    data: Dict[str, Any] | pa.StructScalar,
-    tcz: Tuple[int, int, int] = (0, 0, 0),
+    data: dict[str, object] | pa.StructScalar,
+    tcz: tuple[int, int, int] = (0, 0, 0),
     autoscale: bool = True,
     vmin: int | None = None,
     vmax: int | None = None,
     cmap: str = "gray",
     show: bool = True,
-) -> plt:
-    """Display a single (t,c,z) plane from an OME-Arrow record.
-
-    Minimal deps: pyarrow (if scalar), numpy, matplotlib.
-
-    Args:
-      data:
-        OME-Arrow data as a Python dict or StructScalar.
-      tcz:
-        (t, c, z) indices of the plane to display. Defaults to (0,0,0).
-      autoscale:
-        If True and vmin/vmax not passed, set vmin/vmax from data range.
-      vmin:
-        Optional lower limit for display scaling.
-      vmax:
-        Optional upper limit for display scaling.
-      cmap:
-        Matplotlib colormap for single-channel display.
-      show:
-        If True (default), calls plt.show() to display the image.
-
-    Raises:
-      ValueError: If the requested plane is not found or shapes mismatch.
-    """
+) -> tuple[Figure, Axes, AxesImage]:
     if isinstance(data, pa.StructScalar):
         data = data.as_py()
 
@@ -74,14 +53,14 @@ def view_matplotlib(
         vmin = lo if vmin is None else vmin
         vmax = hi if vmax is None else vmax
 
-    plt.figure()
-    plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
-    plt.axis("off")
+    fig, ax = plt.subplots()
+    im: AxesImage = ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.axis("off")
 
     if show:
         plt.show()
 
-    return plt
+    return fig, ax, im
 
 
 def view_pyvista(

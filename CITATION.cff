@@ -11,7 +11,16 @@ authors:
   - given-names: Dave
     family-names: Bunten
     orcid: "https://orcid.org/0000-0001-6041-3665"
-repository-code: "https://github.com/d33bs/ome-arrow"
+  - given-names: Jenna
+    family-names: Tomkinson
+    orcid: 'https://orcid.org/0000-0003-2676-5813'
+  - given-names: Michael
+    family-names: Lippincott
+    orcid: 'https://orcid.org/0000-0002-8637-1448'
+  - given-names: Gregory
+    family-names: Way
+    orcid: 'https://orcid.org/0000-0002-0503-9348'
+repository-code: "https://github.com/wayscience/ome-arrow"
 abstract: >-
   Using OME specifications with Apache Arrow for fast, queryable, and language agnostic bioimage data.
 keywords:
@@ -32,3 +41,19 @@ references:
       - description: "README.md with Citation Information"
         type: url
         value: "https://github.com/CellProfiler/examples/blob/master/ExampleHuman/README.md"
+  - authors:
+      - name: "Open Microscopy Environment (OME) Team"
+    date-accessed: "2025-11-07"
+    title: OME-TIFF Sample Data
+    type: data
+    repository-code: "https://github.com/ome/ome-model"
+    url: "https://ome-model.readthedocs.io/en/stable/ome-tiff/data.html"
+    scope: "OME-TIFF Example Datasets"
+    notes: >-
+      The OME-TIFF sample datasets illustrate the structure and metadata conventions
+      used in the OME-TIFF format, including images for testing readers, writers,
+      and visualization tools.
+    identifiers:
+      - description: "OME Model Documentation — OME-TIFF Sample Data"
+        type: url
+        value: "https://ome-model.readthedocs.io/en/stable/ome-tiff/data.html"

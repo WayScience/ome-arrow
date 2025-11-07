@@ -21,8 +21,8 @@ sys.path.insert(0, basedir)
 
 project = "ome_arrow"
 # is used here due to sphinx decision-making: https://github.com/sphinx-doc/sphinx/issues/8132
-copyright = "2024, DBMI Community"  # noqa: A001
-author = "DBMI Community"
+copyright = "2024, Way Science Community"  # noqa: A001
+author = "Way Science Community"
 
 # -- General configuration ---------------------------------------------------
 
@@ -56,7 +56,7 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/d33bs/ome-arrow",
+            "url": "https://github.com/wayscience/ome-arrow",
             "icon": "fa-brands fa-github",
         },
     ],

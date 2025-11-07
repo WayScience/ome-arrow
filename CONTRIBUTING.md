@@ -11,7 +11,7 @@ If you are stuck, please feel free to ask any questions or ask for help.
 This project is governed by our [code of conduct](code_of_conduct.md). By participating, you are expected to uphold this code.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to community leaders responsible for enforcement.
-Please open a [new security advisory notice](https://github.com/d33bs/ome-arrow/security/advisories/new) (using defaults or "n/a" where unable to fill in the form) to privately notify us of any incidents of this nature.
+Please open a [new security advisory notice](https://github.com/wayscience/ome-arrow/security/advisories/new) (using defaults or "n/a" where unable to fill in the form) to privately notify us of any incidents of this nature.
 
 ## Development
 
@@ -57,7 +57,7 @@ We welcome anyone to use [GitHub issues](https://docs.github.com/en/issues/track
 
 Specifically, there are several ways to suggest or make changes to this repository:
 
-1. Open a GitHub issue: https://github.com/d33bs/ome-arrow/issues
+1. Open a GitHub issue: https://github.com/wayscience/ome-arrow/issues
 1. Create a pull request from a forked branch of the repository
 
 ### Creating a pull request
@@ -72,7 +72,7 @@ Once you make the necessary changes on this branch, you should file a pull reque
 The content and description of your pull request are directly related to the speed at which we are able to review, approve, and merge your contribution.
 To ensure an efficient review process please perform the following steps:
 
-1. Follow all instructions in the [pull request template](https://github.com/d33bs/ome-arrow/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
+1. Follow all instructions in the [pull request template](https://github.com/wayscience/ome-arrow/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
 1. Triple check that your pull request is adding _one_ specific feature or additional group of content.
    Small, bite-sized pull requests move so much faster than large pull requests.
 1. After submitting your pull request, ensure that your contribution passes all status checks (e.g. passes all tests)
@@ -93,7 +93,7 @@ Versioning for the project is intended to align with GitHub Releases which provi
 
 ### Releases
 
-We publish source code by using [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) available [here](https://github.com/d33bs/ome-arrow/releases).
+We publish source code by using [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) available [here](https://github.com/wayscience/ome-arrow/releases).
 
 #### Release Publishing Process
 
