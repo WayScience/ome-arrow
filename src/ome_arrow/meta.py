@@ -2,7 +2,6 @@
 Meta-definition for OME-Arrow format.
 """
 
-import numpy as np
 import pyarrow as pa
 
 from ._version import version as ome_arrow_version
@@ -89,13 +88,3 @@ OME_ARROW_STRUCT: pa.StructType = pa.struct(
         pa.field("masks", pa.null()),  # reserved for future annotations
     ]
 )
-
-# map numpy dtypes to ome-arrow types
-DTYPE_MAP_NUMPY_TO_ARROW = {
-    np.dtype("uint8"): "uint8",
-    np.dtype("uint16"): "uint16",
-    np.dtype("uint32"): "uint32",
-    np.dtype("int16"): "int16",
-    np.dtype("float32"): "float",
-    np.dtype("float64"): "double",
-}

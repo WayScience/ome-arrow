@@ -95,6 +95,8 @@ lint.select = [
 ]
 # Ignore `F401` (unused imports) for `__init__.py` file
 lint.per-file-ignores."__init__.py" = [ "F401" ]
+# ignore typing rules for tests
+lint.per-file-ignores."tests/*" = [ "ANN201", "PLR0913", "PLR2004" ]
 
 [tool.pytest.ini_options]
 pythonpath = [ "." ]

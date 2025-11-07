@@ -13,8 +13,8 @@ import pyarrow as pa
 from ome_arrow.export import to_numpy, to_ome_parquet, to_ome_tiff, to_ome_zarr
 from ome_arrow.ingest import (
     from_numpy,
+    from_ome_parquet,
     from_ome_zarr,
-    from_parquet,
     from_stack_pattern_path,
     from_tiff,
 )
@@ -68,10 +68,9 @@ class OMEArrow:
                 map_series_to="T",
                 clamp_to_uint16=True,
             )
-            return
 
         # --- 2) String path/URL: OME-Zarr / OME-Parquet / OME-TIFF ---------------
-        if isinstance(data, str):
+        elif isinstance(data, str):
             s = data.strip()
             path = pathlib.Path(s)
 
@@ -83,58 +82,53 @@ class OMEArrow:
                 or (path.exists() and path.is_dir() and path.suffix.lower() == ".zarr")
             ):
                 self.data = from_ome_zarr(s)
-                return
 
             # OME-Parquet
-            if s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {
+            elif s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {
                 ".parquet",
                 ".pq",
             }:
-                self.data = from_parquet(s)
-                return
+                self.data = from_ome_parquet(s)
 
             # TIFF
-            if path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
+            elif path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
                 (".tif", ".tiff")
             ):
                 self.data = from_tiff(s)
-                return
 
-            if path.exists() and path.is_dir():
+            elif path.exists() and path.is_dir():
                 raise ValueError(
                     f"Directory '{s}' exists but does not look like an OME-Zarr store "
                     "(expected suffix '.zarr' or '.ome.zarr')."
                 )
-
-            raise ValueError(
-                "String input must be one of:\n"
-                "  • Bio-Formats pattern string (contains '<', '>' or '*')\n"
-                "  • OME-Zarr path/URL ending with '.zarr' or '.ome.zarr'\n"
-                "  • OME-Parquet file ending with '.parquet' or '.pq'\n"
-                "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
-            )
+            else:
+                raise ValueError(
+                    "String input must be one of:\n"
+                    "  • Bio-Formats pattern string (contains '<', '>' or '*')\n"
+                    "  • OME-Zarr path/URL ending with '.zarr' or '.ome.zarr'\n"
+                    "  • OME-Parquet file ending with '.parquet' or '.pq'\n"
+                    "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
+                )
 
         # --- 3) NumPy ndarray ----------------------------------------------------
-        if isinstance(data, np.ndarray):
+        elif isinstance(data, np.ndarray):
             # Uses from_numpy defaults: dim_order="TCZYX", clamp_to_uint16=True, etc.
             # If the array is YX/ZYX/CYX/etc., from_numpy will expand/reorder accordingly.
             self.data = from_numpy(data)
-            return
 
         # --- 4) Already-typed Arrow scalar ---------------------------------------
-        if isinstance(data, pa.StructScalar):
+        elif isinstance(data, pa.StructScalar):
             self.data = data
-            return
 
         # --- 5) Plain dict matching the schema -----------------------------------
-        if isinstance(data, dict):
+        elif isinstance(data, dict):
             self.data = pa.scalar(data, type=OME_ARROW_STRUCT)
-            return
 
         # --- otherwise ------------------------------------------------------------
-        raise TypeError(
-            "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
-        )
+        else:
+            raise TypeError(
+                "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
+            )
 
     def export(
         self,

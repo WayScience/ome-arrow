@@ -807,7 +807,7 @@ def from_ome_zarr(
     )
 
 
-def from_parquet(
+def from_ome_parquet(
     parquet_path: str | Path,
     *,
     column_name: Optional[str] = "ome_arrow",
