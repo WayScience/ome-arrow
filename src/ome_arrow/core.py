@@ -1,8 +1,8 @@
 """
 Core of the ome_arrow package, used for classes and such.
 """
-from __future__ import annotations
 
+from __future__ import annotations
 import pathlib
 from typing import Any, Optional, Tuple, Dict, Iterable
 
@@ -270,19 +270,24 @@ class OMEArrow:
     def view(
         self,
         how: str = "matplotlib",
-        tcz: Tuple[int, int, int] = (0, 0, 0),
+        tcz: tuple[int, int, int] = (0, 0, 0),
         autoscale: bool = True,
-        vmin: Optional[int] = None,
-        vmax: Optional[int] = None,
+        vmin: int | None = None,
+        vmax: int | None = None,
         cmap: str = "gray",
         show: bool = True,
-        c: Optional[int] = None,
+        c: int | None = None,
         downsample: int = 1,
         opacity: str | float = "sigmoid",
-        clim: Optional[Tuple[float, float]] = None,
+        clim: tuple[float, float] | None = None,
         show_axes: bool = True,
-        scaling_values: Optional[tuple[float, float, float]] = (1.0, 0.1, 0.1),
-    ) -> Any:
+        scaling_values: tuple[float, float, float] | None = (1.0, 0.1, 0.1),
+    ) -> any:
+        """
+        Simple viewer for OME-Arrow data.
+        - matplotlib mode: shown inline automatically.
+        - pyvista mode: embeds a PNG snapshot via plotter.screenshot().
+        """
         if how == "matplotlib":
             return view_matplotlib(
                 self.data,
@@ -295,8 +300,11 @@ class OMEArrow:
             )
 
         if how == "pyvista":
+            import pyvista as pv
+            from IPython.display import display, Image
+
             c_idx = int(tcz[1] if c is None else c)
-            return view_pyvista(
+            plotter = view_pyvista(
                 data=self.data,
                 c=c_idx,
                 downsample=downsample,
@@ -304,7 +312,21 @@ class OMEArrow:
                 clim=clim,
                 show_axes=show_axes,
                 scaling_values=scaling_values,
+                show=False,
             )
+
+            # Capture a PNG snapshot and display it inline in Jupyter
+            try:
+                png_bytes = plotter.screenshot(return_img=False, filename=None)
+                display(Image(filename="screenshot.png"))  # show inline
+            except Exception:
+                pass
+
+            if show:
+                plotter.show()
+                return None
+            else:
+                return plotter
 
         raise ValueError(f"Unknown view method: {how}")
     

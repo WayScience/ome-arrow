@@ -96,6 +96,7 @@ def view_pyvista(
     background: str = "black",
     percentile_clim: tuple[float, float] = (1.0, 99.9),  # robust contrast
     sampling_scale: float = 0.5,  # smaller = denser rays (sharper, slower)
+    show: bool = True,
 ):
     """
     Jupyter-inline interactive volume view using PyVista backends.
@@ -296,4 +297,7 @@ def view_pyvista(
 
     pl.add_key_event("r", _recolor_and_render)
 
-    return pl.show()
+    if show:
+        pl.show()
+
+    return pl

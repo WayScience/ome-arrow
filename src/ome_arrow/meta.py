@@ -1,3 +1,7 @@
+"""
+Meta-definition for OME-Arrow format.
+"""
+
 import numpy as np
 import pyarrow as pa
 from ._version import version as ome_arrow_version
