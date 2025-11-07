@@ -55,5 +55,3 @@ stack.slice(
     c_indices=[0],
     z_indices=[20],
 )
-
-
