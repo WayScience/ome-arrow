@@ -285,8 +285,8 @@ class OMEArrow:
         scaling_values: tuple[float, float, float] | None = (1.0, 0.1, 0.1),
     ):
         """
-        Display interactively via PyVista, but embed a hidden static PNG
-        so that GitHub/nbviewer can render it when viewing saved notebooks.
+        Display via PyVista interactively in Jupyter,
+        and embed a hidden PNG snapshot for static web renderers.
         """
         if how == "matplotlib":
             return view_matplotlib(
@@ -301,9 +301,8 @@ class OMEArrow:
 
         if how == "pyvista":
             import pyvista as pv
-            import io
-            import matplotlib.pyplot as plt
-            from IPython.display import display, Image, clear_output
+            import io, base64
+            from IPython.display import display, HTML
 
             c_idx = int(tcz[1] if c is None else c)
             plotter = view_pyvista(
@@ -317,29 +316,32 @@ class OMEArrow:
                 show=False,
             )
 
-            # silently capture static snapshot and store it invisibly
-            try:
-                arr = plotter.screenshot(return_img=True)
-                if arr is not None:
-                    buf = io.BytesIO()
-                    plt.imsave(buf, arr)
-                    # Emit image so it's saved in notebook output
-                    display(Image(data=buf.getvalue()))
-                    # Immediately clear so it disappears in the live view
-                    clear_output(wait=True)
-            except Exception as e:
-                print(f"Warning: could not save hidden PyVista snapshot: {e}")
-        
-            # show live interactive viewer
+            # 1) show the interactive widget for live work
             if show:
                 plotter.show()
-                return None
-            else:
 
-                return plotter
+            # 2) capture a PNG and embed it in a collapsed details block
+            try:
+                img = plotter.screenshot(return_img=True)  # ndarray
+                if img is not None:
+                    buf = io.BytesIO()
+                    # use matplotlib-free writer: PyVista returns RGB(A) uint8
+                    from PIL import Image as PILImage  # pillow is a light dep most envs have
+                    PILImage.fromarray(img).save(buf, format="PNG")
+                    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
 
-        raise ValueError(f"Unknown view method: {how}")
+                    display(HTML(
+                        f"""
+                        <details>
+                        <summary>Static snapshot (for GitHub/nbviewer)</summary>
+                        <img src="data:image/png;base64,{b64}" />
+                        </details>
+                        """
+                    ))
+            except Exception as e:
+                print(f"Warning: could not save PyVista snapshot: {e}")
 
+            return plotter
 
     
     def slice(self,
