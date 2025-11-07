@@ -267,6 +267,7 @@ class OMEArrow:
         return describe_ome_arrow(self.data)
         
 
+ 
     def view(
         self,
         how: str = "matplotlib",
@@ -282,11 +283,10 @@ class OMEArrow:
         clim: tuple[float, float] | None = None,
         show_axes: bool = True,
         scaling_values: tuple[float, float, float] | None = (1.0, 0.1, 0.1),
-    ) -> any:
+    ):
         """
-        Simple viewer for OME-Arrow data.
-        - matplotlib mode: shown inline automatically.
-        - pyvista mode: embeds a PNG snapshot via plotter.screenshot().
+        Display interactively via PyVista, but embed a hidden static PNG
+        so that GitHub/nbviewer can render it when viewing saved notebooks.
         """
         if how == "matplotlib":
             return view_matplotlib(
@@ -301,7 +301,9 @@ class OMEArrow:
 
         if how == "pyvista":
             import pyvista as pv
-            from IPython.display import display, Image
+            import io
+            import matplotlib.pyplot as plt
+            from IPython.display import display, Image, clear_output
 
             c_idx = int(tcz[1] if c is None else c)
             plotter = view_pyvista(
@@ -315,20 +317,30 @@ class OMEArrow:
                 show=False,
             )
 
-            # Capture a PNG snapshot and display it inline in Jupyter
+            # silently capture static snapshot and store it invisibly
             try:
-                png_bytes = plotter.screenshot(return_img=False, filename=None)
-                display(Image(filename="screenshot.png"))  # show inline
-            except Exception:
-                pass
-
+                arr = plotter.screenshot(return_img=True)
+                if arr is not None:
+                    buf = io.BytesIO()
+                    plt.imsave(buf, arr)
+                    # Emit image so it's saved in notebook output
+                    display(Image(data=buf.getvalue()))
+                    # Immediately clear so it disappears in the live view
+                    clear_output(wait=True)
+            except Exception as e:
+                print(f"Warning: could not save hidden PyVista snapshot: {e}")
+        
+            # show live interactive viewer
             if show:
                 plotter.show()
                 return None
             else:
+
                 return plotter
 
         raise ValueError(f"Unknown view method: {how}")
+
+
     
     def slice(self,
         x_min: int,
