@@ -148,6 +148,162 @@ def to_ome_arrow(
 
     return pa.scalar(record, type=OME_ARROW_STRUCT)
 
+def from_numpy(
+    arr: np.ndarray,
+    *,
+    dim_order: str = "TCZYX",
+    image_id: Optional[str] = None,
+    name: Optional[str] = None,
+    channel_names: Optional[Sequence[str]] = None,
+    acquisition_datetime: Optional[datetime] = None,
+    clamp_to_uint16: bool = True,
+    # meta
+    physical_size_x: float = 1.0,
+    physical_size_y: float = 1.0,
+    physical_size_z: float = 1.0,
+    physical_size_unit: str = "µm",
+    dtype_meta: Optional[str] = None,  # if None, inferred from output dtype
+) -> pa.StructScalar:
+    """
+    Build an OME-Arrow StructScalar from a NumPy array.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Image data with axes described by `dim_order`.
+    dim_order : str, default "TCZYX"
+        Axis labels for `arr`. Must include "Y" and "X".
+        Supported examples: "YX", "ZYX", "CYX", "CZYX", "TYX", "TCYX", "TCZYX".
+    image_id, name : Optional[str]
+        Identifiers to embed in the record.
+    channel_names : Optional[Sequence[str]]
+        Names for channels; defaults to C0..C{n-1}.
+    acquisition_datetime : Optional[datetime]
+        Defaults to now (UTC) if None.
+    clamp_to_uint16 : bool, default True
+        If True, clamp/cast planes to uint16 before serialization.
+    physical_size_x/y/z : float
+        Spatial pixel sizes (µm), Z used if present.
+    physical_size_unit : str
+        Unit string for spatial axes (default "µm").
+    dtype_meta : Optional[str]
+        Pixel dtype string to place in metadata; if None, inferred from the
+        (possibly cast) array's dtype.
+
+    Returns
+    -------
+    pa.StructScalar
+        Typed OME-Arrow record (schema = OME_ARROW_STRUCT).
+
+    Notes
+    -----
+    - If Z is not in `dim_order`, `size_z` will be 1 and the meta
+      dimension_order becomes "XYCT"; otherwise "XYZCT".
+    - If T/C are absent in `dim_order`, they default to size 1.
+    """
+
+    if not isinstance(arr, np.ndarray):
+        raise TypeError("from_numpy expects a NumPy ndarray.")
+
+    dims = dim_order.upper()
+    if "Y" not in dims or "X" not in dims:
+        raise ValueError("dim_order must include 'Y' and 'X' axes.")
+
+    # Map current axes -> indices
+    axis_to_idx: Dict[str, int] = {ax: i for i, ax in enumerate(dims)}
+
+    # Extract sizes with defaults for missing axes
+    size_x = int(arr.shape[axis_to_idx["X"]])
+    size_y = int(arr.shape[axis_to_idx["Y"]])
+    size_z = int(arr.shape[axis_to_idx["Z"]]) if "Z" in axis_to_idx else 1
+    size_c = int(arr.shape[axis_to_idx["C"]]) if "C" in axis_to_idx else 1
+    size_t = int(arr.shape[axis_to_idx["T"]]) if "T" in axis_to_idx else 1
+
+    if size_x <= 0 or size_y <= 0:
+        raise ValueError("Image must have positive Y and X dimensions.")
+
+    # Reorder to a standard (T, C, Z, Y, X) view for plane extraction
+    desired_axes = ["T", "C", "Z", "Y", "X"]
+    current_axes = list(dims)
+    # Insert absent axes with size 1 using np.expand_dims
+    view = arr
+    for ax in desired_axes:
+        if ax not in axis_to_idx:
+            # Append a new singleton axis at the end, then we'll permute
+            view = np.expand_dims(view, axis=-1)
+            # Pretend this new axis now exists at the last index
+            current_axes.append(ax)
+            axis_to_idx = {a: i for i, a in enumerate(current_axes)}
+
+    # Permute to TCZYX
+    perm = [axis_to_idx[a] for a in desired_axes]
+    tczyx = np.transpose(view, axes=perm)
+
+    # Validate final shape
+    if tuple(tczyx.shape) != (size_t, size_c, size_z, size_y, size_x):
+        # This should not happen, but guard just in case
+        raise ValueError(
+            "Internal axis reordering mismatch: "
+            f"got {tczyx.shape} vs expected {(size_t, size_c, size_z, size_y, size_x)}"
+        )
+
+    # Clamp/cast
+    if clamp_to_uint16 and tczyx.dtype != np.uint16:
+        tczyx = np.clip(tczyx, 0, 65535).astype(np.uint16, copy=False)
+
+    # Channel names
+    if not channel_names or len(channel_names) != size_c:
+        channel_names = [f"C{i}" for i in range(size_c)]
+    channel_names = [str(x) for x in channel_names]
+
+    channels = [
+        {
+            "id": f"ch-{i}",
+            "name": channel_names[i],
+            "emission_um": 0.0,
+            "excitation_um": 0.0,
+            "illumination": "Unknown",
+            "color_rgba": 0xFFFFFFFF,
+        }
+        for i in range(size_c)
+    ]
+
+    # Build planes: flatten YX per (t,c,z)
+    planes: List[Dict[str, Any]] = []
+    for t in range(size_t):
+        for c in range(size_c):
+            for z in range(size_z):
+                plane = tczyx[t, c, z]
+                planes.append(
+                    {"z": z, "t": t, "c": c, "pixels": plane.ravel().tolist()}
+                )
+
+    # Meta dimension_order: mirror your other ingests
+    meta_dim_order = "XYCT" if size_z == 1 else "XYZCT"
+
+    # Pixel dtype in metadata
+    dtype_str = dtype_meta or np.dtype(tczyx.dtype).name
+
+    return to_ome_arrow(
+        image_id=str(image_id or "unnamed"),
+        name=str(name or "unknown"),
+        acquisition_datetime=acquisition_datetime or datetime.now(timezone.utc),
+        dimension_order=meta_dim_order,
+        dtype=dtype_str,
+        size_x=size_x,
+        size_y=size_y,
+        size_z=size_z,
+        size_c=size_c,
+        size_t=size_t,
+        physical_size_x=float(physical_size_x),
+        physical_size_y=float(physical_size_y),
+        physical_size_z=float(physical_size_z),
+        physical_size_unit=str(physical_size_unit),
+        channels=channels,
+        planes=planes,
+        masks=None,
+    )
+
 
 def from_tiff(
     tiff_path: str | Path,

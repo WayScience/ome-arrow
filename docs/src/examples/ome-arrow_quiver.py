@@ -17,24 +17,6 @@
 
 from ome_arrow import OMEArrow
 
-stack = OMEArrow(
-    data="../../../tests/data/nviz-artificial-4d-dataset/E99_C<111,222>_ZS<000-047>.tif"
-)
-stack
-
-stack.export(how="ome-tiff", out="example.ome.tiff")
-OMEArrow(data="example.ome.tiff")
-
-stack.export(how="ome-zarr", out="example.ome.zarr")
-OMEArrow(data="example.ome.zarr")
-
-stack.export(how="ome-parquet", out="example.ome.parquet")
-OMEArrow(data="example.ome.parquet")
-
-stack.view(how="pyvista")
-
-OMEArrow(data="../../../tests/data/nviz-artificial-4d-dataset/E99_C111_ZS040.tif")
-
 oa_image = OMEArrow(
     data="../../../tests/data/examplehuman/AS_09125_050116030001_D03f00d0.tif"
 )
@@ -42,8 +24,26 @@ oa_image
 
 oa_image.info()
 
-oa_image.view(how="matplotlib")
-
 oa_image.export(how="numpy")
 
+stack = OMEArrow(
+    data="../../../tests/data/nviz-artificial-4d-dataset/E99_C<111,222>_ZS<000-047>.tif",
+    tcz=(0,0,20)
+)
+stack
 
+stack_np = stack.export(how="numpy")
+OMEArrow(data=stack_np, tcz=(0,0,20))
+
+stack.export(how="ome-tiff", out="example.ome.tiff")
+OMEArrow(data="example.ome.tiff", tcz=(0,0,20))
+
+stack.export(how="ome-zarr", out="example.ome.zarr")
+OMEArrow(data="example.ome.zarr", tcz=(0,0,20))
+
+stack.export(how="ome-parquet", out="example.ome.parquet")
+OMEArrow(data="example.ome.parquet", tcz=(0,0,20))
+
+stack.view(how="pyvista")
+
+stack.slice(x_min=40, y_min=80, x_max=70, y_max=115, t_indices=[0], c_indices=[0], z_indices=[20])

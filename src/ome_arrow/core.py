@@ -4,15 +4,16 @@ Core of the ome_arrow package, used for classes and such.
 from __future__ import annotations
 
 import pathlib
-from typing import Any, Optional, Tuple, Dict
+from typing import Any, Optional, Tuple, Dict, Iterable
 
 import pyarrow as pa
 import numpy as np
 from ome_arrow.meta import OME_ARROW_STRUCT
 from ome_arrow.view import view_matplotlib, view_pyvista
-from ome_arrow.ingest import from_tiff, from_stack_pattern_path, from_ome_zarr
+from ome_arrow.ingest import from_tiff, from_stack_pattern_path, from_ome_zarr, from_numpy, from_parquet
 from ome_arrow.export import to_numpy, to_ome_tiff, to_ome_zarr, to_ome_parquet
 from ome_arrow.utils import describe_ome_arrow
+from ome_arrow.transform import slice_ome_arrow
 
 
 class OMEArrow:
@@ -34,7 +35,8 @@ class OMEArrow:
 
     def __init__(
         self,
-        data: str | dict | pa.StructScalar,
+        data: str | dict | pa.StructScalar | "np.ndarray",
+        tcz: Tuple[int, int, int] = (0, 0, 0)
     ):
         """
         Construct an OMEArrow from:
@@ -42,17 +44,13 @@ class OMEArrow:
         - a path/URL to an OME-TIFF (.tif/.tiff)
         - a path/URL to an OME-Zarr store (.zarr / .ome.zarr)
         - a path/URL to an OME-Parquet file (.parquet / .pq)
+        - a NumPy ndarray (2D–5D; interpreted with from_numpy defaults)
         - a dict already matching the OME-Arrow schema
         - a pa.StructScalar already typed to OME_ARROW_STRUCT
         """
-        import pathlib
-        from ome_arrow.meta import OME_ARROW_STRUCT
-        from ome_arrow.ingest import (
-            from_tiff,
-            from_ome_zarr,
-            from_stack_pattern_path,
-            from_parquet,        # ← NEW
-        )
+
+        # set the tcz for viewing
+        self.tcz = tcz
 
         # --- 1) Stack pattern (Bio-Formats-style) --------------------------------
         if isinstance(data, str) and any(c in data for c in "<>*"):
@@ -69,7 +67,7 @@ class OMEArrow:
             s = data.strip()
             path = pathlib.Path(s)
 
-            # Inline Zarr detection: suffix or substring check
+            # Zarr detection
             if (
                 s.lower().endswith(".zarr")
                 or s.lower().endswith(".ome.zarr")
@@ -79,13 +77,12 @@ class OMEArrow:
                 self.data = from_ome_zarr(s)
                 return
 
-            # OME-Parquet detection (single-file parquet container)
+            # OME-Parquet
             if s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {".parquet", ".pq"}:
-                # Uses defaults: column_name="ome_arrow", row_index=0
                 self.data = from_parquet(s)
                 return
 
-            # TIFF ingest
+            # TIFF
             if path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith((".tif", ".tiff")):
                 self.data = from_tiff(s)
                 return
@@ -104,18 +101,27 @@ class OMEArrow:
                 "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
             )
 
-        # --- 3) Already-typed Arrow scalar ---------------------------------------
+        # --- 3) NumPy ndarray ----------------------------------------------------
+        if isinstance(data, np.ndarray):
+            # Uses from_numpy defaults: dim_order="TCZYX", clamp_to_uint16=True, etc.
+            # If the array is YX/ZYX/CYX/etc., from_numpy will expand/reorder accordingly.
+            self.data = from_numpy(data)
+            return
+
+        # --- 4) Already-typed Arrow scalar ---------------------------------------
         if isinstance(data, pa.StructScalar):
             self.data = data
             return
 
-        # --- 4) Plain dict matching the schema -----------------------------------
+        # --- 5) Plain dict matching the schema -----------------------------------
         if isinstance(data, dict):
             self.data = pa.scalar(data, type=OME_ARROW_STRUCT)
             return
 
         # --- otherwise ------------------------------------------------------------
-        raise TypeError("input data must be str, dict, or pa.StructScalar")
+        raise TypeError("input data must be str, dict, pa.StructScalar, or numpy.ndarray")
+
+
     def export(
         self,
         how: str = "numpy",
@@ -264,7 +270,7 @@ class OMEArrow:
     def view(
         self,
         how: str = "matplotlib",
-        ztc: Tuple[int, int, int] = (0, 0, 0),
+        tcz: Tuple[int, int, int] = (0, 0, 0),
         autoscale: bool = True,
         vmin: Optional[int] = None,
         vmax: Optional[int] = None,
@@ -280,7 +286,7 @@ class OMEArrow:
         if how == "matplotlib":
             return view_matplotlib(
                 self.data,
-                ztc=ztc,
+                tcz=tcz,
                 autoscale=autoscale,
                 vmin=vmin,
                 vmax=vmax,
@@ -289,7 +295,7 @@ class OMEArrow:
             )
 
         if how == "pyvista":
-            c_idx = int(ztc[2] if c is None else c)
+            c_idx = int(tcz[1] if c is None else c)
             return view_pyvista(
                 data=self.data,
                 c=c_idx,
@@ -301,6 +307,50 @@ class OMEArrow:
             )
 
         raise ValueError(f"Unknown view method: {how}")
+    
+    def slice(self,
+        x_min: int,
+        x_max: int,
+        y_min: int,
+        y_max: int,
+        t_indices: Optional[Iterable[int]] = None,
+        c_indices: Optional[Iterable[int]] = None,
+        z_indices: Optional[Iterable[int]] = None,
+        fill_missing: bool = True,
+    ):
+        """
+        Create a cropped copy of an OME-Arrow record.
+
+        Crops spatially to [y_min:y_max, x_min:x_max] (half-open) and, if provided,
+        filters/reindexes T/C/Z to the given index sets.
+
+        Parameters
+        ----------
+        x_min, x_max, y_min, y_max : int
+            Half-open crop bounds in pixels (0-based).
+        t_indices, c_indices, z_indices : Iterable[int] | None
+            Optional explicit indices to keep for T, C, Z. If None, keep all.
+            Selected indices are reindexed to 0..len-1 in the output.
+        fill_missing : bool
+            If True, any missing (t,c,z) planes in the selection are zero-filled.
+
+        Returns
+        -------
+        OMEArrow object
+            New OME-Arrow record with updated sizes and planes.
+        """
+
+        return OMEArrow(data=slice_ome_arrow(
+            data=self.data,
+            x_min=x_min,
+            x_max=x_max,
+            y_min=y_min,
+            y_max=y_max,
+            t_indices=t_indices,
+            c_indices=c_indices,
+            z_indices=z_indices,
+            fill_missing=fill_missing,
+        ))
         
     def _repr_html_(self) -> str:
         """
@@ -309,7 +359,7 @@ class OMEArrow:
         try:
             view_matplotlib(
                 data=self.data,
-                ztc=(0, 0, 0),
+                tcz=self.tcz,
                 autoscale=True,
                 vmin=None,
                 vmax=None,
