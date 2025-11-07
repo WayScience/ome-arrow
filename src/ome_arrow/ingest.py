@@ -2,38 +2,22 @@
 Converting to and from OME-Arrow formats.
 """
 
+import itertools
+import re
 from datetime import datetime, timezone
-from typing import Optional, Sequence, List, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-import pyarrow as pa
+import bioio_ome_tiff
+import bioio_tifffile
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-
+from bioio import BioImage
 from bioio_ome_zarr import Reader as OMEZarrReader
-from datetime import datetime
-from pathlib import Path
-from typing import Optional, Sequence
-
-import numpy as np
-import pyarrow as pa
-from bioio import BioImage
-import bioio_tifffile
-import bioio_ome_tiff
-
-
-import re
-import itertools
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-
-import numpy as np
-import pyarrow as pa
-from bioio import BioImage
-import bioio_tifffile
-import bioio_ome_tiff
 
 from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
+
 
 def to_ome_arrow(
     type_: str = OME_ARROW_TAG_TYPE,
@@ -147,6 +131,7 @@ def to_ome_arrow(
     }
 
     return pa.scalar(record, type=OME_ARROW_STRUCT)
+
 
 def from_numpy(
     arr: np.ndarray,
@@ -496,7 +481,9 @@ def from_stack_pattern_path(
 
     def regex_match(folder: Path, regex: str) -> List[Path]:
         r = re.compile(regex)
-        return sorted([p for p in folder.iterdir() if p.is_file() and r.fullmatch(p.name)])
+        return sorted(
+            [p for p in folder.iterdir() if p.is_file() and r.fullmatch(p.name)]
+        )
 
     matched: Dict[Tuple[int, int, int], Path] = {}
     literal_channel_names: Optional[List[str]] = None
@@ -522,9 +509,12 @@ def from_stack_pattern_path(
                     if not map_series_to:
                         raise ValueError("Encountered 'series' but map_series_to=None")
                     dim = map_series_to.upper()
-                if dim == "T": t = idx
-                elif dim == "C": c = idx
-                elif dim == "Z": z = idx
+                if dim == "T":
+                    t = idx
+                elif dim == "C":
+                    c = idx
+                elif dim == "Z":
+                    z = idx
 
             if literal_channel_names is None:
                 for ph in placeholders:
@@ -546,14 +536,19 @@ def from_stack_pattern_path(
     size_z = max(k[2] for k in matched) + 1
 
     if channel_names and len(channel_names) != size_c:
-        raise ValueError(f"channel_names length {len(channel_names)} != size_c {size_c}")
+        raise ValueError(
+            f"channel_names length {len(channel_names)} != size_c {size_c}"
+        )
     if not channel_names:
         channel_names = literal_channel_names or [f"C{i}" for i in range(size_c)]
 
     # ---- PROBE SHAPE (NEW: accept TCZYX and squeeze singleton axes) ----
     sample = next(iter(matched.values()))
     is_ome = sample.suffix.lower() in (".ome.tif", ".ome.tiff")
-    img0 = BioImage(image=str(sample), reader=(bioio_ome_tiff.Reader if is_ome else bioio_tifffile.Reader))
+    img0 = BioImage(
+        image=str(sample),
+        reader=(bioio_ome_tiff.Reader if is_ome else bioio_tifffile.Reader),
+    )
     a0 = np.asarray(img0.data)
     # bioio returns TCZYX or YX; normalize to TCZYX
     if a0.ndim == 2:
@@ -589,45 +584,68 @@ def from_stack_pattern_path(
                 fpath = matched.get((t, c, z))
                 if fpath is None:
                     # missing plane: zero-fill
-                    planes.append({"z": z, "t": t, "c": c, "pixels": [0] * (size_x * size_y)})
+                    planes.append(
+                        {"z": z, "t": t, "c": c, "pixels": [0] * (size_x * size_y)}
+                    )
                     continue
 
-                reader = bioio_ome_tiff.Reader if fpath.suffix.lower() in (".ome.tif", ".ome.tiff") else bioio_tifffile.Reader
+                reader = (
+                    bioio_ome_tiff.Reader
+                    if fpath.suffix.lower() in (".ome.tif", ".ome.tiff")
+                    else bioio_tifffile.Reader
+                )
                 im = BioImage(image=str(fpath), reader=reader)
                 arr = np.asarray(im.data)
 
                 if arr.ndim == 2:
                     # Direct YX
                     if arr.shape != (size_y, size_x):
-                        raise ValueError(f"Shape mismatch for {fpath.name}: {arr.shape} vs {(size_y, size_x)}")
+                        raise ValueError(
+                            f"Shape mismatch for {fpath.name}: {arr.shape} vs {(size_y, size_x)}"
+                        )
                     arr = _ensure_u16(arr)
-                    planes.append({"z": z, "t": t, "c": c, "pixels": arr.ravel().tolist()})
+                    planes.append(
+                        {"z": z, "t": t, "c": c, "pixels": arr.ravel().tolist()}
+                    )
                 else:
                     # Treat as TCZYX; extract dims
                     Y, X = arr.shape[-2], arr.shape[-1]
                     lead = arr.shape[:-2]
                     Tn, Cn, Zn = (list(lead) + [1, 1, 1])[:3]
-                    if (Y, X) != (size_y, size_x):
-                        raise ValueError(f"Shape mismatch for {fpath.name}: {(Y,X)} vs {(size_y,size_x)}")
+                    if (size_y, size_x) != (Y, X):
+                        raise ValueError(
+                            f"Shape mismatch for {fpath.name}: {(Y, X)} vs {(size_y, size_x)}"
+                        )
 
                     # Case A: singleton TCZ -> squeeze to YX
                     if Tn == 1 and Cn == 1 and Zn == 1:
                         plane2d = _ensure_u16(arr.reshape(Y, X))
-                        planes.append({"z": z, "t": t, "c": c, "pixels": plane2d.ravel().tolist()})
+                        planes.append(
+                            {"z": z, "t": t, "c": c, "pixels": plane2d.ravel().tolist()}
+                        )
                     # Case B: multi-Z only (expand across Z)
                     elif Tn == 1 and Cn == 1 and Zn > 1:
                         # spill Z pages starting at this z index
                         for z_local in range(Zn):
-                            plane2d = _ensure_u16(arr.reshape(1, 1, Zn, Y, X)[0, 0, z_local])
+                            plane2d = _ensure_u16(
+                                arr.reshape(1, 1, Zn, Y, X)[0, 0, z_local]
+                            )
                             z_idx = z + z_local
-                            planes.append({"z": z_idx, "t": t, "c": c, "pixels": plane2d.ravel().tolist()})
+                            planes.append(
+                                {
+                                    "z": z_idx,
+                                    "t": t,
+                                    "c": c,
+                                    "pixels": plane2d.ravel().tolist(),
+                                }
+                            )
                         # bump global size_z if we exceeded it
                         size_z = max(size_z, z + Zn)
                     else:
                         # For now, we require multi-T/C pages to be expressed by the filename pattern,
                         # not embedded inside a single file.
                         raise ValueError(
-                            f"{fpath.name} contains multiple pages across T/C/Z={Tn,Cn,Zn}; "
+                            f"{fpath.name} contains multiple pages across T/C/Z={Tn, Cn, Zn}; "
                             f"only Z>1 with T=C=1 is supported inside one file. "
                             f"Please express T/C via the filename pattern."
                         )
@@ -668,7 +686,6 @@ def from_stack_pattern_path(
         planes=planes,
         masks=None,
     )
-
 
 
 def from_ome_zarr(
@@ -789,6 +806,7 @@ def from_ome_zarr(
         masks=None,
     )
 
+
 def from_parquet(
     parquet_path: str | Path,
     *,
@@ -844,9 +862,7 @@ def from_parquet(
     if table.num_rows == 0:
         raise ValueError("Parquet file contains 0 rows; expected at least 1.")
     if not (0 <= row_index < table.num_rows):
-        raise ValueError(
-            f"row_index {row_index} out of range [0, {table.num_rows})."
-        )
+        raise ValueError(f"row_index {row_index} out of range [0, {table.num_rows}).")
 
     # 1) Locate the OME-Arrow column
     def _struct_matches_ome_fields(t: pa.StructType) -> bool:
@@ -859,9 +875,7 @@ def from_parquet(
     if column_name is not None and column_name in table.column_names:
         arr = table[column_name]
         if not pa.types.is_struct(arr.type):
-            raise ValueError(
-                f"Column '{column_name}' is not a Struct; got {arr.type}."
-            )
+            raise ValueError(f"Column '{column_name}' is not a Struct; got {arr.type}.")
         if strict_schema and arr.type != OME_ARROW_STRUCT:
             raise ValueError(
                 f"Column '{column_name}' schema != OME_ARROW_STRUCT.\n"
@@ -891,9 +905,7 @@ def from_parquet(
                 hint = "no struct column with OME-Arrow fields was found."
             else:
                 hint = f"column '{column_name}' not found and auto-detection failed."
-            raise ValueError(
-                f"Could not locate an OME-Arrow struct column: {hint}"
-            )
+            raise ValueError(f"Could not locate an OME-Arrow struct column: {hint}")
 
     # 2) Extract the row as a Python dict
     #    (Using to_pylist() for the single element slice is simple & reliable.)
@@ -906,10 +918,9 @@ def from_parquet(
     # Optional: soft validation via file-level metadata (if present)
     try:
         meta = table.schema.metadata or {}
-        tag_ok = (
-            meta.get(b"ome.arrow.type", b"").decode() == str(OME_ARROW_TAG_TYPE)
-            and meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
-        )
+        tag_ok = meta.get(b"ome.arrow.type", b"").decode() == str(
+            OME_ARROW_TAG_TYPE
+        ) and meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
         # You could log/print a warning if tag_ok is False, but don't fail.
     except Exception:
         pass

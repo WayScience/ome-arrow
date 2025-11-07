@@ -3,17 +3,25 @@ Core of the ome_arrow package, used for classes and such.
 """
 
 from __future__ import annotations
-import pathlib
-from typing import Any, Optional, Tuple, Dict, Iterable
 
-import pyarrow as pa
+import pathlib
+from typing import Any, Dict, Iterable, Optional, Tuple
+
 import numpy as np
+import pyarrow as pa
+
+from ome_arrow.export import to_numpy, to_ome_parquet, to_ome_tiff, to_ome_zarr
+from ome_arrow.ingest import (
+    from_numpy,
+    from_ome_zarr,
+    from_parquet,
+    from_stack_pattern_path,
+    from_tiff,
+)
 from ome_arrow.meta import OME_ARROW_STRUCT
-from ome_arrow.view import view_matplotlib, view_pyvista
-from ome_arrow.ingest import from_tiff, from_stack_pattern_path, from_ome_zarr, from_numpy, from_parquet
-from ome_arrow.export import to_numpy, to_ome_tiff, to_ome_zarr, to_ome_parquet
-from ome_arrow.utils import describe_ome_arrow
 from ome_arrow.transform import slice_ome_arrow
+from ome_arrow.utils import describe_ome_arrow
+from ome_arrow.view import view_matplotlib, view_pyvista
 
 
 class OMEArrow:
@@ -36,7 +44,7 @@ class OMEArrow:
     def __init__(
         self,
         data: str | dict | pa.StructScalar | "np.ndarray",
-        tcz: Tuple[int, int, int] = (0, 0, 0)
+        tcz: Tuple[int, int, int] = (0, 0, 0),
     ):
         """
         Construct an OMEArrow from:
@@ -78,12 +86,17 @@ class OMEArrow:
                 return
 
             # OME-Parquet
-            if s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {".parquet", ".pq"}:
+            if s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {
+                ".parquet",
+                ".pq",
+            }:
                 self.data = from_parquet(s)
                 return
 
             # TIFF
-            if path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith((".tif", ".tiff")):
+            if path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
+                (".tif", ".tiff")
+            ):
                 self.data = from_tiff(s)
                 return
 
@@ -119,8 +132,9 @@ class OMEArrow:
             return
 
         # --- otherwise ------------------------------------------------------------
-        raise TypeError("input data must be str, dict, pa.StructScalar, or numpy.ndarray")
-
+        raise TypeError(
+            "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
+        )
 
     def export(
         self,
@@ -137,7 +151,7 @@ class OMEArrow:
         compression_level: int = 6,
         tile: tuple[int, int] | None = None,
         # OME-Zarr args
-        chunks: tuple[int, int, int, int, int] | None = None,   # (T,C,Z,Y,X)
+        chunks: tuple[int, int, int, int, int] | None = None,  # (T,C,Z,Y,X)
         zarr_compressor: str | None = "zstd",
         zarr_level: int = 7,
         # optional display metadata (both paths guard/ignore if unsafe)
@@ -247,7 +261,7 @@ class OMEArrow:
                 data=self.data,
                 out_path=out,
                 column_name=parquet_column_name,
-                compression=parquet_compression,   # default 'zstd'
+                compression=parquet_compression,  # default 'zstd'
                 file_metadata=parquet_metadata,
             )
             return out
@@ -265,9 +279,7 @@ class OMEArrow:
                 - summary: human-readable text
         """
         return describe_ome_arrow(self.data)
-        
 
- 
     def view(
         self,
         how: str = "matplotlib",
@@ -300,9 +312,10 @@ class OMEArrow:
             )
 
         if how == "pyvista":
-            import pyvista as pv
-            import io, base64
-            from IPython.display import display, HTML
+            import base64
+            import io
+
+            from IPython.display import HTML, display
 
             c_idx = int(tcz[1] if c is None else c)
             plotter = view_pyvista(
@@ -326,24 +339,29 @@ class OMEArrow:
                 if img is not None:
                     buf = io.BytesIO()
                     # use matplotlib-free writer: PyVista returns RGB(A) uint8
-                    from PIL import Image as PILImage  # pillow is a light dep most envs have
+                    from PIL import (
+                        Image as PILImage,
+                    )  # pillow is a light dep most envs have
+
                     PILImage.fromarray(img).save(buf, format="PNG")
                     b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-                    display(HTML(
-                        f"""
+                    display(
+                        HTML(
+                            f"""
                         <details>
                         <summary>Static snapshot (for non-interactive view)</summary>
                         <img src="data:image/png;base64,{b64}" />
                         </details>
                         """
-                    ))
+                        )
+                    )
             except Exception as e:
                 print(f"Warning: could not save PyVista snapshot: {e}")
 
             return plotter
 
-    
-    def slice(self,
+    def slice(
+        self,
         x_min: int,
         x_max: int,
         y_min: int,
@@ -375,18 +393,20 @@ class OMEArrow:
             New OME-Arrow record with updated sizes and planes.
         """
 
-        return OMEArrow(data=slice_ome_arrow(
-            data=self.data,
-            x_min=x_min,
-            x_max=x_max,
-            y_min=y_min,
-            y_max=y_max,
-            t_indices=t_indices,
-            c_indices=c_indices,
-            z_indices=z_indices,
-            fill_missing=fill_missing,
-        ))
-        
+        return OMEArrow(
+            data=slice_ome_arrow(
+                data=self.data,
+                x_min=x_min,
+                x_max=x_max,
+                y_min=y_min,
+                y_max=y_max,
+                t_indices=t_indices,
+                c_indices=c_indices,
+                z_indices=z_indices,
+                fill_missing=fill_missing,
+            )
+        )
+
     def _repr_html_(self) -> str:
         """
         Auto-render first plane (0,0,0) as inline PNG in Jupyter.
@@ -399,11 +419,10 @@ class OMEArrow:
                 vmin=None,
                 vmax=None,
                 cmap="gray",
-                show=False
+                show=False,
             )
             # return blank string to avoid showing class representation below image
             return self.info()["summary"]
         except Exception as e:
             # Fallback to a tiny text status if rendering fails.
             return f"<pre>OMEArrowKit: render failed: {e}</pre>"
-        

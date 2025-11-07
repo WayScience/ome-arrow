@@ -1,13 +1,15 @@
 """
-Module for transforming OME-Arrow data 
+Module for transforming OME-Arrow data
 (e.g., slices, projections, or other changes).
 """
 
-from typing import Dict, Any, Iterable, Optional, List, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
 import numpy as np
 import pyarrow as pa
 
 from ome_arrow.meta import OME_ARROW_STRUCT
+
 
 def slice_ome_arrow(
     data: Dict[str, Any] | pa.StructScalar,
@@ -60,7 +62,11 @@ def slice_ome_arrow(
 
     # Normalize T/C/Z selections (keep all if None)
     def _norm(sel: Optional[Iterable[int]], size: int) -> List[int]:
-        return list(range(size)) if sel is None else sorted({int(i) for i in sel if 0 <= int(i) < size})
+        return (
+            list(range(size))
+            if sel is None
+            else sorted({int(i) for i in sel if 0 <= int(i) < size})
+        )
 
     keep_t = _norm(t_indices, st)
     keep_c = _norm(c_indices, sc)
@@ -87,11 +93,14 @@ def slice_ome_arrow(
     # Group incoming planes by (t,c,z)
     by_tcz: Dict[Tuple[int, int, int], Dict[str, Any]] = {}
     for p in planes_in:
-        tt = int(p["t"]); cc = int(p["c"]); zz = int(p["z"])
+        tt = int(p["t"])
+        cc = int(p["c"])
+        zz = int(p["z"])
         by_tcz[(tt, cc, zz)] = p
 
     # Helper to crop one plane
     expected_len = sx * sy
+
     def _crop_pixels(flat: Iterable[int]) -> List[int]:
         arr = np.asarray(flat)
         if arr.size != expected_len:
@@ -112,13 +121,22 @@ def slice_ome_arrow(
                         continue
                     # zero-fill missing plane
                     planes_out.append(
-                        {"t": t_map[tt], "c": c_map[cc], "z": z_map[zz],
-                         "pixels": [0] * (new_sx * new_sy)}
+                        {
+                            "t": t_map[tt],
+                            "c": c_map[cc],
+                            "z": z_map[zz],
+                            "pixels": [0] * (new_sx * new_sy),
+                        }
                     )
                 else:
                     cropped = _crop_pixels(src["pixels"])
                     planes_out.append(
-                        {"t": t_map[tt], "c": c_map[cc], "z": z_map[zz], "pixels": cropped}
+                        {
+                            "t": t_map[tt],
+                            "c": c_map[cc],
+                            "z": z_map[zz],
+                            "pixels": cropped,
+                        }
                     )
 
     # Filter channel metadata to kept channels and reindex
@@ -126,7 +144,10 @@ def slice_ome_arrow(
     channels_out: List[Dict[str, Any]] = []
     # If channels metadata length mismatches, synthesize minimal entries
     if len(channels_in) != sc:
-        channels_in = [{"id": f"ch-{i}", "name": f"C{i}", "color_rgba": 0xFFFFFFFF} for i in range(sc)]
+        channels_in = [
+            {"id": f"ch-{i}", "name": f"C{i}", "color_rgba": 0xFFFFFFFF}
+            for i in range(sc)
+        ]
     for old_c in keep_c:
         meta = dict(channels_in[old_c])
         meta["id"] = f"ch-{c_map[old_c]}"
@@ -139,14 +160,16 @@ def slice_ome_arrow(
 
     # Update pixels_meta
     pm_out = dict(pm)
-    pm_out.update({
-        "size_x": new_sx,
-        "size_y": new_sy,
-        "size_z": new_sz,
-        "size_c": new_sc,
-        "size_t": new_st,
-        "channels": channels_out,
-    })
+    pm_out.update(
+        {
+            "size_x": new_sx,
+            "size_y": new_sy,
+            "size_z": new_sz,
+            "size_c": new_sc,
+            "size_t": new_st,
+            "channels": channels_out,
+        }
+    )
 
     # If dimension order encoded XYCT/XYZCT etc., keep it as-is (no axis permutation).
     # (Optional: you could normalize to XYCT if new_sz==1, else XYZCT.)

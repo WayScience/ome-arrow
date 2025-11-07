@@ -4,10 +4,7 @@ Viewing utilities for OME-Arrow data.
 
 from typing import Any, Dict, Tuple
 
-import numpy as np
-import pyarrow as pa
 import matplotlib.pyplot as plt
-from typing import Any, Dict, Optional, Sequence
 import numpy as np
 import pyarrow as pa
 import pyvista as pv
@@ -53,7 +50,11 @@ def view_matplotlib(
     t, c, z = (int(x) for x in tcz)
 
     plane = next(
-        (p for p in data["planes"] if int(p["t"]) == t and int(p["c"]) == c and int(p["z"]) == z),
+        (
+            p
+            for p in data["planes"]
+            if int(p["t"]) == t and int(p["c"]) == c and int(p["z"]) == z
+        ),
         None,
     )
     if plane is None:
@@ -61,7 +62,7 @@ def view_matplotlib(
 
     pix = plane["pixels"]
     if len(pix) != sx * sy:
-        raise ValueError(f"pixels len {len(pix)} != size_x*size_y ({sx*sy})")
+        raise ValueError(f"pixels len {len(pix)} != size_x*size_y ({sx * sy})")
 
     img = np.asarray(pix, dtype=np.uint16).reshape(sy, sx).copy()
 
@@ -80,7 +81,6 @@ def view_matplotlib(
         plt.show()
 
     return plt
-
 
 
 def view_pyvista(
@@ -105,8 +105,8 @@ def view_pyvista(
     sampling_scale controls ray step via the mapper after add_volume.
     """
     import warnings
+
     import numpy as np
-    import pyvista as pv
 
     # ---- unwrap OME-Arrow row
     row = data.as_py() if isinstance(data, pa.StructScalar) else data
@@ -114,7 +114,7 @@ def view_pyvista(
     sx, sy, sz = int(pm["size_x"]), int(pm["size_y"]), int(pm["size_z"])
     sc, st = int(pm["size_c"]), int(pm["size_t"])
     if not (0 <= c < sc):
-        raise ValueError(f"Channel out of range: 0..{sc-1}")
+        raise ValueError(f"Channel out of range: 0..{sc - 1}")
 
     # ---- spacing (dx, dy, dz) in world units
     dx = float(pm.get("physical_size_x", 1.0) or 1.0)
@@ -158,8 +158,9 @@ def view_pyvista(
     # ---- backend selection
     def _try_backend(name: str) -> bool:
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message=".*notebook backend.*",
-                                    category=UserWarning)
+            warnings.filterwarnings(
+                "ignore", message=".*notebook backend.*", category=UserWarning
+            )
             try:
                 pv.set_jupyter_backend(name)
                 return True
@@ -167,9 +168,13 @@ def view_pyvista(
                 return False
 
     if backend == "auto":
-        backend_used = "trame" if _try_backend("trame") \
-                       else "html" if _try_backend("html") \
-                       else "static"
+        backend_used = (
+            "trame"
+            if _try_backend("trame")
+            else "html"
+            if _try_backend("html")
+            else "static"
+        )
     else:
         backend_used = backend if _try_backend(backend) else "static"
 
@@ -201,12 +206,12 @@ def view_pyvista(
 
     vol_actor = pl.add_volume(
         img,
-        cmap="gray",                   # napari-like
+        cmap="gray",  # napari-like
         opacity=opacity,
         clim=clim,
-        shade=False,                   # microscopy usually unshaded
+        shade=False,  # microscopy usually unshaded
         scalar_bar_args={"title": "intensity"},
-        opacity_unit_distance=base_sample,   # keep opacity consistent
+        opacity_unit_distance=base_sample,  # keep opacity consistent
         # no sampling_distance kwarg here (set via mapper below)
     )
 
@@ -242,7 +247,7 @@ def view_pyvista(
 
     if show_axes:
         pl.add_axes()
-    
+
     pl.show_bounds(
         color="white",
         grid=None,

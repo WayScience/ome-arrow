@@ -3,7 +3,9 @@ Utility functions for ome-arrow.
 """
 
 from typing import Any, Dict
+
 import pyarrow as pa
+
 
 def verify_ome_arrow(data: Any, struct: pa.StructType) -> bool:
     """Return True if `data` conforms to the given Arrow StructType.
@@ -23,7 +25,8 @@ def verify_ome_arrow(data: Any, struct: pa.StructType) -> bool:
         return True
     except (TypeError, pa.ArrowInvalid, pa.ArrowTypeError):
         return False
-    
+
+
 def describe_ome_arrow(data: pa.StructScalar | dict) -> Dict[str, Any]:
     """
     Describe the structure of an OME-Arrow image record.

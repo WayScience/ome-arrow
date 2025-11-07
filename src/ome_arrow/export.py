@@ -2,12 +2,12 @@
 Module for exporting OME-Arrow data to other formats.
 """
 
-import pyarrow as pa
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-from typing import Dict, Any, Sequence, Tuple, Optional, List
-import numpy as np
+
 from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
 
 
@@ -112,6 +112,7 @@ def to_numpy(
 
     return out
 
+
 def to_ome_tiff(
     data: Dict[str, Any] | pa.StructScalar,
     out_path: str,
@@ -119,7 +120,7 @@ def to_ome_tiff(
     dtype: np.dtype = np.uint16,
     clamp: bool = False,
     dim_order: str = "TCZYX",
-    compression: Optional[str] = "zlib",   # "zlib","lzma","jpegxl", or None
+    compression: Optional[str] = "zlib",  # "zlib","lzma","jpegxl", or None
     compression_level: int = 6,
     tile: Optional[Tuple[int, int]] = None,  # (Y, X)
     use_channel_colors: bool = False,
@@ -149,7 +150,9 @@ def to_ome_tiff(
             try:
                 from aicsimageio.types import PhysicalPixelSizes
             except Exception:
-                from typing import NamedTuple, Optional as _Opt
+                from typing import NamedTuple
+                from typing import Optional as _Opt
+
                 class PhysicalPixelSizes(NamedTuple):  # type: ignore
                     Z: _Opt[float] = None
                     Y: _Opt[float] = None
@@ -175,15 +178,19 @@ def to_ome_tiff(
     # Optional channel colors (guarded)
     channel_colors_for_writer = None
     if use_channel_colors and len(chs) == sc:
+
         def _rgba_to_rgb(rgba: int) -> int:
             r = (rgba >> 24) & 0xFF
             g = (rgba >> 16) & 0xFF
-            b = (rgba >>  8) & 0xFF
+            b = (rgba >> 8) & 0xFF
             return (r << 16) | (g << 8) | b
+
         flat_colors: list[int] = []
         for ch in chs:
             rgba = ch.get("color_rgba")
-            flat_colors.append(_rgba_to_rgb(int(rgba)) if isinstance(rgba, int) else 0xFFFFFF)
+            flat_colors.append(
+                _rgba_to_rgb(int(rgba)) if isinstance(rgba, int) else 0xFFFFFF
+            )
         if len(flat_colors) == sc:
             channel_colors_for_writer = [flat_colors]  # list-per-image
 
@@ -203,10 +210,10 @@ def to_ome_tiff(
         tifffile_kwargs["tile"] = (int(tile[0]), int(tile[1]))
 
     # list-per-image payloads
-    data_list        = [arr]
-    dim_order_list   = [dim_order]
-    image_name_list  = [str(row.get("name") or row.get("id") or "image")]
-    ch_names_list    = [channel_names]
+    data_list = [arr]
+    dim_order_list = [dim_order]
+    image_name_list = [str(row.get("name") or row.get("id") or "image")]
+    ch_names_list = [channel_names]
 
     # 3) Write
     OmeTiffWriter.save(
@@ -220,6 +227,7 @@ def to_ome_tiff(
         tifffile_kwargs=tifffile_kwargs,
     )
 
+
 def to_ome_zarr(
     data: Dict[str, Any] | pa.StructScalar,
     out_path: str,
@@ -229,13 +237,13 @@ def to_ome_zarr(
     # Axes order for the on-disk array — must match arr shape (T,C,Z,Y,X)
     dim_order: str = "TCZYX",
     # NGFF / multiscale
-    multiscale_levels: int = 1,                 # 1 = no pyramid; >1 builds levels
-    downscale_spatial_by: int = 2,              # per-level factor for Z,Y,X
-    zarr_format: int = 3,                       # 3 (NGFF 0.5) or 2 (NGFF 0.4)
+    multiscale_levels: int = 1,  # 1 = no pyramid; >1 builds levels
+    downscale_spatial_by: int = 2,  # per-level factor for Z,Y,X
+    zarr_format: int = 3,  # 3 (NGFF 0.5) or 2 (NGFF 0.4)
     # Storage knobs
-    chunks: Optional[Tuple[int, int, int, int, int]] = None,   # (T,C,Z,Y,X) or None
-    shards: Optional[Tuple[int, int, int, int, int]] = None,   # v3 only, optional
-    compressor: Optional[str] = "zstd",         # "zstd","lz4","gzip", or None
+    chunks: Optional[Tuple[int, int, int, int, int]] = None,  # (T,C,Z,Y,X) or None
+    shards: Optional[Tuple[int, int, int, int, int]] = None,  # v3 only, optional
+    compressor: Optional[str] = "zstd",  # "zstd","lz4","gzip", or None
     compressor_level: int = 3,
     # Optional display metadata (carried through if you later enrich channels/rdefs)
     image_name: Optional[str] = None,
@@ -249,10 +257,10 @@ def to_ome_zarr(
     - Populates axes names/types/units and physical pixel sizes from pixels_meta.
     """
     # --- local import to avoid hard deps at module import time
-    from ome_arrow.export import to_numpy  # your existing function
-
     # Use the class you showed
     from bioio_ome_zarr.writers import OMEZarrWriter
+
+    from ome_arrow.export import to_numpy  # your existing function
 
     # Optional compressors for v2 vs v3
     compressor_obj = None
@@ -260,13 +268,25 @@ def to_ome_zarr(
         if zarr_format == 2:
             # numcodecs Blosc (v2 path)
             from numcodecs import Blosc as BloscV2
-            cname = {"zstd":"zstd","lz4":"lz4","gzip":"zlib"}.get(compressor, "zstd")
-            compressor_obj = BloscV2(cname=cname, clevel=int(compressor_level), shuffle=BloscV2.BITSHUFFLE)
+
+            cname = {"zstd": "zstd", "lz4": "lz4", "gzip": "zlib"}.get(
+                compressor, "zstd"
+            )
+            compressor_obj = BloscV2(
+                cname=cname, clevel=int(compressor_level), shuffle=BloscV2.BITSHUFFLE
+            )
         else:
             # zarr v3 codec
             from zarr.codecs import BloscCodec, BloscShuffle
-            cname = {"zstd":"zstd","lz4":"lz4","gzip":"zlib"}.get(compressor, "zstd")
-            compressor_obj = BloscCodec(cname=cname, clevel=int(compressor_level), shuffle=BloscShuffle.bitshuffle)
+
+            cname = {"zstd": "zstd", "lz4": "lz4", "gzip": "zlib"}.get(
+                compressor, "zstd"
+            )
+            compressor_obj = BloscCodec(
+                cname=cname,
+                clevel=int(compressor_level),
+                shuffle=BloscShuffle.bitshuffle,
+            )
 
     # 1) Dense pixel data (T,C,Z,Y,X)
     arr = to_numpy(data, dtype=dtype, clamp=clamp)
@@ -277,12 +297,16 @@ def to_ome_zarr(
     st, sc, sz, sy, sx = arr.shape
 
     # 3) Axis metadata (names/types/units aligned with T,C,Z,Y,X)
-    axes_names = [a.lower() for a in dim_order]     # ["t","c","z","y","x"]
-    axes_types = ["time","channel","space","space","space"]
+    axes_names = [a.lower() for a in dim_order]  # ["t","c","z","y","x"]
+    axes_types = ["time", "channel", "space", "space", "space"]
     # Units: micrometers for spatial, leave T/C None
-    axes_units = [None, None, pm.get("physical_size_z_unit") or "µm",
-                  pm.get("physical_size_y_unit") or "µm",
-                  pm.get("physical_size_x_unit") or "µm"]
+    axes_units = [
+        None,
+        None,
+        pm.get("physical_size_z_unit") or "µm",
+        pm.get("physical_size_y_unit") or "µm",
+        pm.get("physical_size_x_unit") or "µm",
+    ]
     # Physical pixel sizes at level 0 in axis order
     p_dx = float(pm.get("physical_size_x", 1.0) or 1.0)
     p_dy = float(pm.get("physical_size_y", 1.0) or 1.0)
@@ -293,30 +317,37 @@ def to_ome_zarr(
     def _down(a: int, f: int) -> int:
         return max(1, a // f)
 
-    def _level_shapes_tcxyz(levels: int) -> List[Tuple[int,int,int,int,int]]:
+    def _level_shapes_tcxyz(levels: int) -> List[Tuple[int, int, int, int, int]]:
         shapes = [(st, sc, sz, sy, sx)]
         for _ in range(levels - 1):
             t, c, z, y, x = shapes[-1]
-            shapes.append((t, c,
-                           _down(z, downscale_spatial_by),
-                           _down(y, downscale_spatial_by),
-                           _down(x, downscale_spatial_by)))
+            shapes.append(
+                (
+                    t,
+                    c,
+                    _down(z, downscale_spatial_by),
+                    _down(y, downscale_spatial_by),
+                    _down(x, downscale_spatial_by),
+                )
+            )
         return shapes
 
     multiscale_levels = max(1, int(multiscale_levels))
-    level_shapes: List[Tuple[int,int,int,int,int]] = _level_shapes_tcxyz(multiscale_levels)
+    level_shapes: List[Tuple[int, int, int, int, int]] = _level_shapes_tcxyz(
+        multiscale_levels
+    )
 
     # 5) Chunking / shards (can be single-shape or per-level; we pass single-shape if provided)
-    chunk_shape: Optional[List[Tuple[int,...]]] = None
+    chunk_shape: Optional[List[Tuple[int, ...]]] = None
     if chunks is not None:
         chunk_shape = [tuple(int(v) for v in chunks)] * multiscale_levels
 
-    shard_shape: Optional[List[Tuple[int,...]]] = None
+    shard_shape: Optional[List[Tuple[int, ...]]] = None
     if shards is not None and zarr_format == 3:
         shard_shape = [tuple(int(v) for v in shards)] * multiscale_levels
 
     # 6) Image name default
-    img_name = (image_name or str(row.get("name") or row.get("id") or "Image"))
+    img_name = image_name or str(row.get("name") or row.get("id") or "Image")
 
     # 7) Instantiate writer with your class’ constructor
     writer = OMEZarrWriter(
@@ -328,10 +359,10 @@ def to_ome_zarr(
         compressor=compressor_obj,
         zarr_format=3 if int(zarr_format) == 3 else 2,
         image_name=img_name,
-        channels=None,                # you can map your channel metadata here later
-        rdefs=None,                   # optional OMERO display metadata
-        creator_info=None,            # optional "creator" block
-        root_transform=None,          # optional NGFF root transform
+        channels=None,  # you can map your channel metadata here later
+        rdefs=None,  # optional OMERO display metadata
+        creator_info=None,  # optional "creator" block
+        root_transform=None,  # optional NGFF root transform
         axes_names=axes_names,
         axes_types=axes_types,
         axes_units=axes_units,
@@ -340,6 +371,7 @@ def to_ome_zarr(
 
     # 8) Write full-resolution; writer will build & fill lower levels
     writer.write_full_volume(arr)
+
 
 def to_ome_parquet(
     data: Dict[str, Any] | pa.StructScalar,

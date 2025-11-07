@@ -1,10 +1,9 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [ "setuptools>=64", "setuptools-scm>=8", "uv-dynamic-versioning"]
+requires = [ "setuptools>=64", "setuptools-scm>=8", "uv-dynamic-versioning" ]
 
 [project]
-name = "ome_arrow"
-dynamic = ["version"]
+name = "ome-arrow"
 description = "Using OME specifications with Apache Arrow for fast, queryable, and language agnostic bioimage data."
 readme = "README.md"
 authors = [
@@ -16,23 +15,25 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
+dynamic = [ "version" ]
 dependencies = [
-  "pandas>=2.2.3",
-  "fire>=0.7.0",
-  "pyarrow>=22.0.0",
-  "matplotlib>=3.10.7",
-  "bioio>=3.0.0",
-  "bioio-tifffile>=1.3.0",
-  "numpy>=2.2.6",
-  "bioio-ome-tiff>=1.4.0",
-  "pyvista>=0.46.4",
-  "trame>=3.12.0",
-  "trame-vtk>=2.10.0",
-  "trame-vuetify>=3.1.0",
+  "bioio>=3",
+  "bioio-ome-tiff>=1.4",
+  "bioio-ome-zarr>=3.0.3",
+  "bioio-tifffile>=1.3",
+  "fire>=0.7",
   "ipywidgets>=8.1.8",
   "jupyterlab-widgets>=3.0.16",
-  "bioio-ome-zarr>=3.0.3",
+  "matplotlib>=3.10.7",
+  "numpy>=2.2.6",
+  "pandas>=2.2.3",
+  "pyarrow>=22",
+  "pyvista>=0.46.4",
+  "trame>=3.12",
+  "trame-vtk>=2.10",
+  "trame-vuetify>=3.1",
 ]
 
 [dependency-groups]
@@ -53,17 +54,17 @@ notebooks = [
   "jupytext>=1.17.1",
 ]
 
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = [ "src" ]
+
 [tool.setuptools_scm]
 root = "."
 version_scheme = "no-guess-dev"
 local_scheme = "no-local-version"
 version_file = "src/ome_arrow/_version.py"
-
-[tool.setuptools.package-dir]
-"" = "src"
-
-[tool.setuptools.packages.find]
-where = ["src"]
 
 [tool.ruff]
 target-version = "py311"
