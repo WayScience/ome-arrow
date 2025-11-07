@@ -245,7 +245,7 @@ def view_pyvista(
     
     pl.show_bounds(
         color="white",
-        grid="front",
+        grid=None,
         location="outer",
         ticks="both",
         xtitle="X (µm)",
