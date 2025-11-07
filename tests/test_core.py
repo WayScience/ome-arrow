@@ -2,11 +2,13 @@
 Tests for the core module
 """
 
-import pytest
 import pathlib
-from ome_arrow.core import OMEArrow
+
 import matplotlib
+import pytest
 import pyvista as pv
+
+from ome_arrow.core import OMEArrow
 
 
 @pytest.mark.parametrize(
@@ -244,7 +246,9 @@ import pyvista as pv
         ),
     ],
 )
-def test_ome_arrow_base_expectations(input_data: str, expected_info: dict, tmp_path: pathlib.Path):
+def test_ome_arrow_base_expectations(
+    input_data: str, expected_info: dict, tmp_path: pathlib.Path
+):
     """
     Test that OMEArrow initializes correctly with valid data.
     """
@@ -254,7 +258,9 @@ def test_ome_arrow_base_expectations(input_data: str, expected_info: dict, tmp_p
     assert oa_image.info() == expected_info
 
     # test visualization
-    assert isinstance(oa_image.view(how="matplotlib", show=False)[0], matplotlib.figure.Figure)
+    assert isinstance(
+        oa_image.view(how="matplotlib", show=False)[0], matplotlib.figure.Figure
+    )
 
     assert isinstance(oa_image.view(how="pyvista", show=False), pv.Plotter)
 
@@ -264,8 +270,25 @@ def test_ome_arrow_base_expectations(input_data: str, expected_info: dict, tmp_p
     # test conversions to other formats retain info
     assert OMEArrow(data=oa_image.export(how="numpy")).info() == expected_info
 
-    assert OMEArrow(data=oa_image.export(how="ometiff", out=f"{tmp_path}/example.ome.tiff")).info() == expected_info
+    assert (
+        OMEArrow(
+            data=oa_image.export(how="ometiff", out=f"{tmp_path}/example.ome.tiff")
+        ).info()
+        == expected_info
+    )
 
-    assert OMEArrow(data=oa_image.export(how="omezarr", out=f"{tmp_path}/example.ome.zarr")).info() == expected_info
+    assert (
+        OMEArrow(
+            data=oa_image.export(how="omezarr", out=f"{tmp_path}/example.ome.zarr")
+        ).info()
+        == expected_info
+    )
 
-    assert OMEArrow(data=oa_image.export(how="omeparquet", out=f"{tmp_path}/example.ome.parquet")).info() == expected_info
+    assert (
+        OMEArrow(
+            data=oa_image.export(
+                how="omeparquet", out=f"{tmp_path}/example.ome.parquet"
+            )
+        ).info()
+        == expected_info
+    )
