@@ -83,3 +83,6 @@ autodoc_preserve_defaults = True
 
 # enable anchor creation
 myst_heading_anchors = 3
+
+# disable notebook execution
+nb_execution_mode = "off"
