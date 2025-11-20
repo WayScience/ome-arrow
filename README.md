@@ -11,7 +11,7 @@ OME-Arrow uses [Open Microscopy Environment (OME)](https://github.com/ome) speci
 
 <img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/references_to_files.png">
 
-__Images are often left behind from data model, referenced but excluded from databases.__
+__Images are often left behind from the data model, referenced but excluded from databases.__
 
 <img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/various_ome_arrow_schema.png">
 
