@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>ome-arrow &#8212; ome_arrow  documentation</title>
+    <title>Open, interoperable, and queryable microscopy images with OME Arrow &#8212; ome_arrow  documentation</title>
   
   
   
@@ -291,25 +291,45 @@
                 <article class="bd-article">
                   
   <!-- include contents from the root readme -->
-<section id="ome-arrow">
-<h1>ome-arrow<a class="headerlink" href="#ome-arrow" title="Link to this heading">#</a></h1>
-<p>OME-Arrow uses OME specifications with Apache Arrow for fast, queryable, and language agnostic bioimage data.</p>
-<p>Images are often referenced through databases as filepath links instead of the data itself.
-OME-Arrow enables image data to be stored alongside metadata or derived data such as single-cell morphology features.
-This means you can store and query data from the same location using any system which is compatible with Apache Arrow.</p>
+<img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/logo.png?raw=true">
+<p><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/ome-arrow" />
+<a class="reference external" href="https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml?query=branch%3Amain"><img alt="Build Status" src="https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml/badge.svg?branch=main" /></a>
+<a class="reference external" href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" /></a>
+<a class="reference external" href="https://github.com/astral-sh/uv"><img alt="uv" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" /></a></p>
+<section id="open-interoperable-and-queryable-microscopy-images-with-ome-arrow">
+<h1>Open, interoperable, and queryable microscopy images with OME Arrow<a class="headerlink" href="#open-interoperable-and-queryable-microscopy-images-with-ome-arrow" title="Link to this heading">#</a></h1>
+<p>OME-Arrow uses <a class="reference external" href="https://github.com/ome">Open Microscopy Environment (OME)</a> specifications through <a class="reference external" href="https://arrow.apache.org/">Apache Arrow</a> for fast, queryable, and language agnostic bioimage data.</p>
+<img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/references_to_files.png">
+<p><strong>Images are often left behind from the data model, referenced but excluded from databases.</strong></p>
+<img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/various_ome_arrow_schema.png">
+<p><strong>OME-Arrow brings images back into the story.</strong></p>
+<p>OME Arrow enables image data to be stored alongside metadata or derived data such as single-cell morphology features.
+Images in OME Arrow are composed of mutlilayer <a class="reference external" href="https://arrow.apache.org/docs/python/generated/pyarrow.struct.html">structs</a> so they may be stored as values within tables.
+This means you can store, query, and build relationships on data from the same location using any system which is compatible with Apache Arrow (including Parquet) through common data interfaces (such as SQL and DuckDB).</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<p>Install OME Arrow from PyPI or from source:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># install from pypi</span>
+pip<span class="w"> </span>install<span class="w"> </span>ome-arrow
+
+<span class="c1"># install directly from source</span>
+pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/wayscience/ome-arrow.git
+</pre></div>
+</div>
+</section>
 <section id="quick-start">
 <h2>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h2>
 <p>See below for a quick start guide.
-Please also reference an example notebook: <a class="reference internal" href="examples/learning_to_fly_with_ome-arrow.html"><span class="std std-doc">Learning to fly with OME-Arrow</span></a>.</p>
+Please also reference an example notebook: <a class="reference external" href="https://github.com/wayscience/ome-arrow/tree/main/docs/src/examples/learning_to_fly_with_ome-arrow.ipynb">Learning to fly with OME-Arrow</a>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
 
-<span class="c1"># Ingest a tif image through a convenient OME-Arrow class</span>
+<span class="c1"># Ingest a tif image through a convenient OME Arrow class</span>
 <span class="c1"># We can also ingest OME-Zarr or NumPy arrays.</span>
 <span class="n">oa_image</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span>
     <span class="n">data</span><span class="o">=</span><span class="s2">&quot;your_image.tif&quot;</span>
 <span class="p">)</span>
 
-<span class="c1"># Access the OME-Arrow struct itself</span>
+<span class="c1"># Access the OME Arrow struct itself</span>
 <span class="c1"># (compatible with Arrow-compliant data storage).</span>
 <span class="n">oa_image</span><span class="o">.</span><span class="n">data</span>
 
@@ -328,6 +348,20 @@ Please also reference an example notebook: <a class="reference internal" href="e
 <span class="n">oa_image</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">how</span><span class="o">=</span><span class="s2">&quot;ome-parquet&quot;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="s2">&quot;your_image.ome.parquet&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="contributing-development-and-testing">
+<h2>Contributing, Development, and Testing<a class="headerlink" href="#contributing-development-and-testing" title="Link to this heading">#</a></h2>
+<p>Please see our <a class="reference external" href="https://github.com/wayscience/ome-arrow/tree/main/CONTRIBUTING.md">contributing documentation</a> for more details on contributions, development, and testing.</p>
+</section>
+<section id="related-projects">
+<h2>Related projects<a class="headerlink" href="#related-projects" title="Link to this heading">#</a></h2>
+<p>OME Arrow is used or inspired by the following projects, check them out!</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/WayScience/napari-ome-arrow"><code class="docutils literal notranslate"><span class="pre">napari-ome-arrow</span></code></a>: enables you to view OME Arrow and related images.</p></li>
+<li><p><a class="reference external" href="https://github.com/WayScience/nViz"><code class="docutils literal notranslate"><span class="pre">nViz</span></code></a>: focuses on ingesting and visualizing various 3D image data.</p></li>
+<li><p><a class="reference external" href="https://github.com/cytomining/CytoDataFrame"><code class="docutils literal notranslate"><span class="pre">CytoDataFrame</span></code></a>: provides a DataFrame-like experience for viewing feature and microscopy image data within Jupyter notebook interfaces.</p></li>
+<li><p><a class="reference external" href="https://github.com/cytomining/coSMicQC"><code class="docutils literal notranslate"><span class="pre">coSMicQC</span></code></a>: performs quality control on microscopy feature datasets, visualized using CytoDataFrames.</p></li>
+</ul>
 <div class="toctree-wrapper compound">
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
