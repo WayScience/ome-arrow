@@ -18,7 +18,7 @@ __Images are often left behind from the data model, referenced but excluded from
 __OME-Arrow brings images back into the story.__
 
 OME Arrow enables image data to be stored alongside metadata or derived data such as single-cell morphology features.
-Images in OME Arrow are composed of mutlilayer struct values so they may be stored as values within tables.
+Images in OME Arrow are composed of mutlilayer [structs](https://arrow.apache.org/docs/python/generated/pyarrow.struct.html) so they may be stored as values within tables.
 This means you can store, query, and build relationships on data from the same location using any system which is compatible with Apache Arrow (including Parquet) through common data interfaces (such as SQL and DuckDB).
 
 ## Installation
