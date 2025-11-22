@@ -80,3 +80,14 @@ stack.slice(
     c_indices=[0],
     z_indices=[20],
 )
+
+# read from a multi-image OME Parquet file as OME-Arrow
+oa_image = OMEArrow(
+    data="../../../tests/data/JUMP-BR00117006/BR00117006.ome.parquet",
+    # we can specify which column and row to read
+    # (or rely on OMEArrow to find a suitable default)
+    column_name="Image_FileName_OrigDNA_OMEArrow_LABL",
+    row_index=2,
+)
+# by default, the image and metadata are shown
+oa_image

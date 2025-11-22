@@ -2477,6 +2477,7 @@ docs = [
 ]
 notebooks = [
     { name = "black" },
+    { name = "ipykernel" },
     { name = "isort" },
     { name = "jupyterlab" },
     { name = "jupyterlab-code-formatter" },
@@ -2495,7 +2496,7 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.7" },
     { name = "numpy", specifier = ">=2.2.6" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pillow", specifier = ">=12.0.0" },
+    { name = "pillow", specifier = ">=12" },
     { name = "pyarrow", specifier = ">=22" },
     { name = "pyvista", specifier = ">=0.46.4" },
     { name = "trame", specifier = ">=3.12" },
@@ -2515,6 +2516,7 @@ docs = [
 ]
 notebooks = [
     { name = "black", specifier = ">=25.1" },
+    { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "isort", specifier = ">=6.0.1" },
     { name = "jupyterlab", specifier = ">=4.4.2" },
     { name = "jupyterlab-code-formatter", specifier = ">=3.0.2" },

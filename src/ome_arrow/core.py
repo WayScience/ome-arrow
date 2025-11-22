@@ -47,6 +47,8 @@ class OMEArrow:
         self,
         data: str | dict | pa.StructScalar | "np.ndarray",
         tcz: Tuple[int, int, int] = (0, 0, 0),
+        column_name: str = "ome_arrow",
+        row_index: int = 0,
     ) -> None:
         """
         Construct an OMEArrow from:
@@ -91,7 +93,9 @@ class OMEArrow:
                 ".parquet",
                 ".pq",
             }:
-                self.data = from_ome_parquet(s)
+                self.data = from_ome_parquet(
+                    s, column_name=column_name, row_index=row_index
+                )
 
             # TIFF
             elif path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
