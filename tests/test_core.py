@@ -244,6 +244,22 @@ from ome_arrow.core import OMEArrow
                 "type": "2D image",
             },
         ),
+        (
+            "tests/data/JUMP-BR00117006/BR00117006.ome.parquet",
+            {
+                "channels": 1,
+                "is_multichannel": False,
+                "shape": (
+                    1,
+                    1,
+                    1,
+                    72,
+                    84,
+                ),
+                "summary": "2D image, single-channel - shape (T=1, C=1, Z=1, Y=72, X=84)",
+                "type": "2D image",
+            },
+        ),
     ],
 )
 def test_ome_arrow_base_expectations(
@@ -292,3 +308,42 @@ def test_ome_arrow_base_expectations(
         ).info()
         == expected_info
     )
+
+
+@pytest.mark.parametrize(
+    "input_data, column_name, row_index, expected_info",
+    [
+        (
+            "tests/data/JUMP-BR00117006/BR00117006.ome.parquet",
+            "Image_FileName_OrigDNA_OMEArrow_LABL",
+            2,
+            {
+                "channels": 1,
+                "is_multichannel": False,
+                "shape": (
+                    1,
+                    1,
+                    1,
+                    73,
+                    97,
+                ),
+                "summary": "2D image, single-channel - shape (T=1, C=1, Z=1, Y=73, X=97)",
+                "type": "2D image",
+            },
+        ),
+    ],
+)
+def test_ome_parquet_specific_col_and_row(
+    input_data: str,
+    column_name: str,
+    row_index: int,
+    expected_info: dict,
+    tmp_path: pathlib.Path,
+):
+    """
+    Test that OMEArrow initializes correctly with valid data.
+    """
+
+    oa_image = OMEArrow(data=input_data, column_name=column_name, row_index=row_index)
+
+    assert oa_image.info() == expected_info

@@ -49,6 +49,7 @@ docs = [
 ]
 notebooks = [
   "black>=25.1",
+  "ipykernel>=6.29.5",
   "isort>=6.0.1",
   "jupyterlab>=4.4.2",
   "jupyterlab-code-formatter>=3.0.2",
