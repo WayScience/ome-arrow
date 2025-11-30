@@ -4,7 +4,7 @@ Tests for visualization helpers.
 
 import pytest
 
-import ome_arrow.view as view
+from ome_arrow import view
 
 
 def test_view_pyvista_requires_optional_extras(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -16,4 +16,3 @@ def test_view_pyvista_requires_optional_extras(monkeypatch: pytest.MonkeyPatch) 
     with pytest.warns(RuntimeWarning, match=r"ome-arrow\[viz\]"):
         with pytest.raises(RuntimeError, match="PyVista-based visualization"):
             view.view_pyvista(data={})
-
