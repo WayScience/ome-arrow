@@ -44,6 +44,7 @@ stack = OMEArrow(
 stack
 
 # we can visualize the stack using pyvista for 3D rendering
+# (requires optional extras: pip install "ome-arrow[viz]")
 stack.view(how="pyvista")
 
 # here we demonstrate that the data can be exported again

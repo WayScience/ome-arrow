@@ -2,15 +2,26 @@
 Viewing utilities for OME-Arrow data.
 """
 
+from __future__ import annotations
+
 import contextlib
+import warnings
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow as pa
-import pyvista as pv
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
+
+try:  # optional dependency
+    import pyvista as pv
+except ImportError:  # pragma: no cover - exercised when viz extra missing
+    pv = None  # type: ignore[assignment]
+
+if TYPE_CHECKING:
+    import pyvista
 
 
 def view_matplotlib(
@@ -63,6 +74,21 @@ def view_matplotlib(
     return fig, ax, im
 
 
+def _require_pyvista() -> "pyvista":
+    """
+    Ensure PyVista is available, raising a helpful error otherwise.
+    """
+    if pv is None:
+        msg = (
+            "PyVista-based visualization requires the optional 'viz' extras. "
+            "Install with `pip install ome-arrow[viz]` to enable 3D viewing."
+        )
+        warnings.warn(msg, RuntimeWarning)
+        raise RuntimeError(msg)
+
+    return pv
+
+
 def view_pyvista(
     data: dict | pa.StructScalar,
     c: int = 0,
@@ -77,16 +103,14 @@ def view_pyvista(
     percentile_clim: tuple[float, float] = (1.0, 99.9),  # robust contrast
     sampling_scale: float = 0.5,  # smaller = denser rays (sharper, slower)
     show: bool = True,
-) -> pv.Plotter:
+) -> "pyvista.Plotter":
     """
     Jupyter-inline interactive volume view using PyVista backends.
     Tries 'trame' → 'html' → 'static' when backend='auto'.
 
     sampling_scale controls ray step via the mapper after add_volume.
     """
-    import warnings
-
-    import numpy as np
+    pv = _require_pyvista()
 
     # ---- unwrap OME-Arrow row
     row = data.as_py() if isinstance(data, pa.StructScalar) else data

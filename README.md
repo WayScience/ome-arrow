@@ -58,7 +58,7 @@ oa_image.info()
 oa_image.view(how="matplotlib")
 
 # Display the image with pyvista
-# (great for ZYX 3D images).
+# (great for ZYX 3D images; install extras: `pip install 'ome-arrow[viz]'`).
 oa_image.view(how="pyvista")
 
 # Export to OME-Parquet.

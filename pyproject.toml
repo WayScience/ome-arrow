@@ -24,13 +24,16 @@ dependencies = [
   "bioio-ome-zarr>=3.0.3",
   "bioio-tifffile>=1.3",
   "fire>=0.7",
-  "ipywidgets>=8.1.8",
-  "jupyterlab-widgets>=3.0.16",
   "matplotlib>=3.10.7",
   "numpy>=2.2.6",
   "pandas>=2.2.3",
   "pillow>=12",
   "pyarrow>=22",
+]
+
+optional-dependencies.viz = [
+  "ipywidgets>=8.1.8",
+  "jupyterlab-widgets>=3.0.16",
   "pyvista>=0.46.4",
   "trame>=3.12",
   "trame-vtk>=2.10",

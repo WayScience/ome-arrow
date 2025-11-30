@@ -5,12 +5,11 @@ Core of the ome_arrow package, used for classes and such.
 from __future__ import annotations
 
 import pathlib
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 
 import matplotlib
 import numpy as np
 import pyarrow as pa
-import pyvista
 
 from ome_arrow.export import to_numpy, to_ome_parquet, to_ome_tiff, to_ome_zarr
 from ome_arrow.ingest import (
@@ -24,6 +23,9 @@ from ome_arrow.meta import OME_ARROW_STRUCT
 from ome_arrow.transform import slice_ome_arrow
 from ome_arrow.utils import describe_ome_arrow
 from ome_arrow.view import view_matplotlib, view_pyvista
+
+if TYPE_CHECKING:
+    import pyvista
 
 
 class OMEArrow:
@@ -293,7 +295,7 @@ class OMEArrow:
         clim: tuple[float, float] | None = None,
         show_axes: bool = True,
         scaling_values: tuple[float, float, float] | None = (1.0, 0.1, 0.1),
-    ) -> matplotlib.figure.Figure | pyvista.Plotter:
+    ) -> matplotlib.figure.Figure | "pyvista.Plotter":
         """
         Render an OME-Arrow record using Matplotlib or PyVista.
 
