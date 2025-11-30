@@ -13,5 +13,8 @@ def test_view_pyvista_requires_optional_extras(monkeypatch: pytest.MonkeyPatch) 
     """
     monkeypatch.setattr(view, "pv", None)
 
-    with pytest.warns(RuntimeWarning, match=r"ome-arrow\[viz\]"), pytest.raises(RuntimeError, match="PyVista-based visualization"):
+    with (
+        pytest.warns(RuntimeWarning, match=r"ome-arrow\[viz\]"),
+        pytest.raises(RuntimeError, match="PyVista-based visualization"),
+    ):
         view.view_pyvista(data={})
