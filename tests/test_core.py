@@ -6,7 +6,6 @@ import pathlib
 
 import matplotlib
 import pytest
-import pyvista as pv
 
 from ome_arrow.core import OMEArrow
 
@@ -262,6 +261,10 @@ def test_ome_arrow_base_expectations(
         oa_image.view(how="matplotlib", show=False)[0], matplotlib.figure.Figure
     )
 
+    pv = pytest.importorskip(
+        "pyvista",
+        reason="PyVista visualization stack is optional (install extras: viz)",
+    )
     assert isinstance(oa_image.view(how="pyvista", show=False), pv.Plotter)
 
     # test info description consistency across data inputs
