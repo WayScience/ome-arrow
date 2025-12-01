@@ -4,6 +4,7 @@
 [![Build Status](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml?query=branch%3Amain)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Software DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.17664969.svg)](https://doi.org/10.5281/zenodo.17664969)
 
 # Open, interoperable, and queryable microscopy images with OME Arrow
 
@@ -58,7 +59,7 @@ oa_image.info()
 oa_image.view(how="matplotlib")
 
 # Display the image with pyvista
-# (great for ZYX 3D images).
+# (great for ZYX 3D images; install extras: `pip install 'ome-arrow[viz]'`).
 oa_image.view(how="pyvista")
 
 # Export to OME-Parquet.
