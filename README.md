@@ -4,6 +4,7 @@
 [![Build Status](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml?query=branch%3Amain)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Software DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.17664969.svg)](https://doi.org/10.5281/zenodo.17664969)
 
 # Open, interoperable, and queryable microscopy images with OME Arrow
 

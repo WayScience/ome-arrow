@@ -29,6 +29,10 @@ abstract: >-
 keywords:
   - python
 license: BSD-3-Clause
+identifiers:
+  - description: Zenodo software DOI
+    type: doi
+    value: 10.5281/zenodo.17664969
 references:
   - authors:
       - name: "ExampleHuman CellProfiler Data Team"
