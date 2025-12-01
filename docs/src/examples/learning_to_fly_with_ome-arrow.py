@@ -44,7 +44,6 @@ stack = OMEArrow(
 stack
 
 # we can visualize the stack using pyvista for 3D rendering
-# (requires optional extras: pip install "ome-arrow[viz]")
 stack.view(how="pyvista")
 
 # here we demonstrate that the data can be exported again
@@ -83,6 +82,10 @@ stack.slice(
 )
 
 # read from a multi-image OME Parquet file as OME-Arrow
+# note: the Parquet file was created using the CytoDataFrame project
+# which helps convert CellProfiler and Image data into OME-Parquet format.
+# see here for more details:
+# https://github.com/cytomining/CytoDataFrame/blob/main/docs/src/examples/cytodataframe_at_a_glance.ipynb
 oa_image = OMEArrow(
     data="../../../tests/data/JUMP-BR00117006/BR00117006.ome.parquet",
     # we can specify which column and row to read
