@@ -307,6 +307,14 @@
 <p>OME Arrow enables image data to be stored alongside metadata or derived data such as single-cell morphology features.
 Images in OME Arrow are composed of mutlilayer <a class="reference external" href="https://arrow.apache.org/docs/python/generated/pyarrow.struct.html">structs</a> so they may be stored as values within tables.
 This means you can store, query, and build relationships on data from the same location using any system which is compatible with Apache Arrow (including Parquet) through common data interfaces (such as SQL and DuckDB).</p>
+<section id="project-focus">
+<h2>Project focus<a class="headerlink" href="#project-focus" title="Link to this heading">#</a></h2>
+<p>This package is intentionally dedicated to work at a per-image level and not large batch handling (though it may be used for those purposes by users or in other projects).</p>
+<ul class="simple">
+<li><p>For visualizing OME Arrow and OME Parquet data in Napari, please see the <a class="reference external" href="https://github.com/WayScience/napari-ome-arrow"><code class="docutils literal notranslate"><span class="pre">napari-ome-arrow</span></code></a> Napari plugin.</p></li>
+<li><p>For more comprehensive handling of many images and features in the context of the OME Parquet format please see the <a class="reference external" href="https://github.com/cytomining/CytoDataFrame"><code class="docutils literal notranslate"><span class="pre">CytoDataFrame</span></code></a> project (and relevant <a class="reference external" href="https://github.com/cytomining/CytoDataFrame/blob/main/docs/src/examples/cytodataframe_at_a_glance.ipynb">example notebook</a>).</p></li>
+</ul>
+</section>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
 <p>Install OME Arrow from PyPI or from source:</p>
@@ -360,7 +368,7 @@ Please also reference an example notebook: <a class="reference external" href="h
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/WayScience/napari-ome-arrow"><code class="docutils literal notranslate"><span class="pre">napari-ome-arrow</span></code></a>: enables you to view OME Arrow and related images.</p></li>
 <li><p><a class="reference external" href="https://github.com/WayScience/nViz"><code class="docutils literal notranslate"><span class="pre">nViz</span></code></a>: focuses on ingesting and visualizing various 3D image data.</p></li>
-<li><p><a class="reference external" href="https://github.com/cytomining/CytoDataFrame"><code class="docutils literal notranslate"><span class="pre">CytoDataFrame</span></code></a>: provides a DataFrame-like experience for viewing feature and microscopy image data within Jupyter notebook interfaces.</p></li>
+<li><p><a class="reference external" href="https://github.com/cytomining/CytoDataFrame"><code class="docutils literal notranslate"><span class="pre">CytoDataFrame</span></code></a>: provides a DataFrame-like experience for viewing feature and microscopy image data within Jupyter notebook interfaces and creating OME Parquet files.</p></li>
 <li><p><a class="reference external" href="https://github.com/cytomining/coSMicQC"><code class="docutils literal notranslate"><span class="pre">coSMicQC</span></code></a>: performs quality control on microscopy feature datasets, visualized using CytoDataFrames.</p></li>
 </ul>
 <div class="toctree-wrapper compound">
