@@ -22,6 +22,13 @@ OME Arrow enables image data to be stored alongside metadata or derived data suc
 Images in OME Arrow are composed of mutlilayer [structs](https://arrow.apache.org/docs/python/generated/pyarrow.struct.html) so they may be stored as values within tables.
 This means you can store, query, and build relationships on data from the same location using any system which is compatible with Apache Arrow (including Parquet) through common data interfaces (such as SQL and DuckDB).
 
+## Project focus
+
+This package is intentionally dedicated to work at a per-image level and not large batch handling (though it may be used for those purposes by users or in other projects).
+
+- For visualizing OME Arrow and OME Parquet data in Napari, please see the [`napari-ome-arrow`](https://github.com/WayScience/napari-ome-arrow) Napari plugin.
+- For more comprehensive handling of many images and features in the context of the OME Parquet format please see the [`CytoDataFrame`](https://github.com/cytomining/CytoDataFrame) project (and relevant [example notebook](https://github.com/cytomining/CytoDataFrame/blob/main/docs/src/examples/cytodataframe_at_a_glance.ipynb)).
+
 ## Installation
 
 Install OME Arrow from PyPI or from source:
@@ -77,5 +84,5 @@ OME Arrow is used or inspired by the following projects, check them out!
 
 - [`napari-ome-arrow`](https://github.com/WayScience/napari-ome-arrow): enables you to view OME Arrow and related images.
 - [`nViz`](https://github.com/WayScience/nViz): focuses on ingesting and visualizing various 3D image data.
-- [`CytoDataFrame`](https://github.com/cytomining/CytoDataFrame): provides a DataFrame-like experience for viewing feature and microscopy image data within Jupyter notebook interfaces.
+- [`CytoDataFrame`](https://github.com/cytomining/CytoDataFrame): provides a DataFrame-like experience for viewing feature and microscopy image data within Jupyter notebook interfaces and creating OME Parquet files.
 - [`coSMicQC`](https://github.com/cytomining/coSMicQC): performs quality control on microscopy feature datasets, visualized using CytoDataFrames.

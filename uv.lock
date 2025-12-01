@@ -2481,6 +2481,7 @@ docs = [
 ]
 notebooks = [
     { name = "black" },
+    { name = "ipykernel" },
     { name = "isort" },
     { name = "jupyterlab" },
     { name = "jupyterlab-code-formatter" },
@@ -2520,6 +2521,7 @@ docs = [
 ]
 notebooks = [
     { name = "black", specifier = ">=25.1" },
+    { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "isort", specifier = ">=6.0.1" },
     { name = "jupyterlab", specifier = ">=4.4.2" },
     { name = "jupyterlab-code-formatter", specifier = ">=3.0.2" },

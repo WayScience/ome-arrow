@@ -4,6 +4,7 @@ Converting to and from OME-Arrow formats.
 
 import itertools
 import re
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -820,42 +821,6 @@ def from_ome_parquet(
 ) -> pa.StructScalar:
     """
     Read an OME-Arrow record from a Parquet file and return a typed StructScalar.
-
-    Expected layout (as produced by `to_ome_parquet`):
-      - single Parquet file
-      - a single column (default name "ome_arrow") of `OME_ARROW_STRUCT` type
-      - one row (row_index=0)
-
-    This function is forgiving:
-      - If `column_name` is None or not found, it will auto-detect a struct column
-        that matches the OME-Arrow field names.
-      - If the table has multiple rows, you can choose which record to read
-        via `row_index`.
-
-    Parameters
-    ----------
-    parquet_path : str | Path
-        Path to the .parquet file.
-    column_name : Optional[str], default "ome_arrow"
-        Name of the column that stores the OME-Arrow struct. If None, auto-detect.
-    row_index : int, default 0
-        Which row to read if the table contains multiple rows.
-    strict_schema : bool, default False
-        If True, require the column's type to equal `OME_ARROW_STRUCT` exactly.
-        If False, we only require the column to be a Struct with the same field
-        names (order can vary).
-
-    Returns
-    -------
-    pa.StructScalar
-        A validated OME-Arrow struct scalar.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the file does not exist.
-    ValueError
-        If a suitable column/row cannot be found or schema checks fail.
     """
     p = Path(parquet_path)
     if not p.exists():
@@ -874,7 +839,9 @@ def from_ome_parquet(
         col_fields = {f.name for f in t}
         return ome_fields == col_fields
 
+    requested_name = column_name
     candidate_col = None
+    autodetected_name = None
 
     if column_name is not None and column_name in table.column_names:
         arr = table[column_name]
@@ -898,10 +865,12 @@ def from_ome_parquet(
             if pa.types.is_struct(arr.type):
                 if strict_schema and arr.type == OME_ARROW_STRUCT:
                     candidate_col = arr
+                    autodetected_name = name
                     column_name = name
                     break
                 if not strict_schema and _struct_matches_ome_fields(arr.type):
                     candidate_col = arr
+                    autodetected_name = name
                     column_name = name
                     break
         if candidate_col is None:
@@ -911,21 +880,26 @@ def from_ome_parquet(
                 hint = f"column '{column_name}' not found and auto-detection failed."
             raise ValueError(f"Could not locate an OME-Arrow struct column: {hint}")
 
+    # Emit warning if auto-detection was used
+    if autodetected_name is not None and autodetected_name != requested_name:
+        warnings.warn(
+            f"Requested column '{requested_name}' was not usable or not found. "
+            f"Auto-detected OME-Arrow column '{autodetected_name}'.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     # 2) Extract the row as a Python dict
-    #    (Using to_pylist() for the single element slice is simple & reliable.)
     record_dict: Dict[str, Any] = candidate_col.slice(row_index, 1).to_pylist()[0]
 
     # 3) Reconstruct a typed StructScalar using the canonical schema
-    #    (this validates field names/types and normalizes order)
     scalar = pa.scalar(record_dict, type=OME_ARROW_STRUCT)
 
     # Optional: soft validation via file-level metadata (if present)
     try:
         meta = table.schema.metadata or {}
-        meta.get(b"ome.arrow.type", b"").decode() == str(
-            OME_ARROW_TAG_TYPE
-        ) and meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
-        # You could log/print a warning if tag_ok is False, but don't fail.
+        meta.get(b"ome.arrow.type", b"").decode() == str(OME_ARROW_TAG_TYPE)
+        meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
     except Exception:
         pass
 
