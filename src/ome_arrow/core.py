@@ -24,6 +24,7 @@ from ome_arrow.transform import slice_ome_arrow
 from ome_arrow.utils import describe_ome_arrow
 from ome_arrow.view import view_matplotlib, view_pyvista
 
+# if not in runtime, import pyvista for type hints
 if TYPE_CHECKING:
     import pyvista
 
