@@ -1,4 +1,4 @@
-<img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/logo.png?raw=true">
+<img width="600" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/logo.png?raw=true">
 
 ![PyPI - Version](https://img.shields.io/pypi/v/ome-arrow)
 [![Build Status](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml?query=branch%3Amain)
