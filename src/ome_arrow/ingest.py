@@ -3,6 +3,7 @@ Converting to and from OME-Arrow formats.
 """
 
 import itertools
+import json
 import re
 import warnings
 from datetime import datetime, timezone
@@ -18,6 +19,129 @@ from bioio import BioImage
 from bioio_ome_zarr import Reader as OMEZarrReader
 
 from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
+
+
+def _normalize_unit(unit: str | None) -> str | None:
+    if not unit:
+        return None
+    u = unit.strip().lower()
+    if u in {"micrometer", "micrometre", "micron", "microns", "um", "µm"}:
+        return "µm"
+    if u in {"nanometer", "nanometre", "nm"}:
+        return "nm"
+    return unit
+
+
+def _read_physical_pixel_sizes(
+    img: BioImage,
+) -> tuple[float, float, float, str | None, bool]:
+    pps = getattr(img, "physical_pixel_sizes", None)
+    if pps is None:
+        return 1.0, 1.0, 1.0, None, False
+
+    vx = getattr(pps, "X", None) or getattr(pps, "x", None)
+    vy = getattr(pps, "Y", None) or getattr(pps, "y", None)
+    vz = getattr(pps, "Z", None) or getattr(pps, "z", None)
+
+    if vx is None and vy is None and vz is None:
+        return 1.0, 1.0, 1.0, None, False
+
+    try:
+        psize_x = float(vx or 1.0)
+        psize_y = float(vy or 1.0)
+        psize_z = float(vz or 1.0)
+    except Exception:
+        return 1.0, 1.0, 1.0, None, False
+
+    unit = getattr(pps, "unit", None) or getattr(pps, "units", None)
+    unit = _normalize_unit(str(unit)) if unit is not None else None
+
+    return psize_x, psize_y, psize_z, unit, True
+
+
+def _load_zarr_attrs(zarr_path: Path) -> dict:
+    zarr_json = zarr_path / "zarr.json"
+    if zarr_json.exists():
+        try:
+            data = json.loads(zarr_json.read_text())
+            return data.get("attributes") or data.get("attrs") or {}
+        except Exception:
+            return {}
+    zattrs = zarr_path / ".zattrs"
+    if zattrs.exists():
+        try:
+            return json.loads(zattrs.read_text())
+        except Exception:
+            return {}
+    return {}
+
+
+def _extract_multiscales(attrs: dict) -> list[dict]:
+    if not isinstance(attrs, dict):
+        return []
+    ome = attrs.get("ome")
+    if isinstance(ome, dict) and isinstance(ome.get("multiscales"), list):
+        return ome["multiscales"]
+    if isinstance(attrs.get("multiscales"), list):
+        return attrs["multiscales"]
+    return []
+
+
+def _read_ngff_scale(zarr_path: Path) -> tuple[float, float, float, str | None] | None:
+    zarr_root = zarr_path
+    for parent in [zarr_path, *list(zarr_path.parents)]:
+        if parent.suffix.lower() in {".zarr", ".ome.zarr"}:
+            zarr_root = parent
+            break
+
+    for candidate in (zarr_path, zarr_root):
+        attrs = _load_zarr_attrs(candidate)
+        multiscales = _extract_multiscales(attrs)
+        if multiscales:
+            break
+    else:
+        return None
+
+    ms = multiscales[0]
+    axes = ms.get("axes") or []
+    datasets = ms.get("datasets") or []
+    if not axes or not datasets:
+        return None
+
+    ds = next((d for d in datasets if str(d.get("path")) == "0"), datasets[0])
+    cts = ds.get("coordinateTransformations") or []
+    scale_ct = next((ct for ct in cts if ct.get("type") == "scale"), None)
+    if not scale_ct:
+        return None
+
+    scale = scale_ct.get("scale") or []
+    if len(scale) != len(axes):
+        return None
+
+    axis_scale: dict[str, float] = {}
+    axis_unit: dict[str, str] = {}
+    for i, ax in enumerate(axes):
+        name = str(ax.get("name", "")).lower()
+        if name in {"x", "y", "z"}:
+            try:
+                axis_scale[name] = float(scale[i])
+            except Exception:
+                continue
+            unit = _normalize_unit(ax.get("unit"))
+            if unit:
+                axis_unit[name] = unit
+
+    if not axis_scale:
+        return None
+
+    psize_x = axis_scale.get("x", 1.0)
+    psize_y = axis_scale.get("y", 1.0)
+    psize_z = axis_scale.get("z", 1.0)
+
+    units = [axis_unit.get(a) for a in ("x", "y", "z") if axis_unit.get(a)]
+    unit = units[0] if units and len(set(units)) == 1 else None
+
+    return psize_x, psize_y, psize_z, unit
 
 
 def to_ome_arrow(
@@ -338,13 +462,8 @@ def from_tiff(
     if size_x <= 0 or size_y <= 0:
         raise ValueError("Image must have positive Y and X dims.")
 
-    pps = getattr(img, "physical_pixel_sizes", None)
-    try:
-        psize_x = float(getattr(pps, "X", None) or 1.0)
-        psize_y = float(getattr(pps, "Y", None) or 1.0)
-        psize_z = float(getattr(pps, "Z", None) or 1.0)
-    except Exception:
-        psize_x = psize_y = psize_z = 1.0
+    psize_x, psize_y, psize_z, unit, _pps_valid = _read_physical_pixel_sizes(img)
+    psize_unit = unit or "µm"
 
     # --- NEW: coerce top-level strings --------------------------------
     img_id = str(image_id or p.stem)
@@ -394,7 +513,7 @@ def from_tiff(
         physical_size_x=psize_x,
         physical_size_y=psize_y,
         physical_size_z=psize_z,
-        physical_size_unit="µm",
+        physical_size_unit=psize_unit,
         channels=channels,
         planes=planes,
         masks=None,
@@ -741,13 +860,15 @@ def from_ome_zarr(
     if size_x <= 0 or size_y <= 0:
         raise ValueError("Image must have positive Y and X dimensions.")
 
-    pps = getattr(img, "physical_pixel_sizes", None)
-    try:
-        psize_x = float(getattr(pps, "X", None) or 1.0)
-        psize_y = float(getattr(pps, "Y", None) or 1.0)
-        psize_z = float(getattr(pps, "Z", None) or 1.0)
-    except Exception:
-        psize_x = psize_y = psize_z = 1.0
+    psize_x, psize_y, psize_z, unit, pps_valid = _read_physical_pixel_sizes(img)
+    psize_unit = unit or "µm"
+
+    if not pps_valid:
+        ngff_scale = _read_ngff_scale(p)
+        if ngff_scale is not None:
+            psize_x, psize_y, psize_z, unit = ngff_scale
+            if unit:
+                psize_unit = unit
 
     img_id = str(image_id or p.stem)
     display_name = str(name or p.name)
@@ -805,7 +926,7 @@ def from_ome_zarr(
         physical_size_x=psize_x,
         physical_size_y=psize_y,
         physical_size_z=psize_z,
-        physical_size_unit="µm",
+        physical_size_unit=psize_unit,
         channels=channels,
         planes=planes,
         masks=None,
