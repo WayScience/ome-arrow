@@ -20,6 +20,105 @@ from bioio_ome_zarr import Reader as OMEZarrReader
 from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
 
 
+def _ome_arrow_from_table(
+    table: pa.Table,
+    *,
+    column_name: Optional[str],
+    row_index: int,
+    strict_schema: bool,
+) -> pa.StructScalar:
+    """Extract a single OME-Arrow record from an Arrow table.
+
+    Args:
+        table: Source Arrow table.
+        column_name: Column to read; auto-detected when None or invalid.
+        row_index: Row index to extract.
+        strict_schema: Require the exact OME-Arrow schema if True.
+
+    Returns:
+        A typed OME-Arrow StructScalar.
+
+    Raises:
+        ValueError: If the row index is out of range or no suitable column exists.
+    """
+    if table.num_rows == 0:
+        raise ValueError("Table contains 0 rows; expected at least 1.")
+    if not (0 <= row_index < table.num_rows):
+        raise ValueError(f"row_index {row_index} out of range [0, {table.num_rows}).")
+
+    # 1) Locate the OME-Arrow column
+    def _struct_matches_ome_fields(t: pa.StructType) -> bool:
+        ome_fields = {f.name for f in OME_ARROW_STRUCT}
+        col_fields = {f.name for f in t}
+        return ome_fields == col_fields
+
+    requested_name = column_name
+    candidate_col = None
+    autodetected_name = None
+
+    if column_name is not None and column_name in table.column_names:
+        arr = table[column_name]
+        if not pa.types.is_struct(arr.type):
+            raise ValueError(f"Column '{column_name}' is not a Struct; got {arr.type}.")
+        if strict_schema and arr.type != OME_ARROW_STRUCT:
+            raise ValueError(
+                f"Column '{column_name}' schema != OME_ARROW_STRUCT.\n"
+                f"Got:   {arr.type}\n"
+                f"Expect:{OME_ARROW_STRUCT}"
+            )
+        if not strict_schema and not _struct_matches_ome_fields(arr.type):
+            raise ValueError(
+                f"Column '{column_name}' does not have the expected OME-Arrow fields."
+            )
+        candidate_col = arr
+    else:
+        # Auto-detect a struct column that matches OME-Arrow fields
+        for name in table.column_names:
+            arr = table[name]
+            if pa.types.is_struct(arr.type):
+                if strict_schema and arr.type == OME_ARROW_STRUCT:
+                    candidate_col = arr
+                    autodetected_name = name
+                    column_name = name
+                    break
+                if not strict_schema and _struct_matches_ome_fields(arr.type):
+                    candidate_col = arr
+                    autodetected_name = name
+                    column_name = name
+                    break
+        if candidate_col is None:
+            if column_name is None:
+                hint = "no struct column with OME-Arrow fields was found."
+            else:
+                hint = f"column '{column_name}' not found and auto-detection failed."
+            raise ValueError(f"Could not locate an OME-Arrow struct column: {hint}")
+
+    # Emit warning if auto-detection was used
+    if autodetected_name is not None and autodetected_name != requested_name:
+        warnings.warn(
+            f"Requested column '{requested_name}' was not usable or not found. "
+            f"Auto-detected OME-Arrow column '{autodetected_name}'.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    # 2) Extract the row as a Python dict
+    record_dict: Dict[str, Any] = candidate_col.slice(row_index, 1).to_pylist()[0]
+
+    # 3) Reconstruct a typed StructScalar using the canonical schema
+    scalar = pa.scalar(record_dict, type=OME_ARROW_STRUCT)
+
+    # Optional: soft validation via file-level metadata (if present)
+    try:
+        meta = table.schema.metadata or {}
+        meta.get(b"ome.arrow.type", b"").decode() == str(OME_ARROW_TAG_TYPE)
+        meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
+    except Exception:
+        pass
+
+    return scalar
+
+
 def to_ome_arrow(
     type_: str = OME_ARROW_TAG_TYPE,
     version: str = OME_ARROW_TAG_VERSION,
@@ -819,88 +918,72 @@ def from_ome_parquet(
     row_index: int = 0,
     strict_schema: bool = False,
 ) -> pa.StructScalar:
-    """
-    Read an OME-Arrow record from a Parquet file and return a typed StructScalar.
+    """Read an OME-Arrow record from a Parquet file.
+
+    Args:
+        parquet_path: Path to the Parquet file.
+        column_name: Column to read; auto-detected when None or invalid.
+        row_index: Row index to extract.
+        strict_schema: Require the exact OME-Arrow schema if True.
+
+    Returns:
+        A typed OME-Arrow StructScalar.
+
+    Raises:
+        FileNotFoundError: If the Parquet path does not exist.
+        ValueError: If the row index is out of range or no suitable column exists.
     """
     p = Path(parquet_path)
     if not p.exists():
         raise FileNotFoundError(f"No such file: {p}")
 
     table = pq.read_table(p)
+    return _ome_arrow_from_table(
+        table,
+        column_name=column_name,
+        row_index=row_index,
+        strict_schema=strict_schema,
+    )
 
-    if table.num_rows == 0:
-        raise ValueError("Parquet file contains 0 rows; expected at least 1.")
-    if not (0 <= row_index < table.num_rows):
-        raise ValueError(f"row_index {row_index} out of range [0, {table.num_rows}).")
 
-    # 1) Locate the OME-Arrow column
-    def _struct_matches_ome_fields(t: pa.StructType) -> bool:
-        ome_fields = {f.name for f in OME_ARROW_STRUCT}
-        col_fields = {f.name for f in t}
-        return ome_fields == col_fields
+def from_ome_vortex(
+    vortex_path: str | Path,
+    *,
+    column_name: Optional[str] = "ome_arrow",
+    row_index: int = 0,
+    strict_schema: bool = False,
+) -> pa.StructScalar:
+    """Read an OME-Arrow record from a Vortex file.
 
-    requested_name = column_name
-    candidate_col = None
-    autodetected_name = None
+    Args:
+        vortex_path: Path to the Vortex file.
+        column_name: Column to read; auto-detected when None or invalid.
+        row_index: Row index to extract.
+        strict_schema: Require the exact OME-Arrow schema if True.
 
-    if column_name is not None and column_name in table.column_names:
-        arr = table[column_name]
-        if not pa.types.is_struct(arr.type):
-            raise ValueError(f"Column '{column_name}' is not a Struct; got {arr.type}.")
-        if strict_schema and arr.type != OME_ARROW_STRUCT:
-            raise ValueError(
-                f"Column '{column_name}' schema != OME_ARROW_STRUCT.\n"
-                f"Got:   {arr.type}\n"
-                f"Expect:{OME_ARROW_STRUCT}"
-            )
-        if not strict_schema and not _struct_matches_ome_fields(arr.type):
-            raise ValueError(
-                f"Column '{column_name}' does not have the expected OME-Arrow fields."
-            )
-        candidate_col = arr
-    else:
-        # Auto-detect a struct column that matches OME-Arrow fields
-        for name in table.column_names:
-            arr = table[name]
-            if pa.types.is_struct(arr.type):
-                if strict_schema and arr.type == OME_ARROW_STRUCT:
-                    candidate_col = arr
-                    autodetected_name = name
-                    column_name = name
-                    break
-                if not strict_schema and _struct_matches_ome_fields(arr.type):
-                    candidate_col = arr
-                    autodetected_name = name
-                    column_name = name
-                    break
-        if candidate_col is None:
-            if column_name is None:
-                hint = "no struct column with OME-Arrow fields was found."
-            else:
-                hint = f"column '{column_name}' not found and auto-detection failed."
-            raise ValueError(f"Could not locate an OME-Arrow struct column: {hint}")
+    Returns:
+        A typed OME-Arrow StructScalar.
 
-    # Emit warning if auto-detection was used
-    if autodetected_name is not None and autodetected_name != requested_name:
-        warnings.warn(
-            f"Requested column '{requested_name}' was not usable or not found. "
-            f"Auto-detected OME-Arrow column '{autodetected_name}'.",
-            UserWarning,
-            stacklevel=2,
-        )
+    Raises:
+        FileNotFoundError: If the Vortex path does not exist.
+        ImportError: If the optional `vortex-data` dependency is missing.
+        ValueError: If the row index is out of range or no suitable column exists.
+    """
+    p = Path(vortex_path)
+    if not p.exists():
+        raise FileNotFoundError(f"No such file: {p}")
 
-    # 2) Extract the row as a Python dict
-    record_dict: Dict[str, Any] = candidate_col.slice(row_index, 1).to_pylist()[0]
-
-    # 3) Reconstruct a typed StructScalar using the canonical schema
-    scalar = pa.scalar(record_dict, type=OME_ARROW_STRUCT)
-
-    # Optional: soft validation via file-level metadata (if present)
     try:
-        meta = table.schema.metadata or {}
-        meta.get(b"ome.arrow.type", b"").decode() == str(OME_ARROW_TAG_TYPE)
-        meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
-    except Exception:
-        pass
+        import vortex
+    except ImportError as exc:
+        raise ImportError(
+            "Vortex support requires the optional 'vortex-data' dependency."
+        ) from exc
 
-    return scalar
+    table = vortex.open(str(p)).to_arrow().read_all()
+    return _ome_arrow_from_table(
+        table,
+        column_name=column_name,
+        row_index=row_index,
+        strict_schema=strict_schema,
+    )

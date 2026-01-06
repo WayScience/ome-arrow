@@ -11,10 +11,17 @@ import matplotlib
 import numpy as np
 import pyarrow as pa
 
-from ome_arrow.export import to_numpy, to_ome_parquet, to_ome_tiff, to_ome_zarr
+from ome_arrow.export import (
+    to_numpy,
+    to_ome_parquet,
+    to_ome_tiff,
+    to_ome_vortex,
+    to_ome_zarr,
+)
 from ome_arrow.ingest import (
     from_numpy,
     from_ome_parquet,
+    from_ome_vortex,
     from_ome_zarr,
     from_stack_pattern_path,
     from_tiff,
@@ -59,6 +66,7 @@ class OMEArrow:
         - a path/URL to an OME-TIFF (.tif/.tiff)
         - a path/URL to an OME-Zarr store (.zarr / .ome.zarr)
         - a path/URL to an OME-Parquet file (.parquet / .pq)
+        - a path/URL to a Vortex file (.vortex)
         - a NumPy ndarray (2D-5D; interpreted
             with from_numpy defaults)
         - a dict already matching the OME-Arrow schema
@@ -100,6 +108,12 @@ class OMEArrow:
                     s, column_name=column_name, row_index=row_index
                 )
 
+            # Vortex
+            elif s.lower().endswith(".vortex") or path.suffix.lower() == ".vortex":
+                self.data = from_ome_vortex(
+                    s, column_name=column_name, row_index=row_index
+                )
+
             # TIFF
             elif path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
                 (".tif", ".tiff")
@@ -117,6 +131,7 @@ class OMEArrow:
                     "  • Bio-Formats pattern string (contains '<', '>' or '*')\n"
                     "  • OME-Zarr path/URL ending with '.zarr' or '.ome.zarr'\n"
                     "  • OME-Parquet file ending with '.parquet' or '.pq'\n"
+                    "  • Vortex file ending with '.vortex'\n"
                     "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
                 )
 
@@ -141,7 +156,7 @@ class OMEArrow:
                 "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
             )
 
-    def export(
+    def export(  # noqa: PLR0911
         self,
         how: str = "numpy",
         dtype: np.dtype = np.uint16,
@@ -165,6 +180,8 @@ class OMEArrow:
         parquet_column_name: str = "ome_arrow",
         parquet_compression: str | None = "zstd",
         parquet_metadata: dict[str, str] | None = None,
+        vortex_column_name: str = "ome_arrow",
+        vortex_metadata: dict[str, str] | None = None,
     ) -> np.array | dict | pa.StructScalar | str:
         """
         Export the OME-Arrow content in a chosen representation.
@@ -178,6 +195,7 @@ class OMEArrow:
             "ome-tiff"  → write OME-TIFF via BioIO
             "ome-zarr"  → write OME-Zarr (OME-NGFF) via BioIO
             "parquet"   → write a single-row Parquet with one struct column
+            "vortex"    → write a single-row Vortex file with one struct column
         dtype:
             Target dtype for "numpy"/writers (default: np.uint16).
         strict:
@@ -199,6 +217,8 @@ class OMEArrow:
             Try to embed per-channel display colors when safe; otherwise omitted.
         parquet_*:
             Options for Parquet export (column name, compression, file metadata).
+        vortex_*:
+            Options for Vortex export (column name, file metadata).
 
         Returns
         -------
@@ -209,6 +229,7 @@ class OMEArrow:
             - "ome-tiff": output path (str)
             - "ome-zarr": output path (str)
             - "parquet": output path (str)
+            - "vortex": output path (str)
 
         Raises
         ------
@@ -268,6 +289,18 @@ class OMEArrow:
                 column_name=parquet_column_name,
                 compression=parquet_compression,  # default 'zstd'
                 file_metadata=parquet_metadata,
+            )
+            return out
+
+        # Vortex (single row, single struct column)
+        if mode in {"ome-vortex", "omevortex", "vortex"}:
+            if not out:
+                raise ValueError("export(how='vortex') requires 'out' path.")
+            to_ome_vortex(
+                data=self.data,
+                out_path=out,
+                column_name=vortex_column_name,
+                file_metadata=vortex_metadata,
             )
             return out
 

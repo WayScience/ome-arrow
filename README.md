@@ -72,6 +72,9 @@ oa_image.view(how="pyvista")
 # Export to OME-Parquet.
 # We can also export OME-TIFF, OME-Zarr or NumPy arrays.
 oa_image.export(how="ome-parquet", out="your_image.ome.parquet")
+
+# Export to Vortex (install extras: `pip install 'ome-arrow[vortex]'`).
+oa_image.export(how="vortex", out="your_image.vortex")
 ```
 
 ## Contributing, Development, and Testing
