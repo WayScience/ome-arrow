@@ -33,6 +33,23 @@ def view_matplotlib(
     cmap: str = "gray",
     show: bool = True,
 ) -> tuple[Figure, Axes, AxesImage]:
+    """Render a single (t, c, z) plane with Matplotlib.
+
+    Args:
+        data: OME-Arrow row or dict containing pixels_meta and planes.
+        tcz: (t, c, z) indices of the plane to render.
+        autoscale: If True, infer vmin/vmax from the image data.
+        vmin: Explicit lower display limit for intensity scaling.
+        vmax: Explicit upper display limit for intensity scaling.
+        cmap: Matplotlib colormap name.
+        show: Whether to display the plot immediately.
+
+    Returns:
+        A tuple of (figure, axes, image) from Matplotlib.
+
+    Raises:
+        ValueError: If the requested plane is missing or pixel sizes mismatch.
+    """
     if isinstance(data, pa.StructScalar):
         data = data.as_py()
 

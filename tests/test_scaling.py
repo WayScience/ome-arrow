@@ -51,6 +51,9 @@ def _read_ngff_scale(zarr_group: Path) -> tuple[float, float, float, str | None]
 
 
 def test_ome_zarr_scale_from_metadata() -> None:
+    """
+    Ensure NGFF scale metadata is mapped into OME-Arrow physical sizes.
+    """
     zarr_path = Path("tests/data/idr0062A/6001240_labels.zarr/labels/0")
     expected_x, expected_y, expected_z, unit = _read_ngff_scale(zarr_path)
 
@@ -67,6 +70,9 @@ def test_ome_zarr_scale_from_metadata() -> None:
 
 
 def test_ome_tiff_scale_from_metadata() -> None:
+    """
+    Ensure OME-TIFF physical pixel sizes map to OME-Arrow physical sizes.
+    """
     tiff_path = Path("tests/data/examplehuman/AS_09125_050116030001_D03f00d2.tif")
     reader = (
         OMETiffReader

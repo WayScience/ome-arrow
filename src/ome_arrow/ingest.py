@@ -529,6 +529,20 @@ def from_stack_pattern_path(
     image_id: Optional[str] = None,
     name: Optional[str] = None,
 ) -> pa.StructScalar:
+    """Build an OME-Arrow record from a filename pattern describing a stack.
+
+    Args:
+        pattern_path: Path or pattern string describing the stack layout.
+        default_dim_for_unspecified: Dimension to use when tokens lack a dim.
+        map_series_to: Dimension to map series tokens to (e.g., "T"), or None.
+        clamp_to_uint16: Whether to clamp pixel values to uint16.
+        channel_names: Optional list of channel names to apply.
+        image_id: Optional image identifier override.
+        name: Optional display name override.
+
+    Returns:
+        A validated OME-Arrow StructScalar describing the stack.
+    """
     path = Path(pattern_path)
     folder = path.parent
     line = path.name.strip()
