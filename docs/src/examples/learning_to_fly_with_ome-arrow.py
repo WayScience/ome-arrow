@@ -44,6 +44,9 @@ stack = OMEArrow(
 stack
 
 # we can visualize the stack using pyvista for 3D rendering
+# note: we use manually specified scaling values here
+# and can also default to what the image metadata provides
+# with `scaling_values=None` (the default).
 stack.view(how="pyvista", scaling_values=(1, 0.1, 0.1))
 
 # here we demonstrate that the data can be exported again
