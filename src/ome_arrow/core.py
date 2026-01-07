@@ -338,7 +338,9 @@ class OMEArrow:
         show_axes: If ``True``, display axes in the PyVista scene.
         scaling_values: Physical scale multipliers for the (x, y, z) axes used by
             PyVista, typically to express anisotropy. If ``None``, uses metadata
-            scaling from the OME-Arrow record.
+            scaling from the OME-Arrow record (pixels_meta.physical_size_x/y/z).
+            These scaling values will default to 1µm if metadata is missing in
+            source image metadata.
 
         Returns:
         matplotlib.figure.Figure | pyvista.Plotter:
