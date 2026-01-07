@@ -16,6 +16,7 @@ from ome_arrow.core import OMEArrow
 
 
 def _read_ngff_scale(zarr_group: Path) -> tuple[float, float, float, str | None]:
+    # Read NGFF metadata from the group-level attributes.
     attrs = json.loads((zarr_group / "zarr.json").read_text()).get("attributes", {})
     multiscales = attrs.get("ome", {}).get("multiscales", [])
     assert multiscales, "Expected NGFF multiscales metadata in zarr.json"
@@ -24,6 +25,7 @@ def _read_ngff_scale(zarr_group: Path) -> tuple[float, float, float, str | None]
     datasets = ms.get("datasets", [])
     assert axes and datasets, "Expected axes/datasets metadata in NGFF multiscales"
 
+    # Find the scale transform for the base (path="0") dataset.
     ds = next((d for d in datasets if str(d.get("path")) == "0"), datasets[0])
     cts = ds.get("coordinateTransformations", [])
     scale_ct = next((ct for ct in cts if ct.get("type") == "scale"), None)
@@ -32,6 +34,7 @@ def _read_ngff_scale(zarr_group: Path) -> tuple[float, float, float, str | None]
     scale = scale_ct.get("scale", [])
     assert len(scale) == len(axes), "Scale length must match axes length"
 
+    # Map axis names to scale values and units, only for spatial axes.
     axis_scale = {}
     axis_unit = {}
     for i, ax in enumerate(axes):
@@ -42,9 +45,11 @@ def _read_ngff_scale(zarr_group: Path) -> tuple[float, float, float, str | None]
             if unit:
                 axis_unit[name] = str(unit)
 
+    # Default to 1.0 when a spatial axis is missing in metadata.
     psize_x = axis_scale.get("x", 1.0)
     psize_y = axis_scale.get("y", 1.0)
     psize_z = axis_scale.get("z", 1.0)
+    # Use the unit only if all provided spatial units agree.
     units = [axis_unit.get(a) for a in ("x", "y", "z") if axis_unit.get(a)]
     unit = units[0] if units and len(set(units)) == 1 else None
     return psize_x, psize_y, psize_z, unit
