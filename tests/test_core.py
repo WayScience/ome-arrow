@@ -354,6 +354,7 @@ def test_ome_parquet_specific_col_and_row(
 
 
 def test_vortex_roundtrip(tmp_path: pathlib.Path) -> None:
+    """Smoke-test the Vortex round-trip export/import path."""
     pytest.importorskip(
         "vortex", reason="Vortex support is optional (install extras: vortex)."
     )
@@ -369,6 +370,7 @@ def test_vortex_roundtrip(tmp_path: pathlib.Path) -> None:
 
 
 def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
+    """Ensure custom Vortex column names are preserved on round-trip."""
     pytest.importorskip(
         "vortex", reason="Vortex support is optional (install extras: vortex)."
     )

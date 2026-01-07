@@ -118,6 +118,8 @@ def _ome_arrow_from_table(
         pass
 
     return scalar
+
+
 def _normalize_unit(unit: str | None) -> str | None:
     if not unit:
         return None
