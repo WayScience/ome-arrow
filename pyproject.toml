@@ -88,6 +88,15 @@ lint.select = [
   "C4",
   # mccabe
   "C90",
+  # pydocstyle (docstring presence)
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D106",
+  "D107",
   # pycodestyle
   "E",
   # pyflakes
@@ -106,6 +115,8 @@ lint.select = [
 lint.per-file-ignores."*" = [ "ANN401", "C901", "PLC0415", "PLR0912", "PLR0913", "PLR0915", "PLR2004" ]
 # Ignore `F401` (unused imports) for `__init__.py` file
 lint.per-file-ignores."__init__.py" = [ "F401" ]
+# ignore docstring presence checks for docs
+lint.per-file-ignores."docs/*" = [ "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107" ]
 # ignore typing rules for tests
 lint.per-file-ignores."tests/*" = [ "ANN201", "E501", "PLR0913", "PLR2004" ]
 

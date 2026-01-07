@@ -332,7 +332,7 @@ class OMEArrow:
         opacity: str | float = "sigmoid",
         clim: tuple[float, float] | None = None,
         show_axes: bool = True,
-        scaling_values: tuple[float, float, float] | None = (1.0, 0.1, 0.1),
+        scaling_values: tuple[float, float, float] | None = None,
     ) -> matplotlib.figure.Figure | "pyvista.Plotter":
         """
         Render an OME-Arrow record using Matplotlib or PyVista.
@@ -370,7 +370,10 @@ class OMEArrow:
         clim: Contrast limits (``(low, high)``) for PyVista rendering.
         show_axes: If ``True``, display axes in the PyVista scene.
         scaling_values: Physical scale multipliers for the (x, y, z) axes used by
-            PyVista, typically to express anisotropy. Defaults to ``(1.0, 0.1, 0.1)``.
+            PyVista, typically to express anisotropy. If ``None``, uses metadata
+            scaling from the OME-Arrow record (pixels_meta.physical_size_x/y/z).
+            These scaling values will default to 1µm if metadata is missing in
+            source image metadata.
 
         Returns:
         matplotlib.figure.Figure | pyvista.Plotter:
