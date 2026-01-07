@@ -44,7 +44,10 @@ stack = OMEArrow(
 stack
 
 # we can visualize the stack using pyvista for 3D rendering
-stack.view(how="pyvista")
+# note: we use manually specified scaling values here
+# and can also default to what the image metadata provides
+# with `scaling_values=None` (the default).
+stack.view(how="pyvista", scaling_values=(1, 0.1, 0.1))
 
 # here we demonstrate that the data can be exported again
 # into numpy format and re-imported
@@ -95,3 +98,8 @@ oa_image = OMEArrow(
 )
 # by default, the image and metadata are shown
 oa_image
+
+# read a 3d zarr image from IDR
+oa_image = OMEArrow(data="../../../tests/data/idr0062A/6001240_labels.zarr")
+# show the image using pyvista
+oa_image.view(how="pyvista")
