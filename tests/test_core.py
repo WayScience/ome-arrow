@@ -5,6 +5,7 @@ Tests for the core module
 import pathlib
 
 import matplotlib
+import numpy as np
 import pytest
 
 from ome_arrow.core import OMEArrow
@@ -350,3 +351,35 @@ def test_ome_parquet_specific_col_and_row(
     oa_image = OMEArrow(data=input_data, column_name=column_name, row_index=row_index)
 
     assert oa_image.info() == expected_info
+
+
+def test_vortex_roundtrip(tmp_path: pathlib.Path) -> None:
+    """Smoke-test the Vortex round-trip export/import path."""
+    pytest.importorskip(
+        "vortex", reason="Vortex support is optional (install extras: vortex)."
+    )
+
+    arr = np.arange(16, dtype=np.uint16).reshape(1, 1, 1, 4, 4)
+    oa = OMEArrow(arr)
+    out = tmp_path / "example.vortex"
+
+    oa.export(how="vortex", out=str(out))
+    reloaded = OMEArrow(str(out))
+
+    assert reloaded.info() == oa.info()
+
+
+def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
+    """Ensure custom Vortex column names are preserved on round-trip."""
+    pytest.importorskip(
+        "vortex", reason="Vortex support is optional (install extras: vortex)."
+    )
+
+    arr = np.arange(12, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    oa = OMEArrow(arr)
+    out = tmp_path / "custom_column.vortex"
+
+    oa.export(how="vortex", out=str(out), vortex_column_name="custom_ome_arrow")
+    reloaded = OMEArrow(str(out), column_name="custom_ome_arrow")
+
+    assert reloaded.info() == oa.info()

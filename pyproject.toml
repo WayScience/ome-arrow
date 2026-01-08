@@ -39,11 +39,15 @@ optional-dependencies.viz = [
   "trame-vtk>=2.10",
   "trame-vuetify>=3.1",
 ]
+optional-dependencies.vortex = [
+  "vortex-data>=0.56",
+]
 
 [dependency-groups]
 dev = [
   "poethepoet>=0.34",
   "pytest>=8.3.5",
+  "vortex-data>=0.56",
 ]
 docs = [
   "myst-nb>=1.2",
