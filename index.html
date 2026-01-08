@@ -355,6 +355,9 @@ Please also reference an example notebook: <a class="reference external" href="h
 <span class="c1"># Export to OME-Parquet.</span>
 <span class="c1"># We can also export OME-TIFF, OME-Zarr or NumPy arrays.</span>
 <span class="n">oa_image</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">how</span><span class="o">=</span><span class="s2">&quot;ome-parquet&quot;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="s2">&quot;your_image.ome.parquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># Export to Vortex (install extras: `pip install &#39;ome-arrow[vortex]&#39;`).</span>
+<span class="n">oa_image</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">how</span><span class="o">=</span><span class="s2">&quot;vortex&quot;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="s2">&quot;your_image.vortex&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
