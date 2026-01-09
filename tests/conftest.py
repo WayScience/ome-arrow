@@ -17,6 +17,7 @@ def example_correct_data() -> dict:
         "version": "1.0.0",
         "id": "img-0001",
         "name": "Example image",
+        "image_type": "image",
         "acquisition_datetime": datetime(2025, 1, 1, 12, 0, 0),
         "pixels_meta": {
             "dimension_order": "XYCT",  # Z==1, so XYCT is fine

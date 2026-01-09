@@ -50,8 +50,9 @@ def _ome_arrow_from_table(
     # 1) Locate the OME-Arrow column
     def _struct_matches_ome_fields(t: pa.StructType) -> bool:
         ome_fields = {f.name for f in OME_ARROW_STRUCT}
+        required_fields = ome_fields - {"image_type"}
         col_fields = {f.name for f in t}
-        return ome_fields == col_fields
+        return required_fields.issubset(col_fields)
 
     requested_name = column_name
     candidate_col = None
@@ -105,6 +106,11 @@ def _ome_arrow_from_table(
 
     # 2) Extract the row as a Python dict
     record_dict: Dict[str, Any] = candidate_col.slice(row_index, 1).to_pylist()[0]
+    # Back-compat: older files won't include image_type; default to None.
+    if "image_type" not in record_dict:
+        record_dict["image_type"] = None
+    # Drop unexpected fields before casting to the canonical schema.
+    record_dict = {f.name: record_dict.get(f.name) for f in OME_ARROW_STRUCT}
 
     # 3) Reconstruct a typed StructScalar using the canonical schema
     scalar = pa.scalar(record_dict, type=OME_ARROW_STRUCT)
@@ -248,6 +254,7 @@ def to_ome_arrow(
     version: str = OME_ARROW_TAG_VERSION,
     image_id: str = "unnamed",
     name: str = "unknown",
+    image_type: str | None = "image",
     acquisition_datetime: Optional[datetime] = None,
     dimension_order: str = "XYZCT",
     dtype: str = "uint16",
@@ -276,6 +283,7 @@ def to_ome_arrow(
         version: Specification version string.
         image_id: Unique image identifier.
         name: Human-friendly name.
+        image_type: Open-ended image kind (e.g., "image", "label").
         acquisition_datetime: Datetime of acquisition (defaults to now).
         dimension_order: Dimension order ("XYZCT" or "XYCT").
         dtype: Pixel data type string (e.g., "uint16").
@@ -299,6 +307,7 @@ def to_ome_arrow(
     version = str(version)
     image_id = str(image_id)
     name = str(name)
+    image_type = None if image_type is None else str(image_type)
     dimension_order = str(dimension_order)
     dtype = str(dtype)
     physical_size_unit = str(physical_size_unit)
@@ -333,6 +342,7 @@ def to_ome_arrow(
         "version": version,
         "id": image_id,
         "name": name,
+        "image_type": image_type,
         "acquisition_datetime": acquisition_datetime or datetime.now(timezone.utc),
         "pixels_meta": {
             "dimension_order": dimension_order,
@@ -363,6 +373,7 @@ def from_numpy(
     dim_order: str = "TCZYX",
     image_id: Optional[str] = None,
     name: Optional[str] = None,
+    image_type: Optional[str] = None,
     channel_names: Optional[Sequence[str]] = None,
     acquisition_datetime: Optional[datetime] = None,
     clamp_to_uint16: bool = True,
@@ -385,6 +396,8 @@ def from_numpy(
         Supported examples: "YX", "ZYX", "CYX", "CZYX", "TYX", "TCYX", "TCZYX".
     image_id, name : Optional[str]
         Identifiers to embed in the record.
+    image_type : Optional[str]
+        Open-ended image kind (e.g., "image", "label").
     channel_names : Optional[Sequence[str]]
         Names for channels; defaults to C0..C{n-1}.
     acquisition_datetime : Optional[datetime]
@@ -496,6 +509,7 @@ def from_numpy(
     return to_ome_arrow(
         image_id=str(image_id or "unnamed"),
         name=str(name or "unknown"),
+        image_type=image_type,
         acquisition_datetime=acquisition_datetime or datetime.now(timezone.utc),
         dimension_order=meta_dim_order,
         dtype=dtype_str,
@@ -518,6 +532,7 @@ def from_tiff(
     tiff_path: str | Path,
     image_id: Optional[str] = None,
     name: Optional[str] = None,
+    image_type: Optional[str] = None,
     channel_names: Optional[Sequence[str]] = None,
     acquisition_datetime: Optional[datetime] = None,
     clamp_to_uint16: bool = True,
@@ -532,6 +547,7 @@ def from_tiff(
         tiff_path: Path to a TIFF readable by bioio.
         image_id: Optional stable image identifier (defaults to stem).
         name: Optional human label (defaults to file name).
+        image_type: Optional image kind (e.g., "image", "label").
         channel_names: Optional channel names; defaults to C0..C{n-1}.
         acquisition_datetime: Optional acquisition time (UTC now if None).
         clamp_to_uint16: If True, clamp/cast planes to uint16.
@@ -601,6 +617,7 @@ def from_tiff(
     return to_ome_arrow(
         image_id=img_id,
         name=display_name,
+        image_type=image_type,
         acquisition_datetime=acquisition_datetime or datetime.now(timezone.utc),
         dimension_order=dim_order,
         dtype="uint16",
@@ -627,6 +644,7 @@ def from_stack_pattern_path(
     channel_names: Optional[List[str]] = None,
     image_id: Optional[str] = None,
     name: Optional[str] = None,
+    image_type: Optional[str] = None,
 ) -> pa.StructScalar:
     """Build an OME-Arrow record from a filename pattern describing a stack.
 
@@ -638,6 +656,7 @@ def from_stack_pattern_path(
         channel_names: Optional list of channel names to apply.
         image_id: Optional image identifier override.
         name: Optional display name override.
+        image_type: Optional image kind (e.g., "image", "label").
 
     Returns:
         A validated OME-Arrow StructScalar describing the stack.
@@ -907,6 +926,7 @@ def from_stack_pattern_path(
     return to_ome_arrow(
         image_id=str(img_id),
         name=str(display_name),
+        image_type=image_type,
         acquisition_datetime=None,
         dimension_order=dim_order,
         dtype="uint16",
@@ -929,6 +949,7 @@ def from_ome_zarr(
     zarr_path: str | Path,
     image_id: Optional[str] = None,
     name: Optional[str] = None,
+    image_type: Optional[str] = None,
     channel_names: Optional[Sequence[str]] = None,
     acquisition_datetime: Optional[datetime] = None,
     clamp_to_uint16: bool = True,
@@ -947,6 +968,8 @@ def from_ome_zarr(
             Optional stable image identifier (defaults to directory stem).
         name:
             Optional display name (defaults to directory name).
+        image_type:
+            Optional image kind (e.g., "image", "label").
         channel_names:
             Optional list of channel names. Defaults to C0, C1, ...
         acquisition_datetime:
@@ -1028,6 +1051,7 @@ def from_ome_zarr(
     return to_ome_arrow(
         image_id=img_id,
         name=display_name,
+        image_type=image_type,
         acquisition_datetime=acquisition_datetime or datetime.now(timezone.utc),
         dimension_order=dim_order,
         dtype="uint16",

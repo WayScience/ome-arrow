@@ -12,6 +12,7 @@ OME_ARROW_TAG_VERSION = ome_arrow_version
 # OME_ARROW_STRUCT: ome-arrow record (describes one image/value).
 #  - type/version: quick identity & evolution.
 #  - id/name/acquisition_datetime: identity & provenance.
+#  - image_type: open-ended image kind (e.g., "image", "label").
 #  - pixels_meta: pixels struct (sizes, units, channels).
 #  - planes: list of planes struct entries, one per (t,c,z).
 #  - masks: reserved for future labels/ROIs (placeholder).
@@ -21,6 +22,7 @@ OME_ARROW_STRUCT: pa.StructType = pa.struct(
         pa.field("version", pa.string()),  # e.g., "1.0.0"
         pa.field("id", pa.string()),  # stable image identifier
         pa.field("name", pa.string()),  # human label
+        pa.field("image_type", pa.string()),  # open-ended (e.g., "image", "label")
         pa.field("acquisition_datetime", pa.timestamp("us")),
         # PIXELS: OME-like "Pixels" header summarizing shape & scale.
         #  - dimension_order: hint like "XYZCT" (or "XYCT" when Z==1).
