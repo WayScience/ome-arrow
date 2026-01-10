@@ -59,6 +59,7 @@ class OMEArrow:
         tcz: Tuple[int, int, int] = (0, 0, 0),
         column_name: str = "ome_arrow",
         row_index: int = 0,
+        image_type: str | None = None,
     ) -> None:
         """
         Construct an OMEArrow from:
@@ -71,6 +72,7 @@ class OMEArrow:
             with from_numpy defaults)
         - a dict already matching the OME-Arrow schema
         - a pa.StructScalar already typed to OME_ARROW_STRUCT
+        - optionally override/set image_type metadata on ingest
         """
 
         # set the tcz for viewing
@@ -83,6 +85,7 @@ class OMEArrow:
                 default_dim_for_unspecified="C",
                 map_series_to="T",
                 clamp_to_uint16=True,
+                image_type=image_type,
             )
 
         # --- 2) String path/URL: OME-Zarr / OME-Parquet / OME-TIFF ---------------
@@ -98,6 +101,14 @@ class OMEArrow:
                 or (path.exists() and path.is_dir() and path.suffix.lower() == ".zarr")
             ):
                 self.data = from_ome_zarr(s)
+                if image_type is not None:
+                    self.data = pa.scalar(
+                        {
+                            **self.data.as_py(),
+                            "image_type": str(image_type),
+                        },
+                        type=OME_ARROW_STRUCT,
+                    )
 
             # OME-Parquet
             elif s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {
@@ -107,18 +118,42 @@ class OMEArrow:
                 self.data = from_ome_parquet(
                     s, column_name=column_name, row_index=row_index
                 )
+                if image_type is not None:
+                    self.data = pa.scalar(
+                        {
+                            **self.data.as_py(),
+                            "image_type": str(image_type),
+                        },
+                        type=OME_ARROW_STRUCT,
+                    )
 
             # Vortex
             elif s.lower().endswith(".vortex") or path.suffix.lower() == ".vortex":
                 self.data = from_ome_vortex(
                     s, column_name=column_name, row_index=row_index
                 )
+                if image_type is not None:
+                    self.data = pa.scalar(
+                        {
+                            **self.data.as_py(),
+                            "image_type": str(image_type),
+                        },
+                        type=OME_ARROW_STRUCT,
+                    )
 
             # TIFF
             elif path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
                 (".tif", ".tiff")
             ):
                 self.data = from_tiff(s)
+                if image_type is not None:
+                    self.data = pa.scalar(
+                        {
+                            **self.data.as_py(),
+                            "image_type": str(image_type),
+                        },
+                        type=OME_ARROW_STRUCT,
+                    )
 
             elif path.exists() and path.is_dir():
                 raise ValueError(
@@ -140,15 +175,33 @@ class OMEArrow:
             # Uses from_numpy defaults: dim_order="TCZYX", clamp_to_uint16=True, etc.
             # If the array is YX/ZYX/CYX/etc.,
             # from_numpy will expand/reorder accordingly.
-            self.data = from_numpy(data)
+            self.data = from_numpy(data, image_type=image_type)
 
         # --- 4) Already-typed Arrow scalar ---------------------------------------
         elif isinstance(data, pa.StructScalar):
-            self.data = data
+            if image_type is None:
+                self.data = data
+            else:
+                self.data = pa.scalar(
+                    {
+                        **data.as_py(),
+                        "image_type": str(image_type),
+                    },
+                    type=OME_ARROW_STRUCT,
+                )
 
         # --- 5) Plain dict matching the schema -----------------------------------
         elif isinstance(data, dict):
-            self.data = pa.scalar(data, type=OME_ARROW_STRUCT)
+            if image_type is None:
+                self.data = pa.scalar(data, type=OME_ARROW_STRUCT)
+            else:
+                self.data = pa.scalar(
+                    {
+                        **data,
+                        "image_type": str(image_type),
+                    },
+                    type=OME_ARROW_STRUCT,
+                )
 
         # --- otherwise ------------------------------------------------------------
         else:
