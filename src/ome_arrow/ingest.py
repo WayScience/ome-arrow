@@ -283,7 +283,9 @@ def to_ome_arrow(
         version: Specification version string.
         image_id: Unique image identifier.
         name: Human-friendly name.
-        image_type: Open-ended image kind (e.g., "image", "label").
+        image_type: Open-ended image kind (e.g., "image", "label"). Note that
+            from_* helpers pass image_type=None by default to preserve
+            "unspecified" vs explicitly set ("image").
         acquisition_datetime: Datetime of acquisition (defaults to now).
         dimension_order: Dimension order ("XYZCT" or "XYCT").
         dtype: Pixel data type string (e.g., "uint16").

@@ -102,13 +102,7 @@ class OMEArrow:
             ):
                 self.data = from_ome_zarr(s)
                 if image_type is not None:
-                    self.data = pa.scalar(
-                        {
-                            **self.data.as_py(),
-                            "image_type": str(image_type),
-                        },
-                        type=OME_ARROW_STRUCT,
-                    )
+                    self.data = self._wrap_with_image_type(self.data, image_type)
 
             # OME-Parquet
             elif s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {
@@ -119,13 +113,7 @@ class OMEArrow:
                     s, column_name=column_name, row_index=row_index
                 )
                 if image_type is not None:
-                    self.data = pa.scalar(
-                        {
-                            **self.data.as_py(),
-                            "image_type": str(image_type),
-                        },
-                        type=OME_ARROW_STRUCT,
-                    )
+                    self.data = self._wrap_with_image_type(self.data, image_type)
 
             # Vortex
             elif s.lower().endswith(".vortex") or path.suffix.lower() == ".vortex":
@@ -133,13 +121,7 @@ class OMEArrow:
                     s, column_name=column_name, row_index=row_index
                 )
                 if image_type is not None:
-                    self.data = pa.scalar(
-                        {
-                            **self.data.as_py(),
-                            "image_type": str(image_type),
-                        },
-                        type=OME_ARROW_STRUCT,
-                    )
+                    self.data = self._wrap_with_image_type(self.data, image_type)
 
             # TIFF
             elif path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
@@ -147,13 +129,7 @@ class OMEArrow:
             ):
                 self.data = from_tiff(s)
                 if image_type is not None:
-                    self.data = pa.scalar(
-                        {
-                            **self.data.as_py(),
-                            "image_type": str(image_type),
-                        },
-                        type=OME_ARROW_STRUCT,
-                    )
+                    self.data = self._wrap_with_image_type(self.data, image_type)
 
             elif path.exists() and path.is_dir():
                 raise ValueError(
@@ -179,35 +155,33 @@ class OMEArrow:
 
         # --- 4) Already-typed Arrow scalar ---------------------------------------
         elif isinstance(data, pa.StructScalar):
-            if image_type is None:
-                self.data = data
-            else:
-                self.data = pa.scalar(
-                    {
-                        **data.as_py(),
-                        "image_type": str(image_type),
-                    },
-                    type=OME_ARROW_STRUCT,
-                )
+            self.data = data
+            if image_type is not None:
+                self.data = self._wrap_with_image_type(self.data, image_type)
 
         # --- 5) Plain dict matching the schema -----------------------------------
         elif isinstance(data, dict):
-            if image_type is None:
-                self.data = pa.scalar(data, type=OME_ARROW_STRUCT)
-            else:
-                self.data = pa.scalar(
-                    {
-                        **data,
-                        "image_type": str(image_type),
-                    },
-                    type=OME_ARROW_STRUCT,
-                )
+            self.data = pa.scalar(data, type=OME_ARROW_STRUCT)
+            if image_type is not None:
+                self.data = self._wrap_with_image_type(self.data, image_type)
 
         # --- otherwise ------------------------------------------------------------
         else:
             raise TypeError(
                 "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
             )
+
+    @staticmethod
+    def _wrap_with_image_type(
+        data: pa.StructScalar, image_type: str
+    ) -> pa.StructScalar:
+        return pa.scalar(
+            {
+                **data.as_py(),
+                "image_type": str(image_type),
+            },
+            type=OME_ARROW_STRUCT,
+        )
 
     def export(  # noqa: PLR0911
         self,
