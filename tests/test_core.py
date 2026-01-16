@@ -369,6 +369,18 @@ def test_vortex_roundtrip(tmp_path: pathlib.Path) -> None:
     assert reloaded.info() == oa.info()
 
 
+def test_parquet_roundtrip_preserves_image_type(tmp_path: pathlib.Path) -> None:
+    """Ensure image_type round-trips through OME-Parquet."""
+    arr = np.arange(16, dtype=np.uint16).reshape(1, 1, 1, 4, 4)
+    oa = OMEArrow(arr, image_type="label")
+    out = tmp_path / "example.ome.parquet"
+
+    oa.export(how="omeparquet", out=str(out))
+    reloaded = OMEArrow(str(out))
+
+    assert reloaded.data.as_py()["image_type"] == "label"
+
+
 def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     """Ensure custom Vortex column names are preserved on round-trip."""
     pytest.importorskip(
