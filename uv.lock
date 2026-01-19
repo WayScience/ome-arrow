@@ -1208,13 +1208,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/96/a22ce5b43a93d12b21f2ec9e374cd4a7edf9347630c7ed90bef7c4ca9f5d/imagecodecs-2025.8.2-cp314-cp314-win32.whl", hash = "sha256:ce57af27547c42dfb888562a1a22dc51a6103c20b3fb69ac4c26121acc741ade", size = 18802212, upload-time = "2025-08-03T06:08:03.341Z" },
     { url = "https://files.pythonhosted.org/packages/b3/0c/d364bff2ffb8f2864e9f7fa6dd05b57c25a4c341ba1e2f08b3dea1dc8a6d/imagecodecs-2025.8.2-cp314-cp314-win_amd64.whl", hash = "sha256:b93d77293c0aa9e661d42f3203b13ea135d5bf9f0936fbbe90780ed1c67322d3", size = 23052776, upload-time = "2025-08-03T06:08:06.975Z" },
     { url = "https://files.pythonhosted.org/packages/7d/4b/54d1e3a2b9d11c8a875c98b543dc5527c259c174b05987b1e79ccfc107b9/imagecodecs-2025.8.2-cp314-cp314-win_arm64.whl", hash = "sha256:d7a53983d4df035761dc652e44c912092bddc5b115d6f5f612df301ce94fcd55", size = 18374009, upload-time = "2025-08-03T06:08:10.074Z" },
-    { url = "https://files.pythonhosted.org/packages/ae/8f/c614d151d577c17f38bb8ba9388f56eaccc5c3708b3109ed103209350bc8/imagecodecs-2025.8.2-cp314-cp314t-macosx_10_14_x86_64.whl", hash = "sha256:9e2b138c2826cf58d4088513fe61bf2311d6206e0eb865a37cd27749812bcc2a", size = 12582934, upload-time = "2025-08-03T06:08:13.466Z" },
-    { url = "https://files.pythonhosted.org/packages/cf/d2/9129c759a5d11c0c0f119fe08871823a623bb382c2996486db5442c3d61b/imagecodecs-2025.8.2-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:fa4750e23d69c95b99eff991ca3f28176b77b2e9ccf14eb326942afa4258d349", size = 10277782, upload-time = "2025-08-03T06:08:15.78Z" },
-    { url = "https://files.pythonhosted.org/packages/31/39/838c2fc76e9d775b385b6d11b7882d162c895bd1c62aaf57143c79956c7f/imagecodecs-2025.8.2-cp314-cp314t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2ca3bb477946836af844dfe89d2bfb21c69e2e08904560f927dbb4298cfb76c9", size = 26631262, upload-time = "2025-08-03T06:08:19.518Z" },
-    { url = "https://files.pythonhosted.org/packages/d7/38/c3f0ab9374b1b74c125ac3e77a8ee84b9a1e9eb7429dca0f026a792d02ed/imagecodecs-2025.8.2-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:dd14eb5626cf7b307f9442da130c2a5340cd088718b71d35ce7389409b2e5341", size = 27053693, upload-time = "2025-08-03T06:08:24.422Z" },
-    { url = "https://files.pythonhosted.org/packages/df/00/88399944e570369c39e626020200136ae20d9fcbb439e83ec0f25d301721/imagecodecs-2025.8.2-cp314-cp314t-win32.whl", hash = "sha256:4d8378e3068b12abc4cd9dbde8867ce80dad89b9f11a7bd24321c139eaea30aa", size = 19110281, upload-time = "2025-08-03T06:08:28.128Z" },
-    { url = "https://files.pythonhosted.org/packages/a1/ec/bbeb61bb3b8c6853c74c501e787cc5be025454be8679fda385b3ee451c8b/imagecodecs-2025.8.2-cp314-cp314t-win_amd64.whl", hash = "sha256:4d1002282afc6b89616915e9741fa8bbd283e214a268f03b14a74acb43aad451", size = 23430830, upload-time = "2025-08-03T06:08:31.963Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/c0/93445b41eb2063414ebb443aa93bccaff2868252a8c55c8c0ea72a7be96a/imagecodecs-2025.8.2-cp314-cp314t-win_arm64.whl", hash = "sha256:f8bb58c7da65f93fee53d4b279d4030db2804b97a42c5135abc82f02ebfb4c3a", size = 18497460, upload-time = "2025-08-03T06:08:35.487Z" },
 ]
 
 [[package]]
@@ -1570,7 +1563,7 @@ wheels = [
 
 [[package]]
 name = "jupyterlab"
-version = "4.4.2"
+version = "4.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "async-lru" },
@@ -1587,9 +1580,9 @@ dependencies = [
     { name = "tornado" },
     { name = "traitlets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/3c/12a8b27ff2c3b4005bbb5e11c7747246965776d2b821193e53ffd61f1332/jupyterlab-4.4.2.tar.gz", hash = "sha256:afa9caf28c0cb966488be18e5e8daba9f018a1c4273a406b7d5006344cbc6d16", size = 23030818, upload-time = "2025-05-06T12:29:40.992Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/dc/2c8c4ff1aee27ac999ba04c373c5d0d7c6c181b391640d7b916b884d5985/jupyterlab-4.5.2.tar.gz", hash = "sha256:c80a6b9f6dace96a566d590c65ee2785f61e7cd4aac5b4d453dcc7d0d5e069b7", size = 23990371, upload-time = "2026-01-12T12:27:08.493Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/ae/fbb93f4990b7648849b19112d8b3e7427bbfc9c5cc8fdc6bf14c0e86d104/jupyterlab-4.4.2-py3-none-any.whl", hash = "sha256:857111a50bed68542bf55dca784522fe728f9f88b4fe69e8c585db5c50900419", size = 12294799, upload-time = "2025-05-06T12:29:35.824Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/78/7e455920f104ef2aa94a4c0d2b40e5b44334ee7057eae1aa1fb97b9631ad/jupyterlab-4.5.2-py3-none-any.whl", hash = "sha256:76466ebcfdb7a9bb7e2fbd6459c0e2c032ccf75be673634a84bee4b3e6b13ab6", size = 12385807, upload-time = "2026-01-12T12:27:03.923Z" },
 ]
 
 [[package]]
@@ -1616,7 +1609,7 @@ wheels = [
 
 [[package]]
 name = "jupyterlab-server"
-version = "2.27.3"
+version = "2.28.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "babel" },
@@ -1627,9 +1620,9 @@ dependencies = [
     { name = "packaging" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0a/c9/a883ce65eb27905ce77ace410d83587c82ea64dc85a48d1f7ed52bcfa68d/jupyterlab_server-2.27.3.tar.gz", hash = "sha256:eb36caca59e74471988f0ae25c77945610b887f777255aa21f8065def9e51ed4", size = 76173, upload-time = "2024-07-16T17:02:04.149Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/2c/90153f189e421e93c4bb4f9e3f59802a1f01abd2ac5cf40b152d7f735232/jupyterlab_server-2.28.0.tar.gz", hash = "sha256:35baa81898b15f93573e2deca50d11ac0ae407ebb688299d3a5213265033712c", size = 76996, upload-time = "2025-10-22T13:59:18.37Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/09/2032e7d15c544a0e3cd831c51d77a8ca57f7555b2e1b2922142eddb02a84/jupyterlab_server-2.27.3-py3-none-any.whl", hash = "sha256:e697488f66c3db49df675158a77b3b017520d772c6e1548c7d9bcc5df7944ee4", size = 59700, upload-time = "2024-07-16T17:02:01.115Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/07/a000fe835f76b7e1143242ab1122e6362ef1c03f23f83a045c38859c2ae0/jupyterlab_server-2.28.0-py3-none-any.whl", hash = "sha256:e4355b148fdcf34d312bbbc80f22467d6d20460e8b8736bf235577dd18506968", size = 59830, upload-time = "2025-10-22T13:59:16.767Z" },
 ]
 
 [[package]]
@@ -2510,7 +2503,7 @@ requires-dist = [
     { name = "trame", marker = "extra == 'viz'", specifier = ">=3.12" },
     { name = "trame-vtk", marker = "extra == 'viz'", specifier = ">=2.10" },
     { name = "trame-vuetify", marker = "extra == 'viz'", specifier = ">=3.1" },
-    { name = "vortex-data", marker = "extra == 'vortex'", specifier = ">=0.56.0" },
+    { name = "vortex-data", marker = "extra == 'vortex'", specifier = ">=0.56" },
 ]
 provides-extras = ["viz", "vortex"]
 
@@ -2518,7 +2511,7 @@ provides-extras = ["viz", "vortex"]
 dev = [
     { name = "poethepoet", specifier = ">=0.34" },
     { name = "pytest", specifier = ">=8.3.5" },
-    { name = "vortex-data", specifier = ">=0.56.0" },
+    { name = "vortex-data", specifier = ">=0.56" },
 ]
 docs = [
     { name = "myst-nb", specifier = ">=1.2" },
