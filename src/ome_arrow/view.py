@@ -23,6 +23,8 @@ except ImportError:  # pragma: no cover - exercised when viz extra missing
 if TYPE_CHECKING:
     import pyvista
 
+from ome_arrow.export import plane_from_chunks
+
 
 def view_matplotlib(
     data: dict[str, object] | pa.StructScalar,
@@ -50,29 +52,8 @@ def view_matplotlib(
     Raises:
         ValueError: If the requested plane is missing or pixel sizes mismatch.
     """
-    if isinstance(data, pa.StructScalar):
-        data = data.as_py()
-
-    pm = data["pixels_meta"]
-    sx, sy = int(pm["size_x"]), int(pm["size_y"])
     t, c, z = (int(x) for x in tcz)
-
-    plane = next(
-        (
-            p
-            for p in data["planes"]
-            if int(p["t"]) == t and int(p["c"]) == c and int(p["z"]) == z
-        ),
-        None,
-    )
-    if plane is None:
-        raise ValueError(f"plane (t={t}, c={c}, z={z}) not found")
-
-    pix = plane["pixels"]
-    if len(pix) != sx * sy:
-        raise ValueError(f"pixels len {len(pix)} != size_x*size_y ({sx * sy})")
-
-    img = np.asarray(pix, dtype=np.uint16).reshape(sy, sx).copy()
+    img = plane_from_chunks(data, t=t, c=c, z=z, dtype=np.uint16).copy()
 
     if (vmin is None or vmax is None) and autoscale:
         lo, hi = int(img.min()), int(img.max())

@@ -4,7 +4,7 @@ Tests for chunked pixel support.
 
 import numpy as np
 
-from ome_arrow.export import to_numpy
+from ome_arrow.export import plane_from_chunks, to_numpy
 from ome_arrow.ingest import to_ome_arrow
 
 
@@ -68,3 +68,16 @@ def test_to_ome_arrow_builds_chunks() -> None:
     assert first_chunk["shape_y"] == 2
     assert first_chunk["shape_x"] == 2
     assert first_chunk["pixels"] == [0, 1, 10, 11]
+
+
+def test_plane_from_chunks(example_correct_data: dict) -> None:
+    """Extract a 2D plane directly from chunked pixels."""
+    data = dict(example_correct_data)
+    data["planes"] = []
+
+    plane = plane_from_chunks(data, t=0, c=1, z=0)
+
+    np.testing.assert_array_equal(
+        plane,
+        np.array([[100, 101, 102, 103], [110, 111, 112, 113], [120, 121, 122, 123]]),
+    )
