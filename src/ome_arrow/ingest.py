@@ -268,9 +268,19 @@ def _normalize_chunk_shape(
     """
     if chunk_shape is None:
         chunk_shape = (1, 512, 512)
-    cz = max(1, min(int(chunk_shape[0]), int(size_z)))
-    cy = max(1, min(int(chunk_shape[1]), int(size_y)))
-    cx = max(1, min(int(chunk_shape[2]), int(size_x)))
+    if not isinstance(chunk_shape, (list, tuple)) or len(chunk_shape) != 3:
+        raise ValueError("chunk_shape must be a sequence of three integers (z,y,x)")
+    try:
+        cz_raw, cy_raw, cx_raw = (int(v) for v in chunk_shape)
+    except Exception as exc:
+        raise ValueError(
+            "chunk_shape must be a sequence of three integers (z,y,x)"
+        ) from exc
+    if cz_raw <= 0 or cy_raw <= 0 or cx_raw <= 0:
+        raise ValueError("chunk_shape values must be positive integers")
+    cz = max(1, min(cz_raw, int(size_z)))
+    cy = max(1, min(cy_raw, int(size_y)))
+    cx = max(1, min(cx_raw, int(size_x)))
     return cz, cy, cx
 
 
@@ -464,7 +474,32 @@ def to_ome_arrow(
 
     chunk_grid = None
     if chunks is not None:
-        cz, cy, cx = _normalize_chunk_shape(chunk_shape, size_z, size_y, size_x)
+        chunk_order = str(chunk_order).upper()
+        if chunk_order != "ZYX":
+            raise ValueError("Only chunk_order='ZYX' is supported for now.")
+        if len(chunks) == 0:
+            raise ValueError("chunks must not be an empty list")
+        first = chunks[0]
+        try:
+            derived_shape = (
+                int(first["shape_z"]),
+                int(first["shape_y"]),
+                int(first["shape_x"]),
+            )
+        except Exception as exc:
+            raise ValueError(
+                "chunks entries must include shape_z/shape_y/shape_x"
+            ) from exc
+        if derived_shape[0] <= 0 or derived_shape[1] <= 0 or derived_shape[2] <= 0:
+            raise ValueError("chunk shapes must be positive integers")
+        if chunk_shape is not None:
+            norm_shape = _normalize_chunk_shape(chunk_shape, size_z, size_y, size_x)
+            if norm_shape != derived_shape:
+                raise ValueError(
+                    "chunk_shape does not match provided chunks "
+                    f"(chunk_shape={norm_shape}, chunks_shape={derived_shape})"
+                )
+        cz, cy, cx = _normalize_chunk_shape(derived_shape, size_z, size_y, size_x)
         chunk_grid = {
             "order": "TCZYX",
             "chunk_t": 1,
