@@ -317,6 +317,8 @@ def _build_chunks_from_planes(
         arr2d = np.asarray(pix).reshape(size_y, size_x)
         plane_map[(t, c, z)] = arr2d
 
+    dtype = next(iter(plane_map.values())).dtype if plane_map else np.uint16
+
     chunks: List[Dict[str, Any]] = []
     for t in range(size_t):
         for c in range(size_c):
@@ -326,7 +328,7 @@ def _build_chunks_from_planes(
                     sy = min(cy, size_y - y0)
                     for x0 in range(0, size_x, cx):
                         sx = min(cx, size_x - x0)
-                        slab = np.zeros((sz, sy, sx), dtype=np.uint16)
+                        slab = np.zeros((sz, sy, sx), dtype=dtype)
                         for zi in range(sz):
                             plane = plane_map.get((t, c, z0 + zi))
                             if plane is None:

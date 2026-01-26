@@ -102,6 +102,21 @@ def to_numpy(
                 )
             if y < 0 or x < 0 or shape_z <= 0 or shape_y <= 0 or shape_x <= 0:
                 raise ValueError(f"chunks[{i}] has invalid shape or origin.")
+            if z + shape_z > sz:
+                raise ValueError(
+                    f"chunks[{i}] extent out of range: z+shape_z={z + shape_z} "
+                    f"> sz={sz}"
+                )
+            if y + shape_y > sy:
+                raise ValueError(
+                    f"chunks[{i}] extent out of range: y+shape_y={y + shape_y} "
+                    f"> sy={sy}"
+                )
+            if x + shape_x > sx:
+                raise ValueError(
+                    f"chunks[{i}] extent out of range: x+shape_x={x + shape_x} "
+                    f"> sx={sx}"
+                )
 
             pix = ch["pixels"]
             try:
@@ -219,6 +234,7 @@ def plane_from_chunks(
             raise ValueError("Only chunk_order='ZYX' is supported for now.")
 
         plane = np.zeros((sy, sx), dtype=dtype)
+        any_chunk_matched = False
         for i, ch in enumerate(chunks):
             if int(ch["t"]) != t or int(ch["c"]) != c:
                 continue
@@ -230,6 +246,26 @@ def plane_from_chunks(
             x0 = int(ch["x"])
             syc = int(ch["shape_y"])
             sxc = int(ch["shape_x"])
+            if z0 < 0 or y0 < 0 or x0 < 0:
+                msg = f"chunks[{i}] has negative origin: (z,y,x)=({z0},{y0},{x0})"
+                if strict:
+                    raise ValueError(msg)
+                continue
+            if z0 + szc > sz:
+                msg = f"chunks[{i}] extent out of range: z+shape_z={z0 + szc} > sz={sz}"
+                if strict:
+                    raise ValueError(msg)
+                continue
+            if y0 + syc > sy:
+                msg = f"chunks[{i}] extent out of range: y+shape_y={y0 + syc} > sy={sy}"
+                if strict:
+                    raise ValueError(msg)
+                continue
+            if x0 + sxc > sx:
+                msg = f"chunks[{i}] extent out of range: x+shape_x={x0 + sxc} > sx={sx}"
+                if strict:
+                    raise ValueError(msg)
+                continue
             pix = ch["pixels"]
             try:
                 n = len(pix)
@@ -250,8 +286,10 @@ def plane_from_chunks(
             slab = _cast_plane(slab)
             zi = z - z0
             plane[y0 : y0 + syc, x0 : x0 + sxc] = slab[zi]
+            any_chunk_matched = True
 
-        return plane
+        if any_chunk_matched:
+            return plane
 
     # Fallback to planes list if chunks are absent.
     target = next(
