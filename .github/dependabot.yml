@@ -15,7 +15,7 @@ updates:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
     groups:
-      python-packages:
+      github-actions:
         patterns:
           - "*"
 
@@ -30,6 +30,6 @@ updates:
       # Check for updates to uv environment files every week
       interval: "weekly"
     groups:
-      github-actions:
+      uv:
         patterns:
           - "*"
