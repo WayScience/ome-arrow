@@ -179,6 +179,7 @@ def to_numpy(
     return out
 
 
+# Note: x/y are implicit because this returns the full XY plane for (t, c, z).
 def plane_from_chunks(
     data: Dict[str, Any] | pa.StructScalar,
     *,
@@ -207,15 +208,18 @@ def plane_from_chunks(
         KeyError: If required OME-Arrow fields are missing.
         ValueError: If indices are out of range or pixels are malformed.
     """
+    # The plane spans full X/Y for the given (t, c, z); x/y are implicit.
     if isinstance(data, pa.StructScalar):
         data = data.as_py()
 
+    # Read pixel metadata and validate requested plane indices.
     pm = data["pixels_meta"]
     sx, sy = int(pm["size_x"]), int(pm["size_y"])
     sz, sc, st = int(pm["size_z"]), int(pm["size_c"]), int(pm["size_t"])
     if not (0 <= t < st and 0 <= c < sc and 0 <= z < sz):
         raise ValueError(f"Requested plane (t={t}, c={c}, z={z}) out of range.")
 
+    # Prepare dtype conversion (optional clamping for integer outputs).
     if np.issubdtype(dtype, np.integer):
         info = np.iinfo(dtype)
         lo, hi = info.min, info.max
@@ -229,6 +233,7 @@ def plane_from_chunks(
             a = np.clip(a, lo, hi)
         return a.astype(dtype, copy=False)
 
+    # Prefer chunked pixels if present, assembling the requested Z plane.
     chunks = data.get("chunks") or []
     if chunks:
         chunk_grid = data.get("chunk_grid") or {}
@@ -236,19 +241,23 @@ def plane_from_chunks(
         if chunk_order != "ZYX":
             raise ValueError("Only chunk_order='ZYX' is supported for now.")
 
+        # Allocate an empty XY plane; fill in tiles from matching chunks.
         plane = np.zeros((sy, sx), dtype=dtype)
         any_chunk_matched = False
         for i, ch in enumerate(chunks):
+            # Skip chunks from other (t, c) positions.
             if int(ch["t"]) != t or int(ch["c"]) != c:
                 continue
             z0 = int(ch["z"])
             szc = int(ch["shape_z"])
+            # Skip chunks whose Z slab does not cover the target plane.
             if not (z0 <= z < z0 + szc):
                 continue
             y0 = int(ch["y"])
             x0 = int(ch["x"])
             syc = int(ch["shape_y"])
             sxc = int(ch["shape_x"])
+            # Validate chunk bounds (strict mode can fail fast).
             if z0 < 0 or y0 < 0 or x0 < 0:
                 msg = f"chunks[{i}] has negative origin: (z,y,x)=({z0},{y0},{x0})"
                 if strict:
@@ -280,11 +289,13 @@ def plane_from_chunks(
                     raise ValueError(
                         f"chunks[{i}].pixels length {n} != expected {expected_len}"
                     )
+                # Lenient mode: truncate or zero-pad to match the expected size.
                 if n > expected_len:
                     pix = pix[:expected_len]
                 else:
                     pix = list(pix) + [0] * (expected_len - n)
 
+            # Convert to a Z/Y/X slab and copy the requested Z slice into the plane.
             slab = np.asarray(pix).reshape(szc, syc, sxc)
             slab = _cast_plane(slab)
             zi = z - z0
