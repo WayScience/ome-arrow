@@ -87,15 +87,18 @@ def to_numpy(
             raise ValueError("Only chunk_order='ZYX' is supported for now.")
 
         for i, ch in enumerate(chunks):
+            # Chunk coordinates include time/channel plus spatial indices.
             t = int(ch["t"])
             c = int(ch["c"])
             z = int(ch["z"])
             y = int(ch["y"])
             x = int(ch["x"])
+            # Chunk shape is only spatial (Z, Y, X).
             shape_z = int(ch["shape_z"])
             shape_y = int(ch["shape_y"])
             shape_x = int(ch["shape_x"])
 
+            # Validate chunk indices and extents within the full 5D array.
             if not (0 <= t < st and 0 <= c < sc and 0 <= z < sz):
                 raise ValueError(
                     f"chunks[{i}] index out of range: (t,c,z)=({t},{c},{z})"
