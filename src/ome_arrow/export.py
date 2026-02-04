@@ -21,7 +21,8 @@ def to_numpy(
     Convert an OME-Arrow record into a NumPy array shaped (T,C,Z,Y,X).
 
     The OME-Arrow "planes" are flattened YX slices indexed by (z, t, c).
-    This function reconstitutes them into a dense TCZYX ndarray.
+    When chunks are present, this function reconstitutes the dense TCZYX array
+    from chunked pixels instead of planes.
 
     Args:
         data:
@@ -58,7 +59,7 @@ def to_numpy(
     if sx <= 0 or sy <= 0 or sz <= 0 or sc <= 0 or st <= 0:
         raise ValueError("All size_* fields must be positive integers.")
 
-    expected_len = sx * sy
+    expected_plane_len = sx * sy
 
     # Prepare target array (T,C,Z,Y,X), zero-filled by default.
     out = np.zeros((st, sc, sz, sy, sx), dtype=dtype)
@@ -78,6 +79,70 @@ def to_numpy(
             a = np.clip(a, lo, hi)
         return a.astype(dtype, copy=False)
 
+    chunks = data.get("chunks") or []
+    if chunks:
+        chunk_grid = data.get("chunk_grid") or {}
+        chunk_order = str(chunk_grid.get("chunk_order") or "ZYX").upper()
+        if chunk_order != "ZYX":
+            raise ValueError("Only chunk_order='ZYX' is supported for now.")
+
+        for i, ch in enumerate(chunks):
+            # Chunk coordinates include time/channel plus spatial indices.
+            t = int(ch["t"])
+            c = int(ch["c"])
+            z = int(ch["z"])
+            y = int(ch["y"])
+            x = int(ch["x"])
+            # Chunk shape is only spatial (Z, Y, X).
+            shape_z = int(ch["shape_z"])
+            shape_y = int(ch["shape_y"])
+            shape_x = int(ch["shape_x"])
+
+            # Validate chunk indices and extents within the full 5D array.
+            if not (0 <= t < st and 0 <= c < sc and 0 <= z < sz):
+                raise ValueError(
+                    f"chunks[{i}] index out of range: (t,c,z)=({t},{c},{z})"
+                )
+            if y < 0 or x < 0 or shape_z <= 0 or shape_y <= 0 or shape_x <= 0:
+                raise ValueError(f"chunks[{i}] has invalid shape or origin.")
+            if z + shape_z > sz:
+                raise ValueError(
+                    f"chunks[{i}] extent out of range: z+shape_z={z + shape_z} "
+                    f"> sz={sz}"
+                )
+            if y + shape_y > sy:
+                raise ValueError(
+                    f"chunks[{i}] extent out of range: y+shape_y={y + shape_y} "
+                    f"> sy={sy}"
+                )
+            if x + shape_x > sx:
+                raise ValueError(
+                    f"chunks[{i}] extent out of range: x+shape_x={x + shape_x} "
+                    f"> sx={sx}"
+                )
+
+            pix = ch["pixels"]
+            try:
+                n = len(pix)
+            except Exception as e:
+                raise ValueError(f"chunks[{i}].pixels is not a sequence") from e
+
+            expected_len = shape_z * shape_y * shape_x
+            if n != expected_len:
+                if strict:
+                    raise ValueError(
+                        f"chunks[{i}].pixels length {n} != expected {expected_len}"
+                    )
+                if n > expected_len:
+                    pix = pix[:expected_len]
+                else:
+                    pix = list(pix) + [0] * (expected_len - n)
+
+            arr3d = np.asarray(pix).reshape(shape_z, shape_y, shape_x)
+            arr3d = _cast_plane(arr3d)
+            out[t, c, z : z + shape_z, y : y + shape_y, x : x + shape_x] = arr3d
+        return out
+
     # Fill planes.
     for i, p in enumerate(data.get("planes", [])):
         z = int(p["z"])
@@ -94,16 +159,17 @@ def to_numpy(
         except Exception as e:
             raise ValueError(f"planes[{i}].pixels is not a sequence") from e
 
-        if n != expected_len:
+        if n != expected_plane_len:
             if strict:
                 raise ValueError(
-                    f"planes[{i}].pixels length {n} != size_x*size_y {expected_len}"
+                    f"planes[{i}].pixels length {n} != size_x*size_y "
+                    f"{expected_plane_len}"
                 )
             # Lenient mode: fix length by truncation or zero-pad.
-            if n > expected_len:
-                pix = pix[:expected_len]
+            if n > expected_plane_len:
+                pix = pix[:expected_plane_len]
             else:
-                pix = list(pix) + [0] * (expected_len - n)
+                pix = list(pix) + [0] * (expected_plane_len - n)
 
         # Reshape to (Y,X) and cast.
         arr2d = np.asarray(pix).reshape(sy, sx)
@@ -111,6 +177,162 @@ def to_numpy(
         out[t, c, z] = arr2d
 
     return out
+
+
+# Note: x/y are implicit because this returns the full XY plane for (t, c, z).
+def plane_from_chunks(
+    data: Dict[str, Any] | pa.StructScalar,
+    *,
+    t: int,
+    c: int,
+    z: int,
+    dtype: np.dtype = np.uint16,
+    strict: bool = True,
+    clamp: bool = False,
+) -> np.ndarray:
+    """Extract a single (t, c, z) plane using chunked pixels when available.
+
+    Args:
+        data: OME-Arrow data as a Python dict or a `pa.StructScalar`.
+        t: Time index for the plane.
+        c: Channel index for the plane.
+        z: Z index for the plane.
+        dtype: Output dtype (default: np.uint16).
+        strict: When True, raise if chunk pixels are malformed.
+        clamp: If True, clamp values to the valid range of the target dtype.
+
+    Returns:
+        np.ndarray: 2D array with shape (Y, X).
+
+    Raises:
+        KeyError: If required OME-Arrow fields are missing.
+        ValueError: If indices are out of range or pixels are malformed.
+    """
+    # The plane spans full X/Y for the given (t, c, z); x/y are implicit.
+    if isinstance(data, pa.StructScalar):
+        data = data.as_py()
+
+    # Read pixel metadata and validate requested plane indices.
+    pm = data["pixels_meta"]
+    sx, sy = int(pm["size_x"]), int(pm["size_y"])
+    sz, sc, st = int(pm["size_z"]), int(pm["size_c"]), int(pm["size_t"])
+    if not (0 <= t < st and 0 <= c < sc and 0 <= z < sz):
+        raise ValueError(f"Requested plane (t={t}, c={c}, z={z}) out of range.")
+
+    # Prepare dtype conversion (optional clamping for integer outputs).
+    if np.issubdtype(dtype, np.integer):
+        info = np.iinfo(dtype)
+        lo, hi = info.min, info.max
+    elif np.issubdtype(dtype, np.floating):
+        lo, hi = -np.inf, np.inf
+    else:
+        lo, hi = -np.inf, np.inf
+
+    def _cast_plane(a: np.ndarray) -> np.ndarray:
+        if clamp:
+            a = np.clip(a, lo, hi)
+        return a.astype(dtype, copy=False)
+
+    # Prefer chunked pixels if present, assembling the requested Z plane.
+    chunks = data.get("chunks") or []
+    if chunks:
+        chunk_grid = data.get("chunk_grid") or {}
+        chunk_order = str(chunk_grid.get("chunk_order") or "ZYX").upper()
+        if chunk_order != "ZYX":
+            raise ValueError("Only chunk_order='ZYX' is supported for now.")
+
+        # Allocate an empty XY plane; fill in tiles from matching chunks.
+        plane = np.zeros((sy, sx), dtype=dtype)
+        any_chunk_matched = False
+        for i, ch in enumerate(chunks):
+            # Skip chunks from other (t, c) positions.
+            if int(ch["t"]) != t or int(ch["c"]) != c:
+                continue
+            z0 = int(ch["z"])
+            szc = int(ch["shape_z"])
+            # Skip chunks whose Z slab does not cover the target plane.
+            if not (z0 <= z < z0 + szc):
+                continue
+            y0 = int(ch["y"])
+            x0 = int(ch["x"])
+            syc = int(ch["shape_y"])
+            sxc = int(ch["shape_x"])
+            # Validate chunk bounds (strict mode can fail fast).
+            if z0 < 0 or y0 < 0 or x0 < 0:
+                msg = f"chunks[{i}] has negative origin: (z,y,x)=({z0},{y0},{x0})"
+                if strict:
+                    raise ValueError(msg)
+                continue
+            if z0 + szc > sz:
+                msg = f"chunks[{i}] extent out of range: z+shape_z={z0 + szc} > sz={sz}"
+                if strict:
+                    raise ValueError(msg)
+                continue
+            if y0 + syc > sy:
+                msg = f"chunks[{i}] extent out of range: y+shape_y={y0 + syc} > sy={sy}"
+                if strict:
+                    raise ValueError(msg)
+                continue
+            if x0 + sxc > sx:
+                msg = f"chunks[{i}] extent out of range: x+shape_x={x0 + sxc} > sx={sx}"
+                if strict:
+                    raise ValueError(msg)
+                continue
+            pix = ch["pixels"]
+            try:
+                n = len(pix)
+            except Exception as e:
+                raise ValueError(f"chunks[{i}].pixels is not a sequence") from e
+            expected_len = szc * syc * sxc
+            if n != expected_len:
+                if strict:
+                    raise ValueError(
+                        f"chunks[{i}].pixels length {n} != expected {expected_len}"
+                    )
+                # Lenient mode: truncate or zero-pad to match the expected size.
+                if n > expected_len:
+                    pix = pix[:expected_len]
+                else:
+                    pix = list(pix) + [0] * (expected_len - n)
+
+            # Convert to a Z/Y/X slab and copy the requested Z slice into the plane.
+            slab = np.asarray(pix).reshape(szc, syc, sxc)
+            slab = _cast_plane(slab)
+            zi = z - z0
+            plane[y0 : y0 + syc, x0 : x0 + sxc] = slab[zi]
+            any_chunk_matched = True
+
+        if any_chunk_matched:
+            return plane
+
+    # Fallback to planes list if chunks are absent.
+    target = next(
+        (
+            p
+            for p in data.get("planes", [])
+            if int(p["t"]) == t and int(p["c"]) == c and int(p["z"]) == z
+        ),
+        None,
+    )
+    if target is None:
+        raise ValueError(f"plane (t={t}, c={c}, z={z}) not found")
+
+    pix = target["pixels"]
+    try:
+        n = len(pix)
+    except Exception as e:
+        raise ValueError("plane pixels is not a sequence") from e
+    expected_len = sx * sy
+    if n != expected_len:
+        if strict:
+            raise ValueError(f"plane pixels length {n} != size_x*size_y {expected_len}")
+        if n > expected_len:
+            pix = pix[:expected_len]
+        else:
+            pix = list(pix) + [0] * (expected_len - n)
+
+    arr2d = np.asarray(pix).reshape(sy, sx)
+    return _cast_plane(arr2d)
 
 
 def to_ome_tiff(
@@ -255,6 +477,7 @@ def to_ome_zarr(
     - Creates level shapes for a multiscale pyramid (if multiscale_levels>1).
     - Chooses Blosc codec compatible with zarr_format (v2 vs v3).
     - Populates axes names/types/units and physical pixel sizes from pixels_meta.
+    - Uses default TCZYX chunks if none are provided.
     """
     # --- local import to avoid hard deps at module import time
     # Use the class you showed
@@ -317,6 +540,15 @@ def to_ome_zarr(
     def _down(a: int, f: int) -> int:
         return max(1, a // f)
 
+    def _default_chunks_tcxyz(
+        shape: Tuple[int, int, int, int, int],
+    ) -> Tuple[int, int, int, int, int]:
+        _t, _c, z, y, x = shape
+        cz = min(z, 4) if z > 1 else 1
+        cy = min(y, 512)
+        cx = min(x, 512)
+        return (1, 1, cz, cy, cx)
+
     def _level_shapes_tcxyz(levels: int) -> List[Tuple[int, int, int, int, int]]:
         shapes = [(st, sc, sz, sy, sx)]
         for _ in range(levels - 1):
@@ -340,6 +572,8 @@ def to_ome_zarr(
     # 5) Chunking / shards (can be single-shape or per-level;
     # we pass single-shape if provided)
     chunk_shape: Optional[List[Tuple[int, ...]]] = None
+    if chunks is None:
+        chunks = _default_chunks_tcxyz((st, sc, sz, sy, sx))
     if chunks is not None:
         chunk_shape = [tuple(int(v) for v in chunks)] * multiscale_levels
 
@@ -393,7 +627,8 @@ def to_ome_parquet(
         record_dict = data.as_py()
     else:
         # Validate by round-tripping through a typed scalar, then back to dict.
-        record_dict = pa.scalar(data, type=OME_ARROW_STRUCT).as_py()
+        record_dict = {f.name: data.get(f.name) for f in OME_ARROW_STRUCT}
+        record_dict = pa.scalar(record_dict, type=OME_ARROW_STRUCT).as_py()
 
     # 2) Build a single-row struct array from the dict, explicitly passing the schema
     struct_array = pa.array([record_dict], type=OME_ARROW_STRUCT)  # len=1
@@ -456,7 +691,8 @@ def to_ome_vortex(
         record_dict = data.as_py()
     else:
         # Validate by round-tripping through a typed scalar, then back to dict.
-        record_dict = pa.scalar(data, type=OME_ARROW_STRUCT).as_py()
+        record_dict = {f.name: data.get(f.name) for f in OME_ARROW_STRUCT}
+        record_dict = pa.scalar(record_dict, type=OME_ARROW_STRUCT).as_py()
 
     # 2) Build a single-row struct array from the dict, explicitly passing the schema
     struct_array = pa.array([record_dict], type=OME_ARROW_STRUCT)  # len=1
