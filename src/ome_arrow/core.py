@@ -27,6 +27,7 @@ from ome_arrow.ingest import (
     from_tiff,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT
+from ome_arrow.tensor import TensorView
 from ome_arrow.transform import slice_ome_arrow
 from ome_arrow.utils import describe_ome_arrow
 from ome_arrow.view import view_matplotlib, view_pyvista
@@ -77,6 +78,7 @@ class OMEArrow:
 
         # set the tcz for viewing
         self.tcz = tcz
+        self._struct_array: pa.StructArray | None = None
 
         # --- 1) Stack pattern (Bio-Formats-style) --------------------------------
         if isinstance(data, str) and any(c in data for c in "<>*"):
@@ -109,17 +111,25 @@ class OMEArrow:
                 ".parquet",
                 ".pq",
             }:
-                self.data = from_ome_parquet(
-                    s, column_name=column_name, row_index=row_index
+                parquet_result = from_ome_parquet(
+                    s,
+                    column_name=column_name,
+                    row_index=row_index,
+                    return_array=True,
                 )
+                self.data, self._struct_array = parquet_result
                 if image_type is not None:
                     self.data = self._wrap_with_image_type(self.data, image_type)
 
             # Vortex
             elif s.lower().endswith(".vortex") or path.suffix.lower() == ".vortex":
-                self.data = from_ome_vortex(
-                    s, column_name=column_name, row_index=row_index
+                vortex_result = from_ome_vortex(
+                    s,
+                    column_name=column_name,
+                    row_index=row_index,
+                    return_array=True,
                 )
+                self.data, self._struct_array = vortex_result
                 if image_type is not None:
                     self.data = self._wrap_with_image_type(self.data, image_type)
 
@@ -495,6 +505,51 @@ class OMEArrow:
                 print(f"Warning: could not save PyVista snapshot: {e}")
 
             return plotter
+
+    def tensor_view(
+        self,
+        *,
+        scene: int | None = None,
+        t: int | slice | Iterable[int] | None = None,
+        z: int | slice | Iterable[int] | None = None,
+        c: int | slice | Iterable[int] | None = None,
+        roi: tuple[int, int, int, int] | None = None,
+        tile: tuple[int, int] | None = None,
+        layout: str | None = None,
+        dtype: np.dtype | None = None,
+    ) -> TensorView:
+        """Create a TensorView of the pixel data.
+
+        Args:
+            scene: Scene index (only 0 is supported for single-image records).
+            t: Time index selection (int, slice, or sequence). Default: all.
+            z: Z index selection (int, slice, or sequence). Default: all.
+            c: Channel index selection (int, slice, or sequence). Default: all.
+            roi: Spatial crop (x, y, w, h) in pixels.
+            tile: Tile index (tile_y, tile_x) based on chunk grid.
+            layout: Desired layout string using TZCHW letters.
+            dtype: Output dtype override.
+
+        Returns:
+            TensorView: Tensor view over the selected pixels.
+
+        Raises:
+            ValueError: If an unsupported scene is requested.
+        """
+
+        if scene not in (None, 0):
+            raise ValueError("Only scene=0 is supported for single-image records.")
+
+        return TensorView(
+            self._struct_array if self._struct_array is not None else self.data,
+            t=t,
+            z=z,
+            c=c,
+            roi=roi,
+            tile=tile,
+            layout=layout,
+            dtype=dtype,
+        )
 
     def slice(
         self,

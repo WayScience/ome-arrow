@@ -13,4 +13,5 @@ caption: 'Contents:'
 maxdepth: 3
 ---
 python-api
+dlpack
 ```

@@ -42,7 +42,7 @@ jobs:
           python-version: ${{ matrix.python_version }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
-      - name: Sync dependencies (with viz extra)
-        run: uv sync --frozen --extra viz
+      - name: Sync dependencies (with viz + dlpack extras)
+        run: uv sync --frozen --extra viz --extra dlpack
       - name: Run pytest
         run: uv run --frozen pytest
