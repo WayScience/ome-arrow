@@ -13,6 +13,7 @@ from ome_arrow.export import to_ome_parquet
 def _from_dlpack_capsule(capsule: object) -> np.ndarray:
     if hasattr(capsule, "__dlpack__"):
         return np.from_dlpack(capsule)
+
     class _Wrapper:
         def __init__(self, cap: object) -> None:
             self._cap = cap
@@ -28,6 +29,7 @@ def _from_dlpack_capsule(capsule: object) -> np.ndarray:
 
 
 def test_tensor_view_layout_and_values(example_correct_data: dict) -> None:
+    """Validate TensorView layout defaults and permutation behavior."""
     oa = OMEArrow(example_correct_data)
 
     view = oa.tensor_view(t=0, z=0)
@@ -56,6 +58,7 @@ def test_tensor_view_layout_and_values(example_correct_data: dict) -> None:
 
 
 def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
+    """Round-trip DLPack export/import through torch on CPU."""
     torch = pytest.importorskip("torch")
 
     oa = OMEArrow(example_correct_data)
@@ -78,6 +81,7 @@ def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
 
 
 def test_dlpack_roundtrip_jax(example_correct_data: dict) -> None:
+    """Round-trip DLPack export/import through JAX on CPU."""
     jax = pytest.importorskip("jax")
 
     oa = OMEArrow(example_correct_data)
@@ -96,6 +100,7 @@ def test_dlpack_roundtrip_jax(example_correct_data: dict) -> None:
 
 
 def test_dlpack_invalid_device(example_correct_data: dict) -> None:
+    """Raise a clear error for unsupported devices."""
     oa = OMEArrow(example_correct_data)
     view = oa.tensor_view(t=0, z=0)
     with pytest.raises(ValueError, match="Unsupported device"):
@@ -103,6 +108,7 @@ def test_dlpack_invalid_device(example_correct_data: dict) -> None:
 
 
 def test_dlpack_arrow_mode_single_plane(example_correct_data: dict) -> None:
+    """Export a single plane in arrow mode as a flat 1D buffer."""
     oa = OMEArrow(example_correct_data)
     view = oa.tensor_view(t=0, z=0, c=0)
 
@@ -113,6 +119,7 @@ def test_dlpack_arrow_mode_single_plane(example_correct_data: dict) -> None:
 
 
 def test_layout_drop_non_singleton_errors() -> None:
+    """Reject layout drops when the omitted axis is non-singleton."""
     arr = np.zeros((2, 1, 1, 2, 2), dtype=np.uint16)
     oa = OMEArrow(arr)
     view = oa.tensor_view(layout="CHW")
@@ -121,6 +128,7 @@ def test_layout_drop_non_singleton_errors() -> None:
 
 
 def test_iter_dlpack_batches() -> None:
+    """Yield expected batch counts and reconstruct original data."""
     arr = np.arange(3 * 1 * 1 * 2 * 2, dtype=np.uint16).reshape(3, 1, 1, 2, 2)
     oa = OMEArrow(arr)
     view = oa.tensor_view()
@@ -138,6 +146,7 @@ def test_iter_dlpack_batches() -> None:
 
 
 def test_iter_dlpack_shuffle_deterministic() -> None:
+    """Keep shuffle order deterministic with a fixed seed."""
     arr = np.arange(4 * 1 * 1 * 2 * 2, dtype=np.uint16).reshape(4, 1, 1, 2, 2)
     oa = OMEArrow(arr)
     view = oa.tensor_view()
@@ -151,6 +160,7 @@ def test_iter_dlpack_shuffle_deterministic() -> None:
 
 
 def test_iter_dlpack_tiles(example_correct_data: dict) -> None:
+    """Yield tiled DLPack payloads with expected shapes."""
     oa = OMEArrow(example_correct_data)
     view = oa.tensor_view(t=0, z=0)
 
@@ -164,6 +174,7 @@ def test_iter_dlpack_tiles(example_correct_data: dict) -> None:
 def test_arrow_mode_zero_copy_parquet(
     tmp_path: pathlib.Path, example_correct_data: dict
 ) -> None:
+    """Best-effort pointer check for torch zero-copy from parquet."""
     torch = pytest.importorskip("torch")
 
     out = tmp_path / "example.parquet"
@@ -194,6 +205,7 @@ def test_arrow_mode_zero_copy_parquet(
 def test_arrow_mode_zero_copy_parquet_jax(
     tmp_path: pathlib.Path, example_correct_data: dict
 ) -> None:
+    """Best-effort pointer check for JAX zero-copy from parquet."""
     jax = pytest.importorskip("jax")
 
     out = tmp_path / "example.parquet"

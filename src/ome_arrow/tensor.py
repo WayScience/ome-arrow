@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Any, Iterable, Iterator, List, Sequence
+from typing import Any, Iterator, List, Sequence
 
 import numpy as np
 import pyarrow as pa
@@ -52,14 +52,23 @@ class TensorView:
         layout: str | None = None,
         dtype: np.dtype | None = None,
     ) -> None:
+        """Initialize a TensorView over selected OME-Arrow pixels.
+
+        Args:
+            data: OME-Arrow record as dict/StructScalar/StructArray/ChunkedArray.
+            t: Time index selection (int, slice, or sequence). Default: all.
+            z: Z index selection (int, slice, or sequence). Default: all.
+            c: Channel index selection (int, slice, or sequence). Default: all.
+            roi: Spatial crop (x, y, w, h) in pixels. Default: full frame.
+            tile: Tile index (tile_y, tile_x) derived from chunk_grid.
+            layout: Desired layout string using TZCHW letters.
+            dtype: Output dtype override.
+        """
         self._data = data
         self._struct_array: pa.StructArray | None = None
         self._struct_scalar: pa.StructScalar | None = None
         if isinstance(data, pa.ChunkedArray):
-            if data.num_chunks == 1:
-                data = data.chunk(0)
-            else:
-                data = data.combine_chunks()
+            data = data.chunk(0) if data.num_chunks == 1 else data.combine_chunks()
         if isinstance(data, pa.StructArray):
             self._struct_array = data
             self._struct_scalar = data[0]
@@ -501,9 +510,7 @@ class TensorView:
     def _arrow_values(self) -> pa.Array:
         t_idx, z_idx, c_idx = self._selection.t, self._selection.z, self._selection.c
         if len(t_idx) != 1 or len(z_idx) != 1 or len(c_idx) != 1:
-            raise ValueError(
-                "mode='arrow' requires a single (t, z, c) selection."
-            )
+            raise ValueError("mode='arrow' requires a single (t, z, c) selection.")
 
         struct_arr = _ensure_struct_array(self._data)
         if struct_arr is None:
@@ -684,10 +691,7 @@ def _ensure_struct_array(
     data: dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
 ) -> pa.StructArray | None:
     if isinstance(data, pa.ChunkedArray):
-        if data.num_chunks == 1:
-            data = data.chunk(0)
-        else:
-            data = data.combine_chunks()
+        data = data.chunk(0) if data.num_chunks == 1 else data.combine_chunks()
     if isinstance(data, pa.StructArray):
         return data
     if isinstance(data, pa.StructScalar):
@@ -746,12 +750,11 @@ def _select_chunk_values(
         raise ValueError("Chunk not found for the requested (t, z, c, roi).")
 
     if int(selected.field("shape_z")[0].as_py()) != 1:
-        raise ValueError(
-            "mode='arrow' requires shape_z == 1 for chunked selections."
-        )
-    if int(selected.field("shape_x")[0].as_py()) != w or int(
-        selected.field("shape_y")[0].as_py()
-    ) != h:
+        raise ValueError("mode='arrow' requires shape_z == 1 for chunked selections.")
+    if (
+        int(selected.field("shape_x")[0].as_py()) != w
+        or int(selected.field("shape_y")[0].as_py()) != h
+    ):
         raise ValueError("mode='arrow' requires ROI to match chunk size.")
 
     pixels_list = selected.field("pixels")[0]
