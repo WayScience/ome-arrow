@@ -122,38 +122,14 @@ class TensorView:
     @property
     def shape(self) -> tuple[int, ...]:
         """Return the tensor shape for the current layout."""
-        layout = self.layout
-        current = list(_TZCHW)
-        shape = [
-            len(self._selection.t),
-            len(self._selection.z),
-            len(self._selection.c),
-            self._selection.roi[3],
-            self._selection.roi[2],
-        ]
-
-        # Mirror _apply_layout behavior without materializing array data.
-        for dim in list(current):
-            if dim not in layout:
-                axis = current.index(dim)
-                if shape[axis] != 1:
-                    raise ValueError(
-                        f"layout '{layout}' drops non-singleton dimension '{dim}'."
-                    )
-                shape.pop(axis)
-                current.pop(axis)
-
-        if list(layout) == current:
-            return tuple(shape)
-
-        axes = [current.index(dim) for dim in layout]
-        return tuple(shape[axis] for axis in axes)
+        shape, _ = self._shape_and_strides_for_layout(self.layout)
+        return shape
 
     @property
     def strides(self) -> tuple[int, ...]:
         """Return the tensor strides in bytes for the current layout."""
-
-        return self.to_numpy(contiguous=False).strides
+        _, strides = self._shape_and_strides_for_layout(self.layout)
+        return strides
 
     def with_layout(self, layout: str) -> "TensorView":
         """Return a new TensorView with a layout override.
@@ -553,6 +529,45 @@ class TensorView:
                 return {}
             return grid_scalar.as_py()
         return {}
+
+    def _shape_and_strides_for_layout(
+        self, layout: str
+    ) -> tuple[tuple[int, ...], tuple[int, ...]]:
+        current = list(_TZCHW)
+        shape = [
+            len(self._selection.t),
+            len(self._selection.z),
+            len(self._selection.c),
+            self._selection.roi[3],
+            self._selection.roi[2],
+        ]
+
+        itemsize = int(self._dtype.itemsize)
+        strides = [0] * len(shape)
+        stride = itemsize
+        for axis in range(len(shape) - 1, -1, -1):
+            strides[axis] = stride
+            stride *= shape[axis]
+
+        # Mirror _apply_layout behavior without touching pixel buffers.
+        for dim in list(current):
+            if dim not in layout:
+                axis = current.index(dim)
+                if shape[axis] != 1:
+                    raise ValueError(
+                        f"layout '{layout}' drops non-singleton dimension '{dim}'."
+                    )
+                shape.pop(axis)
+                strides.pop(axis)
+                current.pop(axis)
+
+        if list(layout) == current:
+            return tuple(shape), tuple(strides)
+
+        axes = [current.index(dim) for dim in layout]
+        return tuple(shape[axis] for axis in axes), tuple(
+            strides[axis] for axis in axes
+        )
 
     def _arrow_values(self) -> pa.Array:
         t_idx, z_idx, c_idx = self._selection.t, self._selection.z, self._selection.c

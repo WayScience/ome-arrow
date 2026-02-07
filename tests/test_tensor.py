@@ -188,14 +188,7 @@ def test_arrow_mode_zero_copy_parquet(
 
     struct_arr = oa._struct_array
     assert struct_arr is not None
-    planes = struct_arr.field("planes")[0].values
-    mask = pc.and_(
-        pc.equal(planes.field("t"), 0),
-        pc.and_(pc.equal(planes.field("z"), 0), pc.equal(planes.field("c"), 0)),
-    )
-    selected = pc.filter(planes, mask)
-    pixels_list = selected.field("pixels")[0]
-    values = pixels_list.values
+    values = _selected_values_for_arrow_mode(struct_arr, t=0, z=0, c=0)
 
     offset_bytes = values.offset * (values.type.bit_width // 8)
     ptr_arrow = values.buffers()[1].address + offset_bytes
@@ -226,14 +219,7 @@ def test_arrow_mode_zero_copy_parquet_jax(
 
     struct_arr = oa._struct_array
     assert struct_arr is not None
-    planes = struct_arr.field("planes")[0].values
-    mask = pc.and_(
-        pc.equal(planes.field("t"), 0),
-        pc.and_(pc.equal(planes.field("z"), 0), pc.equal(planes.field("c"), 0)),
-    )
-    selected = pc.filter(planes, mask)
-    pixels_list = selected.field("pixels")[0]
-    values = pixels_list.values
+    values = _selected_values_for_arrow_mode(struct_arr, t=0, z=0, c=0)
 
     offset_bytes = values.offset * (values.type.bit_width // 8)
     ptr_arrow = values.buffers()[1].address + offset_bytes
@@ -261,3 +247,34 @@ def _jax_buffer_ptr(arr: object) -> int:
     if inner is not None and hasattr(inner, "unsafe_buffer_pointer"):
         return int(inner.unsafe_buffer_pointer())
     raise AssertionError("Unable to access JAX buffer pointer.")
+
+
+def _selected_values_for_arrow_mode(
+    struct_arr: object, *, t: int, z: int, c: int
+) -> object:
+    chunks_arr = struct_arr.field("chunks")
+    has_chunks = len(chunks_arr) > 0 and not chunks_arr.is_null().to_pylist()[0]
+    if has_chunks:
+        chunks = chunks_arr[0].values
+        mask = pc.and_(
+            pc.equal(chunks.field("t"), t),
+            pc.and_(
+                pc.equal(chunks.field("z"), z),
+                pc.and_(
+                    pc.equal(chunks.field("c"), c),
+                    pc.and_(
+                        pc.equal(chunks.field("x"), 0), pc.equal(chunks.field("y"), 0)
+                    ),
+                ),
+            ),
+        )
+        selected = pc.filter(chunks, mask)
+        return selected.field("pixels")[0].values
+
+    planes = struct_arr.field("planes")[0].values
+    mask = pc.and_(
+        pc.equal(planes.field("t"), t),
+        pc.and_(pc.equal(planes.field("z"), z), pc.equal(planes.field("c"), c)),
+    )
+    selected = pc.filter(planes, mask)
+    return selected.field("pixels")[0].values
