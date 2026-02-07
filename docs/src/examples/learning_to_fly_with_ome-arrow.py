@@ -115,7 +115,7 @@ oa_image = OMEArrow(data="../../../tests/data/idr0062A/6001240_labels.zarr")
 oa_image.view(how="pyvista")
 
 # ## DLPack tensor export (advanced)
-# This is optional and requires torch: `pip install "ome-arrow[dlpack]"`
+# This is optional and requires torch: `pip install "ome-arrow[dlpack-torch]"`
 
 # examples of exporting OME-Arrow data into DLPack format for zero-copy
 oa = OMEArrow("example.ome.parquet")

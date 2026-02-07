@@ -2798,6 +2798,12 @@ dlpack = [
     { name = "jax" },
     { name = "torch" },
 ]
+dlpack-jax = [
+    { name = "jax" },
+]
+dlpack-torch = [
+    { name = "torch" },
+]
 viz = [
     { name = "ipywidgets" },
     { name = "jupyterlab-widgets" },
@@ -2839,6 +2845,7 @@ requires-dist = [
     { name = "fire", specifier = ">=0.7" },
     { name = "ipywidgets", marker = "extra == 'viz'", specifier = ">=8.1.8" },
     { name = "jax", marker = "extra == 'dlpack'", specifier = ">=0.4" },
+    { name = "jax", marker = "extra == 'dlpack-jax'", specifier = ">=0.4" },
     { name = "jupyterlab-widgets", marker = "extra == 'viz'", specifier = ">=3.0.16" },
     { name = "matplotlib", specifier = ">=3.10.7" },
     { name = "numpy", specifier = ">=2.2.6" },
@@ -2847,12 +2854,13 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=22" },
     { name = "pyvista", marker = "extra == 'viz'", specifier = ">=0.46.4" },
     { name = "torch", marker = "extra == 'dlpack'", specifier = ">=2.1" },
+    { name = "torch", marker = "extra == 'dlpack-torch'", specifier = ">=2.1" },
     { name = "trame", marker = "extra == 'viz'", specifier = ">=3.12" },
     { name = "trame-vtk", marker = "extra == 'viz'", specifier = ">=2.10" },
     { name = "trame-vuetify", marker = "extra == 'viz'", specifier = ">=3.1" },
     { name = "vortex-data", marker = "extra == 'vortex'", specifier = ">=0.56" },
 ]
-provides-extras = ["viz", "vortex", "dlpack"]
+provides-extras = ["dlpack", "dlpack-jax", "dlpack-torch", "viz", "vortex"]
 
 [package.metadata.requires-dev]
 dev = [

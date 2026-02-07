@@ -45,6 +45,7 @@ arr = flat.reshape(view.shape)
 
 ```python
 from ome_arrow import OMEArrow
+import numpy as np
 
 obj = OMEArrow("example.ome.parquet")
 view = obj.tensor_view()
@@ -57,6 +58,7 @@ for cap in view.iter_dlpack(batch_size=2, shuffle=False, mode="numpy"):
 
 ```python
 from ome_arrow import OMEArrow
+import numpy as np
 
 obj = OMEArrow("example.ome.parquet")
 view = obj.tensor_view(t=0, z=0)
@@ -81,14 +83,19 @@ reshape.
 
 Zero-copy guarantees depend on the source: Arrow-backed inputs preserve buffers,
 while records built from Python lists or NumPy arrays will materialize once into
-Arrow buffers.
+Arrow buffers. The same applies to `StructScalar` inputs, which are normalized
+through Python objects before Arrow-mode export.
+For Parquet/Vortex sources, zero-copy also requires the on-disk struct schema
+to match `OME_ARROW_STRUCT`; non-strict schema normalization materializes via
+Python objects.
 
 ## Optional dependencies
 
-CPU DLPack export uses Arrow buffers by default. For GPU (`device="cuda"`),
-`mode="numpy"`, or the convenience wrappers `to_torch()` / `to_jax()`,
-install the optional extras:
+CPU DLPack export uses Arrow buffers by default. For framework helpers and GPU
+paths, install only what you need:
 
-```
-pip install "ome-arrow[dlpack]"
+```bash
+pip install "ome-arrow[dlpack-torch]"  # torch only
+pip install "ome-arrow[dlpack-jax]"    # jax only
+pip install "ome-arrow[dlpack]"        # both
 ```

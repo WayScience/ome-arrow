@@ -5,7 +5,7 @@ Core of the ome_arrow package, used for classes and such.
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Tuple
 
 import matplotlib
 import numpy as np
@@ -510,9 +510,9 @@ class OMEArrow:
         self,
         *,
         scene: int | None = None,
-        t: int | slice | Iterable[int] | None = None,
-        z: int | slice | Iterable[int] | None = None,
-        c: int | slice | Iterable[int] | None = None,
+        t: int | slice | Sequence[int] | None = None,
+        z: int | slice | Sequence[int] | None = None,
+        c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,

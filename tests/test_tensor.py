@@ -76,6 +76,8 @@ def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
     np.testing.assert_array_equal(tensor.cpu().numpy(), expected)
     assert tensor.dtype == torch.uint16
 
+    # Pointer equality here relies on TensorView reusing the same cached
+    # materialization for both to_dlpack(mode="numpy") and to_numpy().
     arr = view.to_numpy(contiguous=False)
     assert tensor.data_ptr() == arr.__array_interface__["data"][0]
 

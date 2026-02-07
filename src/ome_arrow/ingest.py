@@ -118,6 +118,14 @@ def _ome_arrow_from_table(
     if strict_schema or candidate_col.type == OME_ARROW_STRUCT:
         scalar = struct_array[0]
     else:
+        warnings.warn(
+            "OME-Arrow column schema differs from OME_ARROW_STRUCT; "
+            "normalizing via Python objects, which disables zero-copy tensor views "
+            "for this record. Use strict_schema=True with canonical schema for "
+            "zero-copy behavior.",
+            UserWarning,
+            stacklevel=2,
+        )
         record_dict: Dict[str, Any] = struct_array.to_pylist()[0]
         # Back-compat: older files won't include image_type; default to None.
         if "image_type" not in record_dict:
@@ -130,8 +138,22 @@ def _ome_arrow_from_table(
     # Optional: soft validation via file-level metadata (if present)
     try:
         meta = table.schema.metadata or {}
-        meta.get(b"ome.arrow.type", b"").decode() == str(OME_ARROW_TAG_TYPE)
-        meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
+        meta_type = meta.get(b"ome.arrow.type", b"").decode()
+        meta_version = meta.get(b"ome.arrow.version", b"").decode()
+        if meta_type and meta_type != str(OME_ARROW_TAG_TYPE):
+            warnings.warn(
+                "Parquet metadata ome.arrow.type does not match expected "
+                f"{OME_ARROW_TAG_TYPE!r}: got {meta_type!r}.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if meta_version and meta_version != str(OME_ARROW_TAG_VERSION):
+            warnings.warn(
+                "Parquet metadata ome.arrow.version does not match expected "
+                f"{OME_ARROW_TAG_VERSION!r}: got {meta_version!r}.",
+                UserWarning,
+                stacklevel=2,
+            )
     except Exception:
         pass
 

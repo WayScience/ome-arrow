@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import random
+import warnings
+from collections import deque
 from dataclasses import dataclass
 from typing import Any, Iterator, List, Sequence
 
@@ -75,7 +77,7 @@ class TensorView:
             self._data_py: dict[str, Any] | None = None
         elif isinstance(data, pa.StructScalar):
             self._struct_scalar = data
-            self._data_py = data.as_py()
+            self._data_py = None
         else:
             self._data_py = data
         self._layout_override = _normalize_layout(layout) if layout else None
@@ -120,8 +122,32 @@ class TensorView:
     @property
     def shape(self) -> tuple[int, ...]:
         """Return the tensor shape for the current layout."""
+        layout = self.layout
+        current = list(_TZCHW)
+        shape = [
+            len(self._selection.t),
+            len(self._selection.z),
+            len(self._selection.c),
+            self._selection.roi[3],
+            self._selection.roi[2],
+        ]
 
-        return self.to_numpy(contiguous=False).shape
+        # Mirror _apply_layout behavior without materializing array data.
+        for dim in list(current):
+            if dim not in layout:
+                axis = current.index(dim)
+                if shape[axis] != 1:
+                    raise ValueError(
+                        f"layout '{layout}' drops non-singleton dimension '{dim}'."
+                    )
+                shape.pop(axis)
+                current.pop(axis)
+
+        if list(layout) == current:
+            return tuple(shape)
+
+        axes = [current.index(dim) for dim in layout]
+        return tuple(shape[axis] for axis in axes)
 
     @property
     def strides(self) -> tuple[int, ...]:
@@ -179,9 +205,14 @@ class TensorView:
             contiguous: When True, materialize a contiguous buffer if needed.
             mode: Export mode. "arrow" returns a capsule for the Arrow values
                 buffer (1D). "numpy" materializes a tensor-shaped NumPy view.
+                Zero-copy Arrow mode requires Arrow-backed inputs (typically
+                Parquet/Vortex ingestion with canonical schema); StructScalar
+                and dict inputs are normalized through Python objects.
 
         Returns:
             DLPack object compatible with torch/jax import utilities.
+            The returned object is single-use per DLPack ownership semantics:
+            after a consumer imports it, the capsule must not be reused.
 
         Raises:
             ValueError: If an unsupported device is requested.
@@ -482,30 +513,43 @@ class TensorView:
     def _pixels_meta(self) -> dict[str, Any]:
         if self._data_py is not None:
             return self._data_py["pixels_meta"]
-        if self._struct_array is None:
-            raise ValueError("No OME-Arrow scalar available.")
-        pm_arr = self._struct_array.field("pixels_meta")
-        return pm_arr[0].as_py()
+        if self._struct_array is not None:
+            pm_arr = self._struct_array.field("pixels_meta")
+            return pm_arr[0].as_py()
+        if self._struct_scalar is not None:
+            pm_scalar = self._struct_scalar["pixels_meta"]
+            if not pm_scalar.is_valid:
+                raise ValueError("pixels_meta is missing from OME-Arrow scalar.")
+            return pm_scalar.as_py()
+        raise ValueError("No OME-Arrow scalar available.")
 
     def _has_chunks(self) -> bool:
         if self._data_py is not None:
             return bool(self._data_py.get("chunks"))
-        if self._struct_array is None:
-            return False
-        chunks_arr = self._struct_array.field("chunks")
-        if len(chunks_arr) == 0:
-            return False
-        return not chunks_arr.is_null().to_pylist()[0]
+        if self._struct_array is not None:
+            chunks_arr = self._struct_array.field("chunks")
+            if len(chunks_arr) == 0:
+                return False
+            return not chunks_arr.is_null().to_pylist()[0]
+        if self._struct_scalar is not None:
+            chunks_scalar = self._struct_scalar["chunks"]
+            return bool(chunks_scalar.is_valid)
+        return False
 
     def _chunk_grid(self) -> dict[str, Any]:
         if self._data_py is not None:
             return self._data_py.get("chunk_grid") or {}
-        if self._struct_array is None:
-            return {}
-        grid_arr = self._struct_array.field("chunk_grid")
-        if len(grid_arr) == 0 or grid_arr.is_null().to_pylist()[0]:
-            return {}
-        return grid_arr[0].as_py()
+        if self._struct_array is not None:
+            grid_arr = self._struct_array.field("chunk_grid")
+            if len(grid_arr) == 0 or grid_arr.is_null().to_pylist()[0]:
+                return {}
+            return grid_arr[0].as_py()
+        if self._struct_scalar is not None:
+            grid_scalar = self._struct_scalar["chunk_grid"]
+            if not grid_scalar.is_valid:
+                return {}
+            return grid_scalar.as_py()
+        return {}
 
     def _arrow_values(self) -> pa.Array:
         t_idx, z_idx, c_idx = self._selection.t, self._selection.z, self._selection.c
@@ -651,13 +695,13 @@ def _batched(items: List[Any], size: int, *, prefetch: int) -> Iterator[List[Any
             yield items[i : i + size]
         return
 
-    queue: List[List[Any]] = []
+    queue: deque[List[Any]] = deque()
     idx = 0
     while idx < len(items) or queue:
         while idx < len(items) and len(queue) <= prefetch:
             queue.append(items[idx : idx + size])
             idx += size
-        yield queue.pop(0)
+        yield queue.popleft()
 
 
 def _require_torch() -> Any:
@@ -675,6 +719,12 @@ def _dlpack_device(obj: Any) -> tuple[int, int]:
 
 
 class _DLPackWrapper:
+    """Thin DLPack producer wrapper around a single capsule.
+
+    The wrapped capsule follows standard DLPack ownership transfer semantics:
+    it is intended for one consumer call to ``__dlpack__``.
+    """
+
     def __init__(self, capsule: Any, device: tuple[int, int]) -> None:
         self._capsule = capsule
         self._device = device
@@ -695,8 +745,20 @@ def _ensure_struct_array(
     if isinstance(data, pa.StructArray):
         return data
     if isinstance(data, pa.StructScalar):
+        warnings.warn(
+            "mode='arrow' received a StructScalar; converting via as_py(), "
+            "so zero-copy is not guaranteed for this export.",
+            UserWarning,
+            stacklevel=3,
+        )
         return pa.array([data.as_py()], type=OME_ARROW_STRUCT)
     if isinstance(data, dict):
+        warnings.warn(
+            "mode='arrow' received a dict; converting to Arrow buffers, "
+            "so zero-copy is not guaranteed for this export.",
+            UserWarning,
+            stacklevel=3,
+        )
         scalar = pa.scalar(data, type=OME_ARROW_STRUCT)
         return pa.array([scalar])
     return None
