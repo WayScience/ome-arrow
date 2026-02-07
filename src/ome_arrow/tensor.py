@@ -731,7 +731,13 @@ class _DLPackWrapper:
 
     def __dlpack__(self, stream: Any | None = None) -> Any:
         _ = stream
-        return self._capsule
+        if self._capsule is None:
+            raise RuntimeError(
+                "DLPack capsule has already been consumed and cannot be reused."
+            )
+        capsule = self._capsule
+        self._capsule = None
+        return capsule
 
     def __dlpack_device__(self) -> tuple[int, int]:
         return self._device
