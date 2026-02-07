@@ -20,7 +20,11 @@ def _from_dlpack_capsule(capsule: object) -> np.ndarray:
 
         def __dlpack__(self, stream: object | None = None) -> object:
             _ = stream
-            return self._cap
+            if self._cap is None:
+                raise RuntimeError("DLPack capsule has already been consumed.")
+            cap = self._cap
+            self._cap = None
+            return cap
 
         def __dlpack_device__(self) -> tuple[int, int]:
             return (1, 0)

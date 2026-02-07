@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import random
 import warnings
-from collections import deque
 from dataclasses import dataclass
 from typing import Any, Iterator, List, Sequence
 
@@ -285,8 +284,8 @@ class TensorView:
             tiles: Tile size (tile_h, tile_w) in pixels for spatial tiling.
             shuffle: Whether to shuffle the iteration order.
             seed: Seed for deterministic shuffling.
-            prefetch: Number of queued batches/tiles to buffer ahead in this
-                synchronous iterator (not asynchronous prefetch execution).
+            prefetch: Placeholder for future asynchronous prefetch support.
+                Currently validated but does not change synchronous iteration.
             device: Target device ("cpu" or "cuda").
             contiguous: When True, materialize contiguous buffers if needed.
             mode: Export mode. "arrow" returns 1D values buffers.
@@ -503,17 +502,20 @@ class TensorView:
         raise ValueError("No OME-Arrow scalar available.")
 
     def _has_chunks(self) -> bool:
+        result = False
         if self._data_py is not None:
-            return bool(self._data_py.get("chunks"))
-        if self._struct_array is not None:
+            result = bool(self._data_py.get("chunks"))
+        elif self._struct_array is not None:
             chunks_arr = self._struct_array.field("chunks")
-            if len(chunks_arr) == 0:
-                return False
-            return not chunks_arr.is_null().to_pylist()[0]
-        if self._struct_scalar is not None:
+            if len(chunks_arr) > 0 and not chunks_arr.is_null().to_pylist()[0]:
+                lengths = chunks_arr.value_lengths()
+                first_len = lengths[0]
+                result = bool(first_len.is_valid and int(first_len.as_py()) > 0)
+        elif self._struct_scalar is not None:
             chunks_scalar = self._struct_scalar["chunks"]
-            return bool(chunks_scalar.is_valid)
-        return False
+            if chunks_scalar.is_valid:
+                result = len(chunks_scalar.values) > 0
+        return result
 
     def _chunk_grid(self) -> dict[str, Any]:
         if self._data_py is not None:
@@ -708,18 +710,11 @@ def _tile_to_roi(
 def _batched(items: List[Any], size: int, *, prefetch: int) -> Iterator[List[Any]]:
     if size <= 0:
         raise ValueError("batch size must be positive")
-    if prefetch <= 0:
-        for i in range(0, len(items), size):
-            yield items[i : i + size]
-        return
-
-    queue: deque[List[Any]] = deque()
-    idx = 0
-    while idx < len(items) or queue:
-        while idx < len(items) and len(queue) <= prefetch:
-            queue.append(items[idx : idx + size])
-            idx += size
-        yield queue.popleft()
+    # prefetch is intentionally a no-op placeholder until async prefetching
+    # is implemented.
+    _ = prefetch
+    for i in range(0, len(items), size):
+        yield items[i : i + size]
 
 
 def _require_torch() -> Any:
