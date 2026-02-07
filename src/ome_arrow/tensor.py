@@ -309,7 +309,8 @@ class TensorView:
             tiles: Tile size (tile_h, tile_w) in pixels for spatial tiling.
             shuffle: Whether to shuffle the iteration order.
             seed: Seed for deterministic shuffling.
-            prefetch: Number of items to precompute ahead.
+            prefetch: Number of queued batches/tiles to buffer ahead in this
+                synchronous iterator (not asynchronous prefetch execution).
             device: Target device ("cpu" or "cuda").
             contiguous: When True, materialize contiguous buffers if needed.
             mode: Export mode. "arrow" returns 1D values buffers.
@@ -433,6 +434,8 @@ class TensorView:
 
         out = np.zeros((len(t_idx), len(z_idx), len(c_idx), h, w), dtype=self._dtype)
         plane_map = self._plane_map()
+        # Baseline implementation: reads one plane per (t, z, c) combination.
+        # For large 5D selections this may be a hotspot, especially with chunks.
         for ti, t in enumerate(t_idx):
             for zi, z in enumerate(z_idx):
                 for ci, c in enumerate(c_idx):
