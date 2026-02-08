@@ -95,6 +95,7 @@ class TensorView:
         self._selection = self._normalize_selection(t=t, z=z, c=c, roi=roi, tile=tile)
         self._array: np.ndarray | None = None
         self._array_layout: str | None = None
+        self._chunks_present: bool | None = None
 
     @property
     def dtype(self) -> np.dtype:
@@ -269,6 +270,7 @@ class TensorView:
         self,
         *,
         batch_size: int | None = None,
+        tile_size: tuple[int, int] | None = None,
         tiles: tuple[int, int] | None = None,
         shuffle: bool = False,
         seed: int | None = None,
@@ -281,7 +283,8 @@ class TensorView:
 
         Args:
             batch_size: Number of T indices per batch. Defaults to full range.
-            tiles: Tile size (tile_h, tile_w) in pixels for spatial tiling.
+            tile_size: Tile size (tile_h, tile_w) in pixels for spatial tiling.
+            tiles: Deprecated alias for ``tile_size``.
             shuffle: Whether to shuffle the iteration order.
             seed: Seed for deterministic shuffling.
             prefetch: Placeholder for future asynchronous prefetch support.
@@ -298,8 +301,18 @@ class TensorView:
             raise ValueError("prefetch must be >= 0")
 
         if tiles is not None:
+            if tile_size is not None:
+                raise ValueError("Provide only one of tile_size or tiles.")
+            warnings.warn(
+                "iter_dlpack(tiles=...) is deprecated; use tile_size=... instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            tile_size = tiles
+
+        if tile_size is not None:
             yield from self._iter_tiles(
-                tiles=tiles,
+                tiles=tile_size,
                 shuffle=shuffle,
                 seed=seed,
                 prefetch=prefetch,
@@ -502,6 +515,11 @@ class TensorView:
         raise ValueError("No OME-Arrow scalar available.")
 
     def _has_chunks(self) -> bool:
+        if self._chunks_present is None:
+            self._chunks_present = self._compute_has_chunks()
+        return self._chunks_present
+
+    def _compute_has_chunks(self) -> bool:
         result = False
         if self._data_py is not None:
             result = bool(self._data_py.get("chunks"))
@@ -676,7 +694,15 @@ def _dtype_from_meta(dtype: Any) -> np.dtype:
         return np.dtype(np.uint16)
     try:
         return np.dtype(dtype)
-    except Exception:
+    except Exception as exc:
+        warnings.warn(
+            (
+                "_dtype_from_meta: failed to convert dtype "
+                f"{dtype!r} ({exc}); falling back to uint16."
+            ),
+            RuntimeWarning,
+            stacklevel=2,
+        )
         return np.dtype(np.uint16)
 
 

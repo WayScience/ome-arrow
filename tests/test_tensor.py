@@ -170,7 +170,7 @@ def test_iter_dlpack_tiles(example_correct_data: dict) -> None:
     oa = OMEArrow(example_correct_data)
     view = oa.tensor_view(t=0, z=0)
 
-    caps = list(view.iter_dlpack(tiles=(2, 2), mode="numpy"))
+    caps = list(view.iter_dlpack(tile_size=(2, 2), mode="numpy"))
     assert len(caps) == 4
 
     tile = _from_dlpack_capsule(caps[0])
@@ -233,6 +233,12 @@ def test_arrow_mode_zero_copy_parquet_jax(
 
 
 def _jax_buffer_ptr(arr: object) -> int:
+    """Return a best-effort device pointer for a JAX array.
+
+    Notes:
+        This probes version-specific JAX internals. Keep this helper local to
+        tests and prefer skipping on unknown layouts over hard failures.
+    """
     if hasattr(arr, "device_buffer"):
         buf = arr.device_buffer
     elif hasattr(arr, "device_buffers"):
@@ -256,6 +262,12 @@ def _jax_buffer_ptr(arr: object) -> int:
 def _selected_values_for_arrow_mode(
     struct_arr: object, *, t: int, z: int, c: int
 ) -> object:
+    """Select Arrow pixel values for the exact path used by ``mode='arrow'``.
+
+    Notes:
+        This intentionally reimplements selection logic from production code so
+        tests can independently verify behavior and pointer provenance.
+    """
     chunks_arr = struct_arr.field("chunks")
     has_chunks = len(chunks_arr) > 0 and not chunks_arr.is_null().to_pylist()[0]
     if has_chunks:

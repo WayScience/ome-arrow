@@ -64,7 +64,9 @@ obj = OMEArrow("example.ome.parquet")
 view = obj.tensor_view(t=0, z=0)
 
 # Tile over spatial region.
-for cap in view.iter_dlpack(tiles=(256, 256), shuffle=True, seed=123, mode="numpy"):
+for cap in view.iter_dlpack(
+    tile_size=(256, 256), shuffle=True, seed=123, mode="numpy"
+):
     tile = np.from_dlpack(cap)
     # tile shape: (C, H, W) in CHW layout
 ```

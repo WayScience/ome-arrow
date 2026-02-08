@@ -30,7 +30,6 @@ dependencies = [
   "pillow>=12",
   "pyarrow>=22",
 ]
-
 optional-dependencies.dlpack = [
   "jax>=0.4",
   "torch>=2.1",
@@ -73,11 +72,9 @@ notebooks = [
   "jupytext>=1.17.1",
 ]
 
-[tool.setuptools.package-dir]
-"" = "src"
-
-[tool.setuptools.packages.find]
-where = [ "src" ]
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages.find.where = [ "src" ]
 
 [tool.setuptools_scm]
 root = "."
@@ -90,16 +87,28 @@ target-version = "py311"
 line-length = 88
 fix = true
 lint.select = [
-  # flake8-builtins
-  "A",
   # flake8-annotations
   "ANN",
+  # flake8-builtins
+  "A",
   # flake8-comprehensions
   "C4",
+  # flake8-simplify
+  "SIM",
+  # isort
+  "I",
   # mccabe
   "C90",
+  # pycodestyle
+  "E",
   # pydocstyle (docstring presence)
   "D100",
+  # pyflakes
+  "F",
+  # pylint
+  "PL",
+  # ruff
+  "RUF",
   "D101",
   "D102",
   "D103",
@@ -107,18 +116,6 @@ lint.select = [
   "D105",
   "D106",
   "D107",
-  # pycodestyle
-  "E",
-  # pyflakes
-  "F",
-  # isort
-  "I",
-  # pylint
-  "PL",
-  # ruff
-  "RUF",
-  # flake8-simplify
-  "SIM",
   "W",
 ]
 # ignore various rules for all
@@ -130,17 +127,8 @@ lint.per-file-ignores."docs/*" = [ "D100", "D101", "D102", "D103", "D104", "D105
 # ignore typing rules for tests
 lint.per-file-ignores."tests/*" = [ "ANN201", "E501", "PLR0913", "PLR2004" ]
 
-[tool.pytest.ini_options]
-pythonpath = [ "." ]
-
-[tool.poe.tasks]
-# tasks for development environments
-test.shell = """
-pytest
-"""
-jupyter.shell = """
-jupyter lab
-"""
+[tool.pytest]
+ini_options.pythonpath = [ "." ]
 
 [tool.jupytext]
 formats = "ipynb,py:light"
@@ -152,3 +140,12 @@ paths = [ "src/ome_arrow", "tests" ]
 [tool.uv-dynamic-versioning]
 vcs = "git"
 style = "semver"
+
+[tool.poe]
+# tasks for development environments
+tasks.test.shell = """
+pytest
+"""
+tasks.jupyter.shell = """
+jupyter lab
+"""
