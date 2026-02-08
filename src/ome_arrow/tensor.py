@@ -65,20 +65,25 @@ class TensorView:
             layout: Desired layout string using TZCHW letters.
             dtype: Output dtype override.
         """
-        self._data = data
         self._struct_array: pa.StructArray | None = None
         self._struct_scalar: pa.StructScalar | None = None
         if isinstance(data, pa.ChunkedArray):
-            data = data.chunk(0) if data.num_chunks == 1 else data.combine_chunks()
+            if data.num_chunks == 0:
+                data = pa.array([], type=OME_ARROW_STRUCT)
+            else:
+                data = data.chunk(0) if data.num_chunks == 1 else data.combine_chunks()
         if isinstance(data, pa.StructArray):
             self._struct_array = data
-            self._struct_scalar = data[0]
+            self._struct_scalar = data[0] if len(data) > 0 else None
             self._data_py: dict[str, Any] | None = None
         elif isinstance(data, pa.StructScalar):
             self._struct_scalar = data
             self._data_py = None
         else:
             self._data_py = data
+        # Keep normalized backing data so child TensorViews do not repeatedly
+        # combine chunked Arrow arrays during iteration.
+        self._data = data
         self._layout_override = _normalize_layout(layout) if layout else None
 
         pm = self._pixels_meta()
@@ -259,12 +264,12 @@ class TensorView:
         """
 
         try:
-            import jax
+            import jax.numpy as jnp
         except ImportError as exc:
             raise RuntimeError("JAX is not installed.") from exc
 
         dlpack = self.to_dlpack(device=device, contiguous=contiguous, mode=mode)
-        return jax.dlpack.from_dlpack(dlpack)
+        return jnp.from_dlpack(dlpack)
 
     def iter_dlpack(
         self,
@@ -506,6 +511,10 @@ class TensorView:
             return self._data_py["pixels_meta"]
         if self._struct_array is not None:
             pm_arr = self._struct_array.field("pixels_meta")
+            if len(pm_arr) == 0:
+                raise ValueError(
+                    "Cannot create TensorView from an empty OME-Arrow array."
+                )
             return pm_arr[0].as_py()
         if self._struct_scalar is not None:
             pm_scalar = self._struct_scalar["pixels_meta"]

@@ -88,12 +88,12 @@ def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
 
 def test_dlpack_roundtrip_jax(example_correct_data: dict) -> None:
     """Round-trip DLPack export/import through JAX on CPU."""
-    jax = pytest.importorskip("jax")
+    jnp = pytest.importorskip("jax.numpy")
 
     oa = OMEArrow(example_correct_data)
     view = oa.tensor_view(t=0, z=0)
     dlpack = view.to_dlpack(contiguous=True, mode="numpy")
-    arr = jax.dlpack.from_dlpack(dlpack)
+    arr = jnp.from_dlpack(dlpack)
 
     expected = np.stack(
         [
@@ -118,7 +118,11 @@ def test_dlpack_arrow_mode_single_plane(example_correct_data: dict) -> None:
     oa = OMEArrow(example_correct_data)
     view = oa.tensor_view(t=0, z=0, c=0)
 
-    dlpack = view.to_dlpack(mode="arrow")
+    with pytest.warns(
+        UserWarning,
+        match="mode='arrow' received a StructScalar; converting via as_py()",
+    ):
+        dlpack = view.to_dlpack(mode="arrow")
     arr = _from_dlpack_capsule(dlpack)
     expected = np.array(example_correct_data["planes"][0]["pixels"])
     np.testing.assert_array_equal(arr, expected)
@@ -205,7 +209,7 @@ def test_arrow_mode_zero_copy_parquet_jax(
     tmp_path: pathlib.Path, example_correct_data: dict
 ) -> None:
     """Best-effort pointer check for JAX zero-copy from parquet."""
-    jax = pytest.importorskip("jax")
+    jnp = pytest.importorskip("jax.numpy")
 
     out = tmp_path / "example.parquet"
     to_ome_parquet(example_correct_data, out_path=str(out), column_name="ome_arrow")
@@ -214,7 +218,7 @@ def test_arrow_mode_zero_copy_parquet_jax(
     view = oa.tensor_view(t=0, z=0, c=0)
     capsule = view.to_dlpack(mode="arrow")
 
-    arr = jax.dlpack.from_dlpack(capsule)
+    arr = jnp.from_dlpack(capsule)
     try:
         device = arr.device()
         assert device.platform == "cpu"

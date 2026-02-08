@@ -262,6 +262,12 @@ from ome_arrow.core import OMEArrow
         ),
     ],
 )
+@pytest.mark.filterwarnings(
+    "ignore:As of version 0.4.0, the parser argument is ignored.*:DeprecationWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:OME-Arrow column schema differs from OME_ARROW_STRUCT.*:UserWarning"
+)
 def test_ome_arrow_base_expectations(
     input_data: str, expected_info: dict, tmp_path: pathlib.Path
 ):
@@ -269,7 +275,11 @@ def test_ome_arrow_base_expectations(
     Test that OMEArrow initializes correctly with valid data.
     """
 
-    oa_image = OMEArrow(data=input_data)
+    if input_data.endswith(".ome.parquet"):
+        with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+            oa_image = OMEArrow(data=input_data)
+    else:
+        oa_image = OMEArrow(data=input_data)
 
     assert oa_image.info() == expected_info
 
@@ -348,7 +358,10 @@ def test_ome_parquet_specific_col_and_row(
     Test that OMEArrow initializes correctly with valid data.
     """
 
-    oa_image = OMEArrow(data=input_data, column_name=column_name, row_index=row_index)
+    with pytest.warns(UserWarning, match="schema differs from OME_ARROW_STRUCT"):
+        oa_image = OMEArrow(
+            data=input_data, column_name=column_name, row_index=row_index
+        )
 
     assert oa_image.info() == expected_info
 
