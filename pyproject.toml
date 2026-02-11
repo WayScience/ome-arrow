@@ -30,7 +30,6 @@ dependencies = [
   "pillow>=12",
   "pyarrow>=22",
 ]
-
 optional-dependencies.viz = [
   "ipywidgets>=8.1.8",
   "jupyterlab-widgets>=3.0.16",
@@ -63,11 +62,9 @@ notebooks = [
   "jupytext>=1.17.1",
 ]
 
-[tool.setuptools.package-dir]
-"" = "src"
-
-[tool.setuptools.packages.find]
-where = [ "src" ]
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages.find.where = [ "src" ]
 
 [tool.setuptools_scm]
 root = "."
@@ -120,17 +117,8 @@ lint.per-file-ignores."docs/*" = [ "D100", "D101", "D102", "D103", "D104", "D105
 # ignore typing rules for tests
 lint.per-file-ignores."tests/*" = [ "ANN201", "E501", "PLR0913", "PLR2004" ]
 
-[tool.pytest.ini_options]
-pythonpath = [ "." ]
-
-[tool.poe.tasks]
-# tasks for development environments
-test.shell = """
-pytest
-"""
-jupyter.shell = """
-jupyter lab
-"""
+[tool.pytest]
+ini_options.pythonpath = [ "." ]
 
 [tool.jupytext]
 formats = "ipynb,py:light"
@@ -142,3 +130,12 @@ paths = [ "src/ome_arrow", "tests" ]
 [tool.uv-dynamic-versioning]
 vcs = "git"
 style = "semver"
+
+[tool.poe]
+# tasks for development environments
+tasks.test.shell = """
+pytest
+"""
+tasks.jupyter.shell = """
+jupyter lab
+"""
