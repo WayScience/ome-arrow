@@ -372,7 +372,7 @@ wheels = [
 
 [[package]]
 name = "bioio-ome-zarr"
-version = "3.2.1"
+version = "3.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bioio-base" },
@@ -383,9 +383,9 @@ dependencies = [
     { name = "xarray" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e0/bb/6bc80370ef8287e6d2dc047f06e440f870d57735fd3e4990fc75f2bd4f57/bioio_ome_zarr-3.2.1.tar.gz", hash = "sha256:ef143329de73b88229db03ad3ceb84399622c5fabf2b911b34c64f8a8a4363fd", size = 45482, upload-time = "2026-01-08T18:03:17.533Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/50/6a3e71cd7fd866d2a3a43b97529ac93a38365e4a5c9a3bb4fe1a2c61c7bc/bioio_ome_zarr-3.2.2.tar.gz", hash = "sha256:29568398ca1b3fdd2079e9f7ed18c3171e57996a4baeca7e928cd6c07a5a26a6", size = 45475, upload-time = "2026-02-10T22:01:29.788Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/9a/691e30d62a5d5e5c220d9e8df4b673a59bfb7a244ad4ac7c8ee23f117054/bioio_ome_zarr-3.2.1-py3-none-any.whl", hash = "sha256:54180e10f4df7b2bddcb8468d05c3d6e7f2b3d3690f4f2ef9d68e0463ac1c9ea", size = 38136, upload-time = "2026-01-08T18:03:16.079Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/fe/8acc8ec515004c7895a27f2405af161ca1f07d06bad83a1d33ddcb7339d6/bioio_ome_zarr-3.2.2-py3-none-any.whl", hash = "sha256:d7d1bed39c1809288a917e4eb5b6643b281c8103eedae8ead539e483696c6761", size = 38136, upload-time = "2026-02-10T22:01:28.226Z" },
 ]
 
 [[package]]
@@ -1634,7 +1634,7 @@ wheels = [
 
 [[package]]
 name = "jupyterlab"
-version = "4.5.3"
+version = "4.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "async-lru" },
@@ -1651,22 +1651,22 @@ dependencies = [
     { name = "tornado" },
     { name = "traitlets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/76/393eae3349f9a39bf21f8f5406e5244d36e2bfc932049b6070c271f92764/jupyterlab-4.5.3.tar.gz", hash = "sha256:4a159f71067cb38e4a82e86a42de8e7e926f384d7f2291964f282282096d27e8", size = 23939231, upload-time = "2026-01-23T15:04:25.768Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/6b/21af7c0512bdf67e0c54c121779a1f2a97a164a7657e13fced79db8fa5a0/jupyterlab-4.5.4.tar.gz", hash = "sha256:c215f48d8e4582bd2920ad61cc6a40d8ebfef7e5a517ae56b8a9413c9789fdfb", size = 23943597, upload-time = "2026-02-11T00:26:55.308Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/9a/0bf9a7a45f0006d7ff4fdc4fc313de4255acab02bf4db1887c65f0472c01/jupyterlab-4.5.3-py3-none-any.whl", hash = "sha256:63c9f3a48de72ba00df766ad6eed416394f5bb883829f11eeff0872302520ba7", size = 12391761, upload-time = "2026-01-23T15:04:21.214Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/9f/a70972ece62ead2d81acc6223188f6d18a92f665ccce17796a0cdea4fcf5/jupyterlab-4.5.4-py3-none-any.whl", hash = "sha256:cc233f70539728534669fb0015331f2a3a87656207b3bb2d07916e9289192f12", size = 12391867, upload-time = "2026-02-11T00:26:51.23Z" },
 ]
 
 [[package]]
 name = "jupyterlab-code-formatter"
-version = "3.0.2"
+version = "3.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jupyter-server" },
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/a0/279f8ab354f944cd54fc124eeb6112f4d4fd22c6834e96ca48a13bc015a4/jupyterlab_code_formatter-3.0.2.tar.gz", hash = "sha256:55adb8fa8b9bd58f0b39e7d3ead6c1e862e9ebc1444a66cdb4233d8dc6351d4b", size = 3323619, upload-time = "2024-08-14T09:59:57.51Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/05/a4115d428c07e70c8fef8790f234afb8ec5d31537f6ef643748b85c89759/jupyterlab_code_formatter-3.0.3.tar.gz", hash = "sha256:179e3c85cf6c0fc3c321c84bae446f3a2ad517e26606989c9485ce72e6c781c5", size = 3324163, upload-time = "2026-02-11T14:57:52.291Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/82/198e37071ca3f5709b80b19d99b5498f75f020e9052b8f7f750bd3580ad6/jupyterlab_code_formatter-3.0.2-py3-none-any.whl", hash = "sha256:9f4c5be0a5296029207d965da7b65621aa8a06d39fc3a5d8e59d1f3db88997fd", size = 33034, upload-time = "2024-08-14T09:59:54.566Z" },
+    { url = "https://files.pythonhosted.org/packages/59/a1/8de7afd92c475f7ed5487a8070fb69c869039ec0aef46ef11543b86bbef4/jupyterlab_code_formatter-3.0.3-py3-none-any.whl", hash = "sha256:e10de34012c8acd935a7781980e629e3cb7635967d83e03ca662c844b23a91d8", size = 33043, upload-time = "2026-02-11T14:57:50.751Z" },
 ]
 
 [[package]]
