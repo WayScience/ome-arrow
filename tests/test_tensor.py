@@ -86,6 +86,20 @@ def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
     assert tensor.data_ptr() == arr.__array_interface__["data"][0]
 
 
+def test_tensor_view_layout_hw_with_first_channel_policy(
+    example_correct_data: dict,
+) -> None:
+    """Allow HW layout by selecting the first channel when requested."""
+    oa = OMEArrow(example_correct_data)
+
+    view_hw = oa.tensor_view(t=0, z=0, layout="HW", channel_policy="first")
+    arr_hw = view_hw.to_numpy(contiguous=False)
+
+    expected_chw = oa.tensor_view(t=0, z=0, layout="CHW").to_numpy(contiguous=True)
+    np.testing.assert_array_equal(arr_hw, expected_chw[0])
+    assert arr_hw.shape == (3, 4)
+
+
 def test_dlpack_roundtrip_jax(example_correct_data: dict) -> None:
     """Round-trip DLPack export/import through JAX on CPU."""
     jnp = pytest.importorskip("jax.numpy")

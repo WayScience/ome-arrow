@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 import warnings
 from dataclasses import dataclass
-from typing import Any, Iterator, List, Sequence
+from typing import Any, Iterator, List, Literal, Sequence
 
 import numpy as np
 import pyarrow as pa
@@ -37,8 +37,12 @@ class TensorView:
         c: Channel index selection (int, slice, or sequence). Default: all.
         roi: Spatial crop (x, y, w, h) in pixels. Default: full frame.
         tile: Tile index (tile_y, tile_x) based on chunk grid.
-        layout: Desired layout string using TZCHW letters.
+        layout: Desired layout string using TZCHW letters where
+            T=time, Z=depth, C=channel, H=height (Y), W=width (X).
         dtype: Output dtype override. Defaults to pixels_meta.type when valid.
+        channel_policy: Behavior when dropping `C` from layout while
+            multiple channels are selected. "error" raises (default).
+            "first" keeps the first channel.
     """
 
     def __init__(
@@ -52,6 +56,7 @@ class TensorView:
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
+        channel_policy: Literal["error", "first"] = "error",
     ) -> None:
         """Initialize a TensorView over selected OME-Arrow pixels.
 
@@ -62,8 +67,12 @@ class TensorView:
             c: Channel index selection (int, slice, or sequence). Default: all.
             roi: Spatial crop (x, y, w, h) in pixels. Default: full frame.
             tile: Tile index (tile_y, tile_x) derived from chunk_grid.
-            layout: Desired layout string using TZCHW letters.
+            layout: Desired layout string using TZCHW letters where
+                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
             dtype: Output dtype override.
+            channel_policy: Behavior when dropping `C` from layout while
+                multiple channels are selected. "error" raises (default).
+                "first" keeps the first channel.
         """
         self._struct_array: pa.StructArray | None = None
         self._struct_scalar: pa.StructScalar | None = None
@@ -85,6 +94,7 @@ class TensorView:
         # combine chunked Arrow arrays during iteration.
         self._data = data
         self._layout_override = _normalize_layout(layout) if layout else None
+        self._channel_policy = _normalize_channel_policy(channel_policy)
 
         pm = self._pixels_meta()
         self._size_x = int(pm["size_x"])
@@ -140,7 +150,8 @@ class TensorView:
         """Return a new TensorView with a layout override.
 
         Args:
-            layout: Desired layout string using TZCHW letters.
+            layout: Desired layout string using TZCHW letters where
+                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
 
         Returns:
             TensorView: New view with the requested layout.
@@ -154,6 +165,7 @@ class TensorView:
             roi=self._selection.roi,
             layout=layout,
             dtype=self._dtype,
+            channel_policy=self._channel_policy,
         )
 
     def to_numpy(self, *, contiguous: bool = False) -> np.ndarray:
@@ -368,6 +380,7 @@ class TensorView:
                 roi=self._selection.roi,
                 layout=self.layout,
                 dtype=self._dtype,
+                channel_policy=self._channel_policy,
             )
             yield view.to_dlpack(device=device, contiguous=contiguous, mode=mode)
 
@@ -408,6 +421,7 @@ class TensorView:
                 roi=(x, y, w, h),
                 layout=self.layout,
                 dtype=self._dtype,
+                channel_policy=self._channel_policy,
             )
             yield view.to_dlpack(device=device, contiguous=contiguous, mode=mode)
 
@@ -416,6 +430,13 @@ class TensorView:
             return self._array
 
         base = self._build_tzchw()
+        if (
+            "C" not in layout
+            and base.shape[2] != 1
+            and self._channel_policy == "first"
+        ):
+            # Explicit opt-in: keep first channel when layout drops C.
+            base = base[:, :, :1, :, :]
         arr = _apply_layout(base, layout)
         self._array = arr
         self._array_layout = layout
@@ -583,9 +604,12 @@ class TensorView:
             if dim not in layout:
                 axis = current.index(dim)
                 if shape[axis] != 1:
-                    raise ValueError(
-                        f"layout '{layout}' drops non-singleton dimension '{dim}'."
-                    )
+                    if dim == "C" and self._channel_policy == "first":
+                        shape[axis] = 1
+                    else:
+                        raise ValueError(
+                            f"layout '{layout}' drops non-singleton dimension '{dim}'."
+                        )
                 shape.pop(axis)
                 strides.pop(axis)
                 current.pop(axis)
@@ -650,6 +674,16 @@ def _normalize_mode(mode: str) -> str:
     if mode not in _ALLOWED_MODES:
         raise ValueError(f"Unsupported mode '{mode}'.")
     return mode
+
+
+def _normalize_channel_policy(channel_policy: str) -> str:
+    policy = str(channel_policy).strip().lower()
+    if policy not in {"error", "first"}:
+        raise ValueError(
+            "Unsupported channel_policy "
+            f"'{channel_policy}'. Expected one of: error, first."
+        )
+    return policy
 
 
 def _normalize_index(

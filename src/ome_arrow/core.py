@@ -5,7 +5,7 @@ Core of the ome_arrow package, used for classes and such.
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Literal, Optional, Sequence, Tuple
 
 import matplotlib
 import numpy as np
@@ -517,6 +517,7 @@ class OMEArrow:
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
+        channel_policy: Literal["error", "first"] = "error",
     ) -> TensorView:
         """Create a TensorView of the pixel data.
 
@@ -527,8 +528,12 @@ class OMEArrow:
             c: Channel index selection (int, slice, or sequence). Default: all.
             roi: Spatial crop (x, y, w, h) in pixels.
             tile: Tile index (tile_y, tile_x) based on chunk grid.
-            layout: Desired layout string using TZCHW letters.
+            layout: Desired layout string using TZCHW letters where
+                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
             dtype: Output dtype override.
+            channel_policy: Behavior when dropping `C` from layout while
+                multiple channels are selected. "error" raises (default).
+                "first" keeps the first channel.
 
         Returns:
             TensorView: Tensor view over the selected pixels.
@@ -549,6 +554,7 @@ class OMEArrow:
             tile=tile,
             layout=layout,
             dtype=dtype,
+            channel_policy=channel_policy,
         )
 
     def slice(

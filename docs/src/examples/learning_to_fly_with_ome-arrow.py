@@ -20,16 +20,6 @@
 # which handles all data I/O and manipulation
 from ome_arrow import OMEArrow
 
-try:
-    import jax
-except ImportError:
-    jax = None
-
-try:
-    import torch
-except ImportError:
-    torch = None
-
 # read a TIFF file and convert it to OME-Arrow
 oa_image = OMEArrow(
     data="../../../tests/data/examplehuman/AS_09125_050116030001_D03f00d0.tif"
@@ -117,32 +107,37 @@ oa_image.view(how="pyvista")
 # ## DLPack tensor export (advanced)
 # This is optional and requires torch: `pip install "ome-arrow[dlpack-torch]"`
 
+# +
 # examples of exporting OME-Arrow data into DLPack format for zero-copy
+import jax.numpy as jnp
+import torch
+
 oa = OMEArrow("example.ome.parquet")
+# -
 
 # %%time
 # DLPack Arrow mode: zero-copy 1D values buffer + reshape
 view = oa.tensor_view(t=0, z=0, c=0)
 cap = view.to_dlpack(mode="arrow")
-if torch is not None:
-    flat = torch.utils.dlpack.from_dlpack(cap)
-    tensor = flat.reshape(view.shape)
-    tensor.shape
-
+flat = torch.utils.dlpack.from_dlpack(cap)
+tensor = flat.reshape(view.shape)
+tensor.shape
 
 # %%time
 # DLPack NumPy mode: shaped tensor directly (still zero-copy when possible)
-view_hwc = oa.tensor_view(t=0, z=0, layout="HWC")
-cap_hwc = view_hwc.to_dlpack(mode="numpy", contiguous=True)
-if torch is not None:
-    tensor_hwc = torch.utils.dlpack.from_dlpack(cap_hwc)
-    tensor_hwc.shape
+# Layout quick reference:
+# - `C` = channels
+# - `H` = image height (Y axis)
+# - `W` = image width (X axis)
+view_chw = oa.tensor_view(t=0, z=0, layout="CHW")
+cap_chw = view_chw.to_dlpack(mode="numpy", contiguous=True)
+tensor_chw = torch.utils.dlpack.from_dlpack(cap_chw)
+tensor_chw.shape
 
 # %%time
 # DLPack Arrow mode: zero-copy 1D values buffer + reshape
 view = oa.tensor_view(t=0, z=0, c=0)
 caps = view.to_dlpack(mode="arrow")
-if jax is not None:
-    flat = jax.dlpack.from_dlpack(caps)
-    arr = flat.reshape(view.shape)
-    arr.shape
+flat = jnp.from_dlpack(caps)
+arr = flat.reshape(view.shape)
+arr.shape

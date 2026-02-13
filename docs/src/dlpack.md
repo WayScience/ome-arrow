@@ -6,9 +6,24 @@ and (optionally) GPU.
 
 Key defaults:
 
-- 2D views default to `CHW` layout.
-- 5D views default to `TZCHW` layout.
-- Use `layout="HWC"` (or any TZCHW permutation) to override.
+- OME-Arrow tensor layouts always include channels (`C`) as a tensor axis.
+- Default layout is `CHW` when both `T` and `Z` are singleton in the source.
+- Otherwise, default layout is `TZCHW` (with singleton `T`/`Z` retained unless you override layout).
+- You can override with any valid TZCHW permutation/subset, for example `HWC`, `ZCHW`, or `CHW`.
+
+Layout nomenclature:
+
+- `T`: time index
+- `Z`: z/depth index
+- `C`: channel index
+- `H`: image height (Y axis)
+- `W`: image width (X axis)
+
+Practical mapping:
+
+- 2D image content (`YX`) is typically exposed as `CHW`.
+- 3D z-stack content (`ZYX`) is typically exposed as `ZCHW` or `TZCHW` (with `T=1`).
+- Time-lapse and volumetric content use `TZCHW` by default.
 
 ## PyTorch
 
@@ -32,12 +47,12 @@ tensor = flat.reshape(view.shape)
 from ome_arrow import OMEArrow
 
 obj = OMEArrow("example.ome.parquet")
-view = obj.tensor_view(t=0, z=0, c=0, layout="HWC")
+view = obj.tensor_view(t=0, z=0, c=0, layout="CHW")
 
-import jax
+import jax.numpy as jnp
 
 capsule = view.to_dlpack(mode="arrow", device="cpu")
-flat = jax.dlpack.from_dlpack(capsule)
+flat = jnp.from_dlpack(capsule)
 arr = flat.reshape(view.shape)
 ```
 
