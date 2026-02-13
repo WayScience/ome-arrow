@@ -430,11 +430,7 @@ class TensorView:
             return self._array
 
         base = self._build_tzchw()
-        if (
-            "C" not in layout
-            and base.shape[2] != 1
-            and self._channel_policy == "first"
-        ):
+        if "C" not in layout and base.shape[2] != 1 and self._channel_policy == "first":
             # Explicit opt-in: keep first channel when layout drops C.
             base = base[:, :, :1, :, :]
         arr = _apply_layout(base, layout)

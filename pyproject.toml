@@ -124,6 +124,8 @@ lint.per-file-ignores."*" = [ "ANN401", "C901", "PLC0415", "PLR0912", "PLR0913",
 lint.per-file-ignores."__init__.py" = [ "F401" ]
 # ignore docstring presence checks for docs
 lint.per-file-ignores."docs/*" = [ "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107" ]
+# allow notebook-style mid-file imports in paired examples
+lint.per-file-ignores."docs/src/examples/learning_to_fly_with_ome-arrow.py" = [ "E402" ]
 # ignore typing rules for tests
 lint.per-file-ignores."tests/*" = [ "ANN201", "E501", "PLR0913", "PLR2004" ]
 
