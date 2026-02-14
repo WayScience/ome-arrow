@@ -21,6 +21,17 @@ _ALLOWED_MODES = {"arrow", "numpy"}
 
 @dataclass(frozen=True)
 class _Selection:
+    """Normalized index selection for a TensorView.
+
+    Attributes:
+        t: Selected time indices.
+        z: Selected depth indices.
+        c: Selected channel indices.
+        roi: Spatial ROI as `(x, y, w, h)` in pixel coordinates. This ROI is
+            2D and is applied per selected `(t, z, c)` plane; time/depth/channel
+            are represented separately by `t`, `z`, and `c`.
+    """
+
     t: List[int]
     z: List[int]
     c: List[int]

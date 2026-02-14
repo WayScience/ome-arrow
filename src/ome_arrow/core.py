@@ -554,6 +554,8 @@ class OMEArrow:
         if scene not in (None, 0):
             raise ValueError("Only scene=0 is supported for single-image records.")
 
+        # TensorView uses an internal canonical axis basis (TZCHW) for shape/stride
+        # math, then applies the requested layout permutation for output.
         return TensorView(
             self._struct_array if self._struct_array is not None else self.data,
             t=t,
