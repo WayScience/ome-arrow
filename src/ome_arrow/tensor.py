@@ -54,6 +54,10 @@ class TensorView:
         layout: Desired layout string using TZCHW letters where
             T=time, Z=depth, C=channel, H=height (Y), W=width (X).
         dtype: Output dtype override. Defaults to pixels_meta.type when valid.
+        chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs. "auto"
+            keeps multi-chunk arrays and unwraps single-chunk arrays.
+            "combine" always combines multi-chunk arrays eagerly.
+            "keep" always keeps chunked storage.
         channel_policy: Behavior when dropping `C` from layout while
             multiple channels are selected. "error" raises (default).
             "first" keeps the first channel.
@@ -71,6 +75,7 @@ class TensorView:
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
+        chunk_policy: Literal["auto", "combine", "keep"] = "auto",
         channel_policy: Literal["error", "first"] = "error",
     ) -> None:
         """Initialize a TensorView over selected OME-Arrow pixels.
@@ -88,21 +93,30 @@ class TensorView:
             layout: Desired layout string using TZCHW letters where
                 T=time, Z=depth, C=channel, H=height (Y), W=width (X).
             dtype: Output dtype override.
+            chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.
             channel_policy: Behavior when dropping `C` from layout while
                 multiple channels are selected. "error" raises (default).
                 "first" keeps the first channel.
         """
+        self._chunk_policy = _normalize_chunk_policy(chunk_policy)
         self._struct_array: pa.StructArray | None = None
         self._struct_scalar: pa.StructScalar | None = None
+        self._chunked_array: pa.ChunkedArray | None = None
         if isinstance(data, pa.ChunkedArray):
             if data.num_chunks == 0:
                 data = pa.array([], type=OME_ARROW_STRUCT)
-            else:
+            elif self._chunk_policy == "combine":
                 data = data.chunk(0) if data.num_chunks == 1 else data.combine_chunks()
+            elif self._chunk_policy == "auto" and data.num_chunks == 1:
+                data = data.chunk(0)
         if isinstance(data, pa.StructArray):
             self._struct_array = data
             self._struct_scalar = data[0] if len(data) > 0 else None
             self._data_py: dict[str, Any] | None = None
+        elif isinstance(data, pa.ChunkedArray):
+            self._chunked_array = data
+            self._struct_scalar = _first_struct_scalar_from_chunked(data)
+            self._data_py = None
         elif isinstance(data, pa.StructScalar):
             self._struct_scalar = data
             self._data_py = None
@@ -185,6 +199,7 @@ class TensorView:
             roi=self._selection.roi,
             layout=layout,
             dtype=self._dtype,
+            chunk_policy=self._chunk_policy,
             channel_policy=self._channel_policy,
         )
 
@@ -436,6 +451,7 @@ class TensorView:
                 roi=(x, y, w, h),
                 layout=self.layout,
                 dtype=self._dtype,
+                chunk_policy=self._chunk_policy,
                 channel_policy=self._channel_policy,
             )
             yield view.to_dlpack(device=device, contiguous=contiguous, mode=mode)
@@ -471,6 +487,7 @@ class TensorView:
                 roi=self._selection.roi,
                 layout=self.layout,
                 dtype=self._dtype,
+                chunk_policy=self._chunk_policy,
                 channel_policy=self._channel_policy,
             )
             yield view.to_dlpack(device=device, contiguous=contiguous, mode=mode)
@@ -512,6 +529,7 @@ class TensorView:
                 roi=(x, y, w, h),
                 layout=self.layout,
                 dtype=self._dtype,
+                chunk_policy=self._chunk_policy,
                 channel_policy=self._channel_policy,
             )
             yield view.to_dlpack(device=device, contiguous=contiguous, mode=mode)
@@ -791,6 +809,16 @@ def _normalize_channel_policy(channel_policy: str) -> str:
     return policy
 
 
+def _normalize_chunk_policy(chunk_policy: str) -> str:
+    policy = str(chunk_policy).strip().lower()
+    if policy not in {"auto", "combine", "keep"}:
+        raise ValueError(
+            "Unsupported chunk_policy "
+            f"'{chunk_policy}'. Expected one of: auto, combine, keep."
+        )
+    return policy
+
+
 def _normalize_index(
     index: int | slice | Sequence[int] | None, size: int, name: str
 ) -> List[int]:
@@ -934,7 +962,21 @@ def _ensure_struct_array(
     data: dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
 ) -> pa.StructArray | None:
     if isinstance(data, pa.ChunkedArray):
-        data = data.chunk(0) if data.num_chunks == 1 else data.combine_chunks()
+        if data.num_chunks == 0:
+            return pa.array([], type=OME_ARROW_STRUCT)
+        if data.num_chunks == 1:
+            data = data.chunk(0)
+        else:
+            scalar = _first_struct_scalar_from_chunked(data)
+            if scalar is None:
+                return pa.array([], type=OME_ARROW_STRUCT)
+            warnings.warn(
+                "mode='arrow' received a multi-chunk ChunkedArray; using first "
+                "record without eager combine_chunks().",
+                UserWarning,
+                stacklevel=3,
+            )
+            data = pa.array([scalar], type=OME_ARROW_STRUCT)
     if isinstance(data, pa.StructArray):
         return data
     if isinstance(data, pa.StructScalar):
@@ -954,6 +996,13 @@ def _ensure_struct_array(
         )
         scalar = pa.scalar(data, type=OME_ARROW_STRUCT)
         return pa.array([scalar])
+    return None
+
+
+def _first_struct_scalar_from_chunked(data: pa.ChunkedArray) -> pa.StructScalar | None:
+    for chunk in data.chunks:
+        if len(chunk) > 0:
+            return chunk[0]
     return None
 
 

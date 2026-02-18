@@ -527,6 +527,7 @@ class OMEArrow:
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
+        chunk_policy: Literal["auto", "combine", "keep"] = "auto",
         channel_policy: Literal["error", "first"] = "error",
     ) -> TensorView:
         """Create a TensorView of the pixel data.
@@ -544,6 +545,7 @@ class OMEArrow:
             layout: Desired layout string using TZCHW letters where
                 T=time, Z=depth, C=channel, H=height (Y), W=width (X).
             dtype: Output dtype override.
+            chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.
             channel_policy: Behavior when dropping `C` from layout while
                 multiple channels are selected. "error" raises (default).
                 "first" keeps the first channel.
@@ -570,6 +572,7 @@ class OMEArrow:
             tile=tile,
             layout=layout,
             dtype=dtype,
+            chunk_policy=chunk_policy,
             channel_policy=channel_policy,
         )
 

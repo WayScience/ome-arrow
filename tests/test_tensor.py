@@ -3,11 +3,14 @@
 import pathlib
 
 import numpy as np
+import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
 from ome_arrow import OMEArrow
 from ome_arrow.export import to_ome_parquet
+from ome_arrow.meta import OME_ARROW_STRUCT
+from ome_arrow.tensor import TensorView
 
 
 def _from_dlpack_capsule(capsule: object) -> np.ndarray:
@@ -59,6 +62,29 @@ def test_tensor_view_layout_and_values(example_correct_data: dict) -> None:
 
     arr_hwc_contig = view_hwc.to_numpy(contiguous=True)
     assert arr_hwc_contig.flags["C_CONTIGUOUS"]
+
+
+def test_tensor_view_chunk_policy_modes(example_correct_data: dict) -> None:
+    """Control chunk handling strategy for ChunkedArray-backed inputs."""
+    base = pa.array([example_correct_data], type=OME_ARROW_STRUCT)
+    chunked = pa.chunked_array([base, base], type=OME_ARROW_STRUCT)
+
+    view_auto = TensorView(chunked, chunk_policy="auto")
+    assert isinstance(view_auto._data, pa.ChunkedArray)
+
+    view_keep = TensorView(chunked, chunk_policy="keep")
+    assert isinstance(view_keep._data, pa.ChunkedArray)
+
+    view_combine = TensorView(chunked, chunk_policy="combine")
+    assert isinstance(view_combine._data, pa.StructArray)
+
+
+def test_tensor_view_chunk_policy_invalid(example_correct_data: dict) -> None:
+    """Reject unsupported chunk policy values."""
+    oa = OMEArrow(example_correct_data)
+
+    with pytest.raises(ValueError, match="Unsupported chunk_policy"):
+        oa.tensor_view(chunk_policy="invalid")
 
 
 def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
