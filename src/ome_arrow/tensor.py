@@ -644,6 +644,14 @@ class TensorView:
         return _Selection(t=t_idx, z=z_idx, c=c_idx, roi=roi)
 
     def _data_py_dict(self) -> dict[str, Any]:
+        """Return the backing record as a Python dict.
+
+        Returns:
+            dict[str, Any]: Materialized OME-Arrow record.
+
+        Raises:
+            ValueError: If no scalar-backed record is available.
+        """
         if self._data_py is None:
             if self._struct_scalar is None:
                 raise ValueError("No OME-Arrow scalar available.")
@@ -651,6 +659,14 @@ class TensorView:
         return self._data_py
 
     def _pixels_meta(self) -> dict[str, Any]:
+        """Return ``pixels_meta`` from the active backing representation.
+
+        Returns:
+            dict[str, Any]: Pixel metadata for shape and dtype decisions.
+
+        Raises:
+            ValueError: If metadata is missing or no scalar/array is available.
+        """
         if self._data_py is not None:
             return self._data_py["pixels_meta"]
         if self._struct_array is not None:
@@ -668,11 +684,21 @@ class TensorView:
         raise ValueError("No OME-Arrow scalar available.")
 
     def _has_chunks(self) -> bool:
+        """Return whether chunked pixel payloads are present.
+
+        Returns:
+            bool: True when ``chunks`` contains at least one chunk.
+        """
         if self._chunks_present is None:
             self._chunks_present = self._compute_has_chunks()
         return self._chunks_present
 
     def _compute_has_chunks(self) -> bool:
+        """Compute chunk presence from dict/array/scalar backing data.
+
+        Returns:
+            bool: True when chunk payloads are present and non-empty.
+        """
         result = False
         if self._data_py is not None:
             result = bool(self._data_py.get("chunks"))
@@ -689,6 +715,11 @@ class TensorView:
         return result
 
     def _chunk_grid(self) -> dict[str, Any]:
+        """Return chunk grid metadata when available.
+
+        Returns:
+            dict[str, Any]: Chunk grid metadata, or an empty dict.
+        """
         if self._data_py is not None:
             return self._data_py.get("chunk_grid") or {}
         if self._struct_array is not None:
@@ -810,6 +841,17 @@ def _normalize_channel_policy(channel_policy: str) -> str:
 
 
 def _normalize_chunk_policy(chunk_policy: str) -> str:
+    """Normalize and validate chunk handling policy.
+
+    Args:
+        chunk_policy: Requested chunk handling mode.
+
+    Returns:
+        str: Normalized policy value in ``{"auto", "combine", "keep"}``.
+
+    Raises:
+        ValueError: If the policy value is unsupported.
+    """
     policy = str(chunk_policy).strip().lower()
     if policy not in {"auto", "combine", "keep"}:
         raise ValueError(
@@ -961,6 +1003,15 @@ class _DLPackWrapper:
 def _ensure_struct_array(
     data: dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
 ) -> pa.StructArray | None:
+    """Coerce supported inputs into a StructArray for Arrow-mode export.
+
+    Args:
+        data: Candidate backing data for a TensorView.
+
+    Returns:
+        pa.StructArray | None: A StructArray when conversion is possible,
+            otherwise ``None``.
+    """
     if isinstance(data, pa.ChunkedArray):
         if data.num_chunks == 0:
             return pa.array([], type=OME_ARROW_STRUCT)
@@ -1000,6 +1051,14 @@ def _ensure_struct_array(
 
 
 def _first_struct_scalar_from_chunked(data: pa.ChunkedArray) -> pa.StructScalar | None:
+    """Return the first non-empty struct scalar from a chunked array.
+
+    Args:
+        data: Chunked struct column.
+
+    Returns:
+        pa.StructScalar | None: First scalar found, or ``None`` for empty input.
+    """
     for chunk in data.chunks:
         if len(chunk) > 0:
             return chunk[0]
