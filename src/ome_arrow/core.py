@@ -523,6 +523,7 @@ class OMEArrow:
         z: int | slice | Sequence[int] | None = None,
         c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
+        roi3d: tuple[int, int, int, int, int, int] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
@@ -536,6 +537,9 @@ class OMEArrow:
             z: Z index selection (int, slice, or sequence). Default: all.
             c: Channel index selection (int, slice, or sequence). Default: all.
             roi: Spatial crop (x, y, w, h) in pixels.
+            roi3d: Spatial + depth crop (x, y, z, w, h, d) in pixels/planes.
+                This is a convenience alias for ``roi=(x, y, w, h)`` and
+                ``z=slice(z, z + d)``.
             tile: Tile index (tile_y, tile_x) based on chunk grid.
             layout: Desired layout string using TZCHW letters where
                 T=time, Z=depth, C=channel, H=height (Y), W=width (X).
@@ -562,6 +566,7 @@ class OMEArrow:
             z=z,
             c=c,
             roi=roi,
+            roi3d=roi3d,
             tile=tile,
             layout=layout,
             dtype=dtype,

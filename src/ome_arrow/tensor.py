@@ -47,6 +47,9 @@ class TensorView:
         z: Z index selection (int, slice, or sequence). Default: all.
         c: Channel index selection (int, slice, or sequence). Default: all.
         roi: Spatial crop (x, y, w, h) in pixels. Default: full frame.
+        roi3d: Spatial + depth crop (x, y, z, w, h, d). This is a
+            convenience alias for ``roi=(x, y, w, h)`` and
+            ``z=slice(z, z + d)``.
         tile: Tile index (tile_y, tile_x) based on chunk grid.
         layout: Desired layout string using TZCHW letters where
             T=time, Z=depth, C=channel, H=height (Y), W=width (X).
@@ -64,6 +67,7 @@ class TensorView:
         z: int | slice | Sequence[int] | None = None,
         c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
+        roi3d: tuple[int, int, int, int, int, int] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
@@ -77,6 +81,9 @@ class TensorView:
             z: Z index selection (int, slice, or sequence). Default: all.
             c: Channel index selection (int, slice, or sequence). Default: all.
             roi: Spatial crop (x, y, w, h) in pixels. Default: full frame.
+            roi3d: Spatial + depth crop (x, y, z, w, h, d). This is a
+                convenience alias for ``roi=(x, y, w, h)`` and
+                ``z=slice(z, z + d)``.
             tile: Tile index (tile_y, tile_x) derived from chunk_grid.
             layout: Desired layout string using TZCHW letters where
                 T=time, Z=depth, C=channel, H=height (Y), W=width (X).
@@ -118,7 +125,9 @@ class TensorView:
             dtype = _dtype_from_meta(pm.get("type"))
         self._dtype = np.dtype(dtype)
 
-        self._selection = self._normalize_selection(t=t, z=z, c=c, roi=roi, tile=tile)
+        self._selection = self._normalize_selection(
+            t=t, z=z, c=c, roi=roi, roi3d=roi3d, tile=tile
+        )
         self._array: np.ndarray | None = None
         self._array_layout: str | None = None
         self._chunks_present: bool | None = None
@@ -360,6 +369,77 @@ class TensorView:
             mode=mode,
         )
 
+    def iter_tiles_3d(
+        self,
+        *,
+        tile_size: tuple[int, int, int],
+        shuffle: bool = False,
+        seed: int | None = None,
+        prefetch: int = 0,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "numpy",
+    ) -> Iterator[Any]:
+        """Iterate over 3D tiles (z, y, x) as DLPack capsules.
+
+        Args:
+            tile_size: Tile size as ``(tile_z, tile_h, tile_w)``.
+            shuffle: Whether to shuffle the tile order.
+            seed: Seed for deterministic shuffling.
+            prefetch: Placeholder for future asynchronous prefetch support.
+            device: Target device ("cpu" or "cuda").
+            contiguous: When True, materialize contiguous buffers if needed.
+            mode: Export mode. Must be ``"numpy"`` for tiled 3D iteration.
+
+        Yields:
+            DLPack object per 3D tile.
+        """
+
+        if mode != "numpy":
+            raise ValueError("iter_tiles_3d currently supports only mode='numpy'.")
+        if prefetch < 0:
+            raise ValueError("prefetch must be >= 0")
+
+        tile_z, tile_h, tile_w = tile_size
+        if tile_z <= 0 or tile_h <= 0 or tile_w <= 0:
+            raise ValueError("tile_size entries must be positive")
+
+        t_indices = list(self._selection.t)
+        z_indices = list(self._selection.z)
+        if not t_indices or not z_indices:
+            return
+
+        x0, y0, w0, h0 = self._selection.roi
+        z_batches = [
+            tuple(z_indices[i : i + tile_z]) for i in range(0, len(z_indices), tile_z)
+        ]
+        tasks = []
+        for t in t_indices:
+            for z_batch in z_batches:
+                for y in range(y0, y0 + h0, tile_h):
+                    for x in range(x0, x0 + w0, tile_w):
+                        tw = min(tile_w, x0 + w0 - x)
+                        th = min(tile_h, y0 + h0 - y)
+                        tasks.append((t, z_batch, x, y, tw, th))
+
+        if shuffle:
+            rng = random.Random(seed)
+            rng.shuffle(tasks)
+
+        for batch in _batched(tasks, 1, prefetch=prefetch):
+            t, z_batch, x, y, w, h = batch[0]
+            view = TensorView(
+                self._data,
+                t=[t],
+                z=list(z_batch),
+                c=self._selection.c,
+                roi=(x, y, w, h),
+                layout=self.layout,
+                dtype=self._dtype,
+                channel_policy=self._channel_policy,
+            )
+            yield view.to_dlpack(device=device, contiguous=contiguous, mode=mode)
+
     def _iter_batches(
         self,
         *,
@@ -503,8 +583,26 @@ class TensorView:
         z: int | slice | Sequence[int] | None,
         c: int | slice | Sequence[int] | None,
         roi: tuple[int, int, int, int] | None,
+        roi3d: tuple[int, int, int, int, int, int] | None,
         tile: tuple[int, int] | None,
     ) -> _Selection:
+        if roi3d is not None:
+            if roi is not None or tile is not None:
+                raise ValueError("Provide only one of roi3d, roi, or tile.")
+            if z is not None:
+                raise ValueError("Provide either z or roi3d, not both.")
+            if len(roi3d) != 6:
+                raise ValueError("roi3d must be (x, y, z, w, h, d)")
+            x3, y3, z3, w3, h3, d3 = roi3d
+            if d3 <= 0:
+                raise ValueError("roi3d depth must be positive")
+            if z3 < 0:
+                raise ValueError("roi3d z origin must be non-negative")
+            if z3 + d3 > self._size_z:
+                raise ValueError("roi3d depth is out of bounds")
+            roi = (x3, y3, w3, h3)
+            z = slice(z3, z3 + d3)
+
         t_idx = _normalize_index(t, self._size_t, "t")
         z_idx = _normalize_index(z, self._size_z, "z")
         c_idx = _normalize_index(c, self._size_c, "c")

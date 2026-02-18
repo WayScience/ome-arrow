@@ -100,6 +100,29 @@ def test_tensor_view_layout_hw_with_first_channel_policy(
     assert arr_hw.shape == (3, 4)
 
 
+def test_tensor_view_roi3d_selects_z_and_roi() -> None:
+    """Map roi3d to z slice + spatial roi consistently."""
+    arr = np.arange(1 * 1 * 3 * 4 * 5, dtype=np.uint16).reshape(1, 1, 3, 4, 5)
+    oa = OMEArrow(arr)
+
+    view = oa.tensor_view(roi3d=(1, 1, 1, 3, 2, 2), layout="TZCHW")
+    out = view.to_numpy(contiguous=True)
+
+    expected = arr[:, :, 1:3, 1:3, 1:4]
+    expected = np.transpose(expected, (0, 2, 1, 3, 4))
+    np.testing.assert_array_equal(out, expected)
+    assert out.shape == (1, 2, 1, 2, 3)
+
+
+def test_tensor_view_roi3d_conflicts_with_z() -> None:
+    """Reject ambiguous selection when both roi3d and z are provided."""
+    arr = np.arange(1 * 1 * 3 * 4 * 5, dtype=np.uint16).reshape(1, 1, 3, 4, 5)
+    oa = OMEArrow(arr)
+
+    with pytest.raises(ValueError, match="Provide either z or roi3d"):
+        oa.tensor_view(z=0, roi3d=(0, 0, 0, 2, 2, 1))
+
+
 def test_dlpack_roundtrip_jax(example_correct_data: dict) -> None:
     """Round-trip DLPack export/import through JAX on CPU."""
     jnp = pytest.importorskip("jax.numpy")
@@ -193,6 +216,31 @@ def test_iter_dlpack_tiles(example_correct_data: dict) -> None:
 
     tile = _from_dlpack_capsule(caps[0])
     assert tile.shape == (2, 2, 2)
+
+
+def test_iter_tiles_3d_numpy() -> None:
+    """Yield expected 3D tile count and values."""
+    arr = np.arange(1 * 1 * 3 * 4 * 4, dtype=np.uint16).reshape(1, 1, 3, 4, 4)
+    oa = OMEArrow(arr)
+    view = oa.tensor_view()
+
+    caps = list(view.iter_tiles_3d(tile_size=(2, 2, 2), mode="numpy"))
+    assert len(caps) == 8
+
+    first = _from_dlpack_capsule(caps[0])
+    assert first.shape == (1, 2, 1, 2, 2)
+    expected = arr[:, :, 0:2, 0:2, 0:2]
+    expected = np.transpose(expected, (0, 2, 1, 3, 4))
+    np.testing.assert_array_equal(first, expected)
+
+
+def test_iter_tiles_3d_arrow_mode_errors() -> None:
+    """Reject arrow mode for 3D tiled iteration."""
+    arr = np.arange(1 * 1 * 2 * 2 * 2, dtype=np.uint16).reshape(1, 1, 2, 2, 2)
+    oa = OMEArrow(arr)
+
+    with pytest.raises(ValueError, match="supports only mode='numpy'"):
+        list(oa.tensor_view().iter_tiles_3d(tile_size=(1, 1, 1), mode="arrow"))
 
 
 def test_arrow_mode_zero_copy_parquet(
