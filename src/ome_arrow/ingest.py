@@ -27,7 +27,8 @@ def _ome_arrow_from_table(
     column_name: Optional[str],
     row_index: int,
     strict_schema: bool,
-) -> pa.StructScalar:
+    return_array: bool = False,
+) -> pa.StructScalar | tuple[pa.StructScalar, pa.StructArray]:
     """Extract a single OME-Arrow record from an Arrow table.
 
     Args:
@@ -37,7 +38,8 @@ def _ome_arrow_from_table(
         strict_schema: Require the exact OME-Arrow schema if True.
 
     Returns:
-        A typed OME-Arrow StructScalar.
+        A typed OME-Arrow StructScalar, or (StructScalar, StructArray) when
+        return_array=True.
 
     Raises:
         ValueError: If the row index is out of range or no suitable column exists.
@@ -104,25 +106,59 @@ def _ome_arrow_from_table(
             stacklevel=2,
         )
 
-    # 2) Extract the row as a Python dict
-    record_dict: Dict[str, Any] = candidate_col.slice(row_index, 1).to_pylist()[0]
-    # Back-compat: older files won't include image_type; default to None.
-    if "image_type" not in record_dict:
-        record_dict["image_type"] = None
-    # Drop unexpected fields before casting to the canonical schema.
-    record_dict = {f.name: record_dict.get(f.name) for f in OME_ARROW_STRUCT}
+    # 2) Extract the row as a StructArray slice (zero-copy when possible).
+    struct_array = candidate_col.slice(row_index, 1)
+    if isinstance(struct_array, pa.ChunkedArray):
+        if struct_array.num_chunks == 1:
+            struct_array = struct_array.chunk(0)
+        else:
+            struct_array = struct_array.combine_chunks()
 
-    # 3) Reconstruct a typed StructScalar using the canonical schema
-    scalar = pa.scalar(record_dict, type=OME_ARROW_STRUCT)
+    # 3) Construct a typed StructScalar (preserve zero-copy when possible).
+    if strict_schema or candidate_col.type == OME_ARROW_STRUCT:
+        scalar = struct_array[0]
+    else:
+        warnings.warn(
+            "OME-Arrow column schema differs from OME_ARROW_STRUCT; "
+            "normalizing via Python objects, which disables zero-copy tensor views "
+            "for this record. Use strict_schema=True with canonical schema for "
+            "zero-copy behavior.",
+            UserWarning,
+            stacklevel=2,
+        )
+        record_dict: Dict[str, Any] = struct_array.to_pylist()[0]
+        # Back-compat: older files won't include image_type; default to None.
+        if "image_type" not in record_dict:
+            record_dict["image_type"] = None
+        # Drop unexpected fields before casting to the canonical schema.
+        record_dict = {f.name: record_dict.get(f.name) for f in OME_ARROW_STRUCT}
+        scalar = pa.scalar(record_dict, type=OME_ARROW_STRUCT)
+        struct_array = pa.array([record_dict], type=OME_ARROW_STRUCT)
 
     # Optional: soft validation via file-level metadata (if present)
     try:
         meta = table.schema.metadata or {}
-        meta.get(b"ome.arrow.type", b"").decode() == str(OME_ARROW_TAG_TYPE)
-        meta.get(b"ome.arrow.version", b"").decode() == str(OME_ARROW_TAG_VERSION)
+        meta_type = meta.get(b"ome.arrow.type", b"").decode()
+        meta_version = meta.get(b"ome.arrow.version", b"").decode()
+        if meta_type and meta_type != str(OME_ARROW_TAG_TYPE):
+            warnings.warn(
+                "Parquet metadata ome.arrow.type does not match expected "
+                f"{OME_ARROW_TAG_TYPE!r}: got {meta_type!r}.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if meta_version and meta_version != str(OME_ARROW_TAG_VERSION):
+            warnings.warn(
+                "Parquet metadata ome.arrow.version does not match expected "
+                f"{OME_ARROW_TAG_VERSION!r}: got {meta_version!r}.",
+                UserWarning,
+                stacklevel=2,
+            )
     except Exception:
         pass
 
+    if return_array:
+        return scalar, struct_array
     return scalar
 
 
@@ -1252,7 +1288,8 @@ def from_ome_parquet(
     column_name: Optional[str] = "ome_arrow",
     row_index: int = 0,
     strict_schema: bool = False,
-) -> pa.StructScalar:
+    return_array: bool = False,
+) -> pa.StructScalar | tuple[pa.StructScalar, pa.StructArray]:
     """Read an OME-Arrow record from a Parquet file.
 
     Args:
@@ -1260,9 +1297,11 @@ def from_ome_parquet(
         column_name: Column to read; auto-detected when None or invalid.
         row_index: Row index to extract.
         strict_schema: Require the exact OME-Arrow schema if True.
+        return_array: When True, also return a 1-row StructArray.
 
     Returns:
-        A typed OME-Arrow StructScalar.
+        A typed OME-Arrow StructScalar, or (StructScalar, StructArray) when
+        return_array=True.
 
     Raises:
         FileNotFoundError: If the Parquet path does not exist.
@@ -1278,6 +1317,7 @@ def from_ome_parquet(
         column_name=column_name,
         row_index=row_index,
         strict_schema=strict_schema,
+        return_array=return_array,
     )
 
 
@@ -1287,7 +1327,8 @@ def from_ome_vortex(
     column_name: Optional[str] = "ome_arrow",
     row_index: int = 0,
     strict_schema: bool = False,
-) -> pa.StructScalar:
+    return_array: bool = False,
+) -> pa.StructScalar | tuple[pa.StructScalar, pa.StructArray]:
     """Read an OME-Arrow record from a Vortex file.
 
     Args:
@@ -1295,9 +1336,11 @@ def from_ome_vortex(
         column_name: Column to read; auto-detected when None or invalid.
         row_index: Row index to extract.
         strict_schema: Require the exact OME-Arrow schema if True.
+        return_array: When True, also return a 1-row StructArray.
 
     Returns:
-        A typed OME-Arrow StructScalar.
+        A typed OME-Arrow StructScalar, or (StructScalar, StructArray) when
+        return_array=True.
 
     Raises:
         FileNotFoundError: If the Vortex path does not exist.
@@ -1321,4 +1364,5 @@ def from_ome_vortex(
         column_name=column_name,
         row_index=row_index,
         strict_schema=strict_schema,
+        return_array=return_array,
     )

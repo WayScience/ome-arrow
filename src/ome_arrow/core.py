@@ -5,7 +5,16 @@ Core of the ome_arrow package, used for classes and such.
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 import matplotlib
 import numpy as np
@@ -27,6 +36,7 @@ from ome_arrow.ingest import (
     from_tiff,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT
+from ome_arrow.tensor import TensorView
 from ome_arrow.transform import slice_ome_arrow
 from ome_arrow.utils import describe_ome_arrow
 from ome_arrow.view import view_matplotlib, view_pyvista
@@ -77,6 +87,7 @@ class OMEArrow:
 
         # set the tcz for viewing
         self.tcz = tcz
+        self._struct_array: pa.StructArray | None = None
 
         # --- 1) Stack pattern (Bio-Formats-style) --------------------------------
         if isinstance(data, str) and any(c in data for c in "<>*"):
@@ -109,17 +120,25 @@ class OMEArrow:
                 ".parquet",
                 ".pq",
             }:
-                self.data = from_ome_parquet(
-                    s, column_name=column_name, row_index=row_index
+                parquet_result = from_ome_parquet(
+                    s,
+                    column_name=column_name,
+                    row_index=row_index,
+                    return_array=True,
                 )
+                self.data, self._struct_array = parquet_result
                 if image_type is not None:
                     self.data = self._wrap_with_image_type(self.data, image_type)
 
             # Vortex
             elif s.lower().endswith(".vortex") or path.suffix.lower() == ".vortex":
-                self.data = from_ome_vortex(
-                    s, column_name=column_name, row_index=row_index
+                vortex_result = from_ome_vortex(
+                    s,
+                    column_name=column_name,
+                    row_index=row_index,
+                    return_array=True,
                 )
+                self.data, self._struct_array = vortex_result
                 if image_type is not None:
                     self.data = self._wrap_with_image_type(self.data, image_type)
 
@@ -495,6 +514,67 @@ class OMEArrow:
                 print(f"Warning: could not save PyVista snapshot: {e}")
 
             return plotter
+
+    def tensor_view(
+        self,
+        *,
+        scene: int | None = None,
+        t: int | slice | Sequence[int] | None = None,
+        z: int | slice | Sequence[int] | None = None,
+        c: int | slice | Sequence[int] | None = None,
+        roi: tuple[int, int, int, int] | None = None,
+        roi3d: tuple[int, int, int, int, int, int] | None = None,
+        tile: tuple[int, int] | None = None,
+        layout: str | None = None,
+        dtype: np.dtype | None = None,
+        chunk_policy: Literal["auto", "combine", "keep"] = "auto",
+        channel_policy: Literal["error", "first"] = "error",
+    ) -> TensorView:
+        """Create a TensorView of the pixel data.
+
+        Args:
+            scene: Scene index (only 0 is supported for single-image records).
+            t: Time index selection (int, slice, or sequence). Default: all.
+            z: Z index selection (int, slice, or sequence). Default: all.
+            c: Channel index selection (int, slice, or sequence). Default: all.
+            roi: Spatial crop (x, y, w, h) in pixels.
+            roi3d: Spatial + depth crop (x, y, z, w, h, d) in pixels/planes.
+                This is a convenience alias for ``roi=(x, y, w, h)`` and
+                ``z=slice(z, z + d)``.
+            tile: Tile index (tile_y, tile_x) based on chunk grid.
+            layout: Desired layout string using TZCHW letters where
+                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+            dtype: Output dtype override.
+            chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.
+            channel_policy: Behavior when dropping `C` from layout while
+                multiple channels are selected. "error" raises (default).
+                "first" keeps the first channel.
+
+        Returns:
+            TensorView: Tensor view over the selected pixels.
+
+        Raises:
+            ValueError: If an unsupported scene is requested.
+        """
+
+        if scene not in (None, 0):
+            raise ValueError("Only scene=0 is supported for single-image records.")
+
+        # TensorView uses an internal canonical axis basis (TZCHW) for shape/stride
+        # math, then applies the requested layout permutation for output.
+        return TensorView(
+            self._struct_array if self._struct_array is not None else self.data,
+            t=t,
+            z=z,
+            c=c,
+            roi=roi,
+            roi3d=roi3d,
+            tile=tile,
+            layout=layout,
+            dtype=dtype,
+            chunk_policy=chunk_policy,
+            channel_policy=channel_policy,
+        )
 
     def slice(
         self,
