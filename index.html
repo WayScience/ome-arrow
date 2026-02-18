@@ -131,6 +131,13 @@
   </a>
 </li>
 
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="dlpack.html">
+    Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
   </ul>
 </nav></div>
       
@@ -221,6 +228,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="python-api.html">
     Python API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="dlpack.html">
+    Exporting OME-Arrow pixel data via DLPack
   </a>
 </li>
 
@@ -361,6 +375,31 @@ Please also reference an example notebook: <a class="reference external" href="h
 </pre></div>
 </div>
 </section>
+<section id="tensor-view-dlpack">
+<h2>Tensor view (DLPack)<a class="headerlink" href="#tensor-view-dlpack" title="Link to this heading">#</a></h2>
+<p>For tensor-focused workflows (PyTorch/JAX), use <code class="docutils literal notranslate"><span class="pre">tensor_view</span></code> and DLPack export.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
+
+<span class="n">oa</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="s2">&quot;your_image.ome.parquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># Spatial ROI per plane</span>
+<span class="n">view</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;CHW&quot;</span><span class="p">)</span>
+
+<span class="c1"># Convenience 3D ROI (x, y, z, w, h, d)</span>
+<span class="n">view3d</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">roi3d</span><span class="o">=</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;TZCHW&quot;</span><span class="p">)</span>
+
+<span class="c1"># 3D tiled iteration over (z, y, x)</span>
+<span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">view3d</span><span class="o">.</span><span class="n">iter_tiles_3d</span><span class="p">(</span><span class="n">tile_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>Advanced options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">chunk_policy=&quot;auto&quot;</span> <span class="pre">|</span> <span class="pre">&quot;combine&quot;</span> <span class="pre">|</span> <span class="pre">&quot;keep&quot;</span></code> controls ChunkedArray handling.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">channel_policy=&quot;error&quot;</span> <span class="pre">|</span> <span class="pre">&quot;first&quot;</span></code> controls behavior when dropping <code class="docutils literal notranslate"><span class="pre">C</span></code> from layout.</p></li>
+</ul>
+<p>See full docs: <a class="reference internal" href="dlpack.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">docs/src/dlpack.md</span></code></span></a></p>
+</section>
 <section id="contributing-development-and-testing">
 <h2>Contributing, Development, and Testing<a class="headerlink" href="#contributing-development-and-testing" title="Link to this heading">#</a></h2>
 <p>Please see our <a class="reference external" href="https://github.com/wayscience/ome-arrow/tree/main/CONTRIBUTING.md">contributing documentation</a> for more details on contributions, development, and testing.</p>
@@ -379,6 +418,18 @@ Please also reference an example notebook: <a class="reference external" href="h
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="python-api.html">Python API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="python-api.html#module-src.ome_arrow.meta">ome_arrow.meta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-src.ome_arrow.tensor">ome_arrow.tensor</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#src.ome_arrow.tensor.TensorView"><code class="docutils literal notranslate"><span class="pre">TensorView</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dlpack.html">Exporting OME-Arrow pixel data via DLPack</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dlpack.html#pytorch">PyTorch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dlpack.html#jax">JAX</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dlpack.html#iteration-examples">Iteration examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dlpack.html#ownership-and-lifetime">Ownership and lifetime</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dlpack.html#optional-dependencies">Optional dependencies</a></li>
 </ul>
 </li>
 </ul>

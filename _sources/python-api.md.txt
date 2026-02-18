@@ -9,3 +9,12 @@ ome_arrow.meta
    :undoc-members:
    :show-inheritance:
 ```
+
+```{eval-rst}
+ome_arrow.tensor
+-------------------
+.. automodule:: src.ome_arrow.tensor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
