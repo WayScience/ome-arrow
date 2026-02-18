@@ -98,6 +98,7 @@ for cap in view3d.iter_tiles_3d(tile_size=(2, 64, 64), mode="numpy"):
 ```
 
 Advanced options:
+
 - `chunk_policy="auto" | "combine" | "keep"` controls ChunkedArray handling.
 - `channel_policy="error" | "first"` controls behavior when dropping `C` from layout.
 
