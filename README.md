@@ -77,6 +77,32 @@ oa_image.export(how="ome-parquet", out="your_image.ome.parquet")
 oa_image.export(how="vortex", out="your_image.vortex")
 ```
 
+## Tensor view (DLPack)
+
+For tensor-focused workflows (PyTorch/JAX), use `tensor_view` and DLPack export.
+
+```python
+from ome_arrow import OMEArrow
+
+oa = OMEArrow("your_image.ome.parquet")
+
+# Spatial ROI per plane
+view = oa.tensor_view(t=0, z=0, roi=(32, 32, 128, 128), layout="CHW")
+
+# Convenience 3D ROI (x, y, z, w, h, d)
+view3d = oa.tensor_view(roi3d=(32, 32, 2, 128, 128, 4), layout="TZCHW")
+
+# 3D tiled iteration over (z, y, x)
+for cap in view3d.iter_tiles_3d(tile_size=(2, 64, 64), mode="numpy"):
+    pass
+```
+
+Advanced options:
+- `chunk_policy="auto" | "combine" | "keep"` controls ChunkedArray handling.
+- `channel_policy="error" | "first"` controls behavior when dropping `C` from layout.
+
+See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
+
 ## Contributing, Development, and Testing
 
 Please see our [contributing documentation](https://github.com/wayscience/ome-arrow/tree/main/CONTRIBUTING.md) for more details on contributions, development, and testing.
