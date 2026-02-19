@@ -10,7 +10,7 @@ import pytest
 from ome_arrow import OMEArrow
 from ome_arrow.export import to_ome_parquet
 from ome_arrow.meta import OME_ARROW_STRUCT
-from ome_arrow.tensor import TensorView
+from ome_arrow.tensor import LazyTensorView, TensorView
 
 
 def _from_dlpack_capsule(capsule: object) -> np.ndarray:
@@ -85,6 +85,28 @@ def test_tensor_view_chunk_policy_invalid(example_correct_data: dict) -> None:
 
     with pytest.raises(ValueError, match="Unsupported chunk_policy"):
         oa.tensor_view(chunk_policy="invalid")
+
+
+def test_lazy_tensor_view_collects_on_execution() -> None:
+    """Defer source loading until lazy tensor view execution."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    assert oa.is_lazy
+
+    view = oa.tensor_view(t=0, z=0, c=0, layout="HW")
+    assert isinstance(view, LazyTensorView)
+    assert oa.is_lazy
+
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        arr = view.to_numpy(contiguous=True)
+    assert arr.shape == (72, 84)
+    assert not oa.is_lazy
+
+
+def test_lazy_reader_requires_string_source() -> None:
+    """Reject lazy mode for non-file inputs."""
+    arr = np.zeros((1, 1, 1, 2, 2), dtype=np.uint16)
+    with pytest.raises(TypeError, match="lazy=True currently supports only string"):
+        OMEArrow(arr, lazy=True)
 
 
 def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:

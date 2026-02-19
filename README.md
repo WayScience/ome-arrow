@@ -97,6 +97,21 @@ for cap in view3d.iter_tiles_3d(tile_size=(2, 64, 64), mode="numpy"):
     pass
 ```
 
+Lazy scan-style convention (Polars-like):
+
+```python
+from ome_arrow import OMEArrow
+
+oa = OMEArrow.scan("your_image.ome.parquet")  # deferred load
+# First: queue lazy spatial/index slicing
+lazy_crop = oa.slice_lazy(0, 512, 0, 512).slice_lazy(64, 256, 64, 256)
+cropped = lazy_crop.collect()
+
+# Then: build lazy tensor views from a source scan
+lazy_view = oa.tensor_view(t=0, z=slice(0, 4), roi=(0, 0, 512, 512))
+arr = lazy_view.to_numpy()
+```
+
 Advanced options:
 
 - `chunk_policy="auto" | "combine" | "keep"` controls ChunkedArray handling.

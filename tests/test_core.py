@@ -408,3 +408,45 @@ def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     reloaded = OMEArrow(str(out), column_name="custom_ome_arrow")
 
     assert reloaded.info() == oa.info()
+
+
+def test_scan_collect_roundtrip() -> None:
+    """Materialize a lazily scanned parquet source via collect()."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    assert oa.is_lazy
+
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        oa.collect()
+    assert not oa.is_lazy
+    assert oa.info()["shape"] == (1, 1, 1, 72, 84)
+
+
+def test_slice_lazy_scan_collect() -> None:
+    """Queue a lazy slice and materialize it via collect()."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    sliced = oa.slice_lazy(0, 10, 0, 8)
+
+    assert sliced.is_lazy
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        sliced.collect()
+    assert sliced.info()["shape"] == (1, 1, 1, 8, 10)
+
+
+def test_slice_lazy_chain_scan_collect() -> None:
+    """Allow chaining lazy slices before materialization."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    sliced = oa.slice_lazy(0, 20, 0, 20).slice_lazy(5, 15, 2, 12)
+
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        shape = sliced.collect().info()["shape"]
+    assert shape == (1, 1, 1, 10, 10)
+
+
+def test_slice_lazy_on_materialized_falls_back_to_eager() -> None:
+    """Use eager slice behavior when source is already materialized."""
+    arr = np.arange(1 * 1 * 1 * 6 * 7, dtype=np.uint16).reshape(1, 1, 1, 6, 7)
+    oa = OMEArrow(arr)
+    out = oa.slice_lazy(1, 5, 1, 4)
+
+    assert not out.is_lazy
+    assert out.info()["shape"] == (1, 1, 1, 3, 4)

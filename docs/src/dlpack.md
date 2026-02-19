@@ -41,6 +41,21 @@ flat = torch.utils.dlpack.from_dlpack(capsule)
 tensor = flat.reshape(view.shape)
 ```
 
+## Lazy scan-style slicing
+
+```python
+from ome_arrow import OMEArrow
+
+obj = OMEArrow.scan("example.ome.parquet")
+# Prioritize lazy slice planning first.
+lazy_crop = obj.slice_lazy(0, 512, 0, 512).slice_lazy(64, 256, 64, 256)
+cropped = lazy_crop.collect()
+
+# Then execute lazy tensor selections.
+lazy_view = obj.tensor_view(t=0, z=slice(0, 8), roi=(128, 128, 256, 256))
+arr = lazy_view.to_numpy()
+```
+
 ## JAX
 
 ```python

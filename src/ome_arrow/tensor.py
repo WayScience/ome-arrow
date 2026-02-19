@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 import warnings
 from dataclasses import dataclass
-from typing import Any, Iterator, List, Literal, Sequence
+from typing import Any, Callable, Iterator, List, Literal, Sequence
 
 import numpy as np
 import pyarrow as pa
@@ -36,6 +36,255 @@ class _Selection:
     z: List[int]
     c: List[int]
     roi: tuple[int, int, int, int]
+
+
+class LazyTensorView:
+    """Deferred TensorView plan with Polars-style collect semantics."""
+
+    def __init__(
+        self,
+        *,
+        loader: Callable[
+            [],
+            dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
+        ],
+        t: int | slice | Sequence[int] | None = None,
+        z: int | slice | Sequence[int] | None = None,
+        c: int | slice | Sequence[int] | None = None,
+        roi: tuple[int, int, int, int] | None = None,
+        roi3d: tuple[int, int, int, int, int, int] | None = None,
+        tile: tuple[int, int] | None = None,
+        layout: str | None = None,
+        dtype: np.dtype | None = None,
+        chunk_policy: Literal["auto", "combine", "keep"] = "auto",
+        channel_policy: Literal["error", "first"] = "error",
+    ) -> None:
+        """Initialize a deferred TensorView plan.
+
+        Args:
+            loader: Callable that returns concrete OME-Arrow pixel data.
+            t: Time index selection.
+            z: Depth index selection.
+            c: Channel index selection.
+            roi: Spatial crop as ``(x, y, w, h)``.
+            roi3d: Spatial + depth crop as ``(x, y, z, w, h, d)``.
+            tile: Tile index as ``(tile_y, tile_x)``.
+            layout: Requested output layout (TZCHW letters).
+            dtype: Output dtype override.
+            chunk_policy: Chunk handling strategy for ChunkedArray inputs.
+            channel_policy: Behavior when dropping ``C`` from layout.
+        """
+        self._loader = loader
+        self._kwargs: dict[str, Any] = {
+            "t": t,
+            "z": z,
+            "c": c,
+            "roi": roi,
+            "roi3d": roi3d,
+            "tile": tile,
+            "layout": layout,
+            "dtype": dtype,
+            "chunk_policy": chunk_policy,
+            "channel_policy": channel_policy,
+        }
+        self._resolved: TensorView | None = None
+
+    def _spawn(self, **updates: Any) -> "LazyTensorView":
+        kwargs = dict(self._kwargs)
+        kwargs.update(updates)
+        return LazyTensorView(loader=self._loader, **kwargs)
+
+    def collect(self) -> "TensorView":
+        """Materialize this lazy plan into a concrete TensorView."""
+        if self._resolved is None:
+            self._resolved = TensorView(self._loader(), **self._kwargs)
+        return self._resolved
+
+    def with_layout(self, layout: str) -> "LazyTensorView":
+        """Return a new lazy view with an updated layout."""
+        return self._spawn(layout=layout)
+
+    def select(
+        self,
+        *,
+        t: int | slice | Sequence[int] | None = None,
+        z: int | slice | Sequence[int] | None = None,
+        c: int | slice | Sequence[int] | None = None,
+        roi: tuple[int, int, int, int] | None = None,
+        roi3d: tuple[int, int, int, int, int, int] | None = None,
+        tile: tuple[int, int] | None = None,
+    ) -> "LazyTensorView":
+        """Return a new lazy plan with updated index/ROI selections."""
+        return self._spawn(t=t, z=z, c=c, roi=roi, roi3d=roi3d, tile=tile)
+
+    @property
+    def dtype(self) -> np.dtype:
+        """Return the tensor dtype."""
+        return self.collect().dtype
+
+    @property
+    def device(self) -> str:
+        """Return the tensor storage device."""
+        return self.collect().device
+
+    @property
+    def layout(self) -> str:
+        """Return the effective tensor layout."""
+        return self.collect().layout
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        """Return the tensor shape."""
+        return self.collect().shape
+
+    @property
+    def strides(self) -> tuple[int, ...]:
+        """Return tensor strides in bytes."""
+        return self.collect().strides
+
+    def to_numpy(self, *, contiguous: bool = False) -> np.ndarray:
+        """Materialize as a NumPy array.
+
+        Args:
+            contiguous: When True, return a contiguous array copy.
+
+        Returns:
+            np.ndarray: Materialized array.
+        """
+        return self.collect().to_numpy(contiguous=contiguous)
+
+    def to_dlpack(
+        self,
+        *,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Any:
+        """Export the planned view as a DLPack object.
+
+        Args:
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Any: DLPack-compatible object.
+        """
+        return self.collect().to_dlpack(device=device, contiguous=contiguous, mode=mode)
+
+    def to_torch(
+        self,
+        *,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Any:
+        """Convert the planned view to a torch tensor.
+
+        Args:
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Any: ``torch.Tensor`` when torch is installed.
+        """
+        return self.collect().to_torch(device=device, contiguous=contiguous, mode=mode)
+
+    def to_jax(
+        self,
+        *,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Any:
+        """Convert the planned view to a JAX array.
+
+        Args:
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Any: JAX array when JAX is installed.
+        """
+        return self.collect().to_jax(device=device, contiguous=contiguous, mode=mode)
+
+    def iter_dlpack(
+        self,
+        *,
+        batch_size: int | None = None,
+        tile_size: tuple[int, int] | None = None,
+        tiles: tuple[int, int] | None = None,
+        shuffle: bool = False,
+        seed: int | None = None,
+        prefetch: int = 0,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Iterator[Any]:
+        """Iterate DLPack outputs in batches or 2D tiles.
+
+        Args:
+            batch_size: Number of time indices per batch.
+            tile_size: Optional tile size as ``(tile_h, tile_w)``.
+            tiles: Deprecated alias for ``tile_size``.
+            shuffle: Whether to shuffle iteration order.
+            seed: Optional random seed for deterministic shuffling.
+            prefetch: Placeholder prefetch count.
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Iterator[Any]: Iterator of DLPack-compatible objects.
+        """
+        return self.collect().iter_dlpack(
+            batch_size=batch_size,
+            tile_size=tile_size,
+            tiles=tiles,
+            shuffle=shuffle,
+            seed=seed,
+            prefetch=prefetch,
+            device=device,
+            contiguous=contiguous,
+            mode=mode,
+        )
+
+    def iter_tiles_3d(
+        self,
+        *,
+        tile_size: tuple[int, int, int],
+        shuffle: bool = False,
+        seed: int | None = None,
+        prefetch: int = 0,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "numpy",
+    ) -> Iterator[Any]:
+        """Iterate DLPack outputs in 3D tiles.
+
+        Args:
+            tile_size: Tile shape as ``(tile_z, tile_h, tile_w)``.
+            shuffle: Whether to shuffle iteration order.
+            seed: Optional random seed for deterministic shuffling.
+            prefetch: Placeholder prefetch count.
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (currently ``"numpy"`` only).
+
+        Returns:
+            Iterator[Any]: Iterator of DLPack-compatible objects.
+        """
+        return self.collect().iter_tiles_3d(
+            tile_size=tile_size,
+            shuffle=shuffle,
+            seed=seed,
+            prefetch=prefetch,
+            device=device,
+            contiguous=contiguous,
+            mode=mode,
+        )
 
 
 class TensorView:
