@@ -109,6 +109,9 @@ def test_lazy_reader_requires_string_source() -> None:
         OMEArrow(arr, lazy=True)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:As of version 0.4.0, the parser argument is ignored.*:DeprecationWarning"
+)
 def test_lazy_tensor_view_select_preserves_existing_dims() -> None:
     """Preserve existing lazy selections when select() updates one axis."""
     oa = OMEArrow.scan(
