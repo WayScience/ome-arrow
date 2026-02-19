@@ -450,3 +450,12 @@ def test_slice_lazy_on_materialized_falls_back_to_eager() -> None:
 
     assert not out.is_lazy
     assert out.info()["shape"] == (1, 1, 1, 3, 4)
+
+
+def test_scan_stack_pattern_rejected_in_lazy_mode() -> None:
+    """Reject Bio-Formats stack pattern strings when lazy scan is requested."""
+    pattern = "tests/data/nviz-artificial-4d-dataset/E99_C<111,222>_ZS<000-021>.tif"
+    with pytest.raises(
+        TypeError, match="lazy=True does not support Bio-Formats pattern strings"
+    ):
+        OMEArrow.scan(pattern)

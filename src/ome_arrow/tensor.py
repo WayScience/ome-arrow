@@ -17,6 +17,7 @@ from ome_arrow.meta import OME_ARROW_STRUCT
 _TZCHW = "TZCHW"
 _ALLOWED_DIMS = set(_TZCHW)
 _ALLOWED_MODES = {"arrow", "numpy"}
+_UNSET = object()
 
 
 @dataclass(frozen=True)
@@ -107,15 +108,28 @@ class LazyTensorView:
     def select(
         self,
         *,
-        t: int | slice | Sequence[int] | None = None,
-        z: int | slice | Sequence[int] | None = None,
-        c: int | slice | Sequence[int] | None = None,
-        roi: tuple[int, int, int, int] | None = None,
-        roi3d: tuple[int, int, int, int, int, int] | None = None,
-        tile: tuple[int, int] | None = None,
+        t: Any = _UNSET,
+        z: Any = _UNSET,
+        c: Any = _UNSET,
+        roi: Any = _UNSET,
+        roi3d: Any = _UNSET,
+        tile: Any = _UNSET,
     ) -> "LazyTensorView":
         """Return a new lazy plan with updated index/ROI selections."""
-        return self._spawn(t=t, z=z, c=c, roi=roi, roi3d=roi3d, tile=tile)
+        updates = {}
+        if t is not _UNSET:
+            updates["t"] = t
+        if z is not _UNSET:
+            updates["z"] = z
+        if c is not _UNSET:
+            updates["c"] = c
+        if roi is not _UNSET:
+            updates["roi"] = roi
+        if roi3d is not _UNSET:
+            updates["roi3d"] = roi3d
+        if tile is not _UNSET:
+            updates["tile"] = tile
+        return self._spawn(**updates)
 
     @property
     def dtype(self) -> np.dtype:

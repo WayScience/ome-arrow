@@ -109,6 +109,43 @@ def test_lazy_reader_requires_string_source() -> None:
         OMEArrow(arr, lazy=True)
 
 
+def test_lazy_tensor_view_select_preserves_existing_dims() -> None:
+    """Preserve existing lazy selections when select() updates one axis."""
+    oa = OMEArrow.scan(
+        "tests/data/ome-artificial-5d-datasets/multi-channel-time-series.ome.tiff"
+    )
+    assert oa.is_lazy
+
+    view = oa.tensor_view(t=2, c=1)
+    assert isinstance(view, LazyTensorView)
+
+    view_z = view.select(z=0)
+    assert isinstance(view_z, LazyTensorView)
+    assert oa.is_lazy
+
+    arr = view_z.to_numpy(contiguous=True)
+    assert arr.shape == (1, 167, 439)
+    assert not oa.is_lazy
+
+
+def test_lazy_tensor_view_with_layout_defers_materialization() -> None:
+    """Update layout lazily and materialize only on execution."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    assert oa.is_lazy
+
+    view = oa.tensor_view(t=0, z=0, c=0)
+    view_hw = view.with_layout("HW")
+
+    assert isinstance(view_hw, LazyTensorView)
+    assert view_hw._kwargs["layout"] == "HW"
+    assert oa.is_lazy
+
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        arr = view_hw.to_numpy(contiguous=True)
+    assert arr.shape == (72, 84)
+    assert not oa.is_lazy
+
+
 def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
     """Round-trip DLPack export/import through torch on CPU."""
     torch = pytest.importorskip("torch")

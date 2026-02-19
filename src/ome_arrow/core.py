@@ -122,6 +122,12 @@ class OMEArrow:
         if lazy:
             if not isinstance(data, str):
                 raise TypeError("lazy=True currently supports only string file inputs.")
+            if any(c in data for c in "<>*"):
+                raise TypeError(
+                    "lazy=True does not support Bio-Formats pattern strings. "
+                    "Use OMEArrow(..., lazy=False) for pattern ingestion via "
+                    "from_stack_pattern_path."
+                )
             self._lazy_source = _LazySourceSpec(
                 data=data,
                 column_name=column_name,
@@ -316,6 +322,9 @@ class OMEArrow:
         if self._lazy_source is None:
             return
         lazy_source = self._lazy_source
+        # Intentionally do not clear `_lazy_source` / `_lazy_slices` before load.
+        # If `_load_from_string_source(...)` raises, lazy state is preserved so
+        # callers can inspect/retry without losing the deferred plan.
         scalar, struct_array = self._load_from_string_source(
             lazy_source.data,
             column_name=lazy_source.column_name,
@@ -336,10 +345,16 @@ class OMEArrow:
                     z_indices=spec.z_indices,
                     fill_missing=spec.fill_missing,
                 )
+            # Applying lazy slices via `slice_ome_arrow` materializes through a
+            # StructScalar path, so we intentionally drop `_struct_array` here.
+            # Consequence: Arrow-backed zero-copy tensor paths
+            # (for example `tensor_view(...).to_dlpack(mode="arrow")`) are not
+            # available after lazy slicing.
             self.data = data
             self._struct_array = None
         else:
             self.data, self._struct_array = scalar, struct_array
+        # Lazy state is cleared only after a successful materialization.
         self._lazy_source = None
         self._lazy_slices = []
 
@@ -816,8 +831,21 @@ class OMEArrow:
         """Return a lazily planned slice, collected on first execution.
 
         For lazy sources created with ``OMEArrow.scan(...)``, this queues a
-        deferred slice operation and returns a new lazy OMEArrow plan.
+        deferred slice operation and returns a new lazy OMEArrow plan produced
+        from ``OMEArrow.scan(...)``.
         For already materialized sources, this falls back to eager ``slice()``.
+        This method does not mutate ``self``.
+
+        Notes:
+            ``slice_lazy`` always returns a new plan object. Internally, the
+            returned plan gets a fresh ``_lazy_slices`` list
+            (``[*self._lazy_slices, new_slice]``), so chained plans do not
+            share mutable slice state with the original ``OMEArrow``.
+            A common footgun is:
+            ``oa.slice_lazy(...).collect()`` followed by ``oa.tensor_view(...)``.
+            Those calls can load/materialize the same source twice because
+            ``oa`` remains the original plan. For a single-load workflow, keep
+            working from the value returned by ``slice_lazy`` / ``collect``.
 
         Args:
             x_min: Inclusive minimum X index for the crop.

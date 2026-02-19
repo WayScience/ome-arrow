@@ -107,8 +107,9 @@ oa = OMEArrow.scan("your_image.ome.parquet")  # deferred load
 lazy_crop = oa.slice_lazy(0, 512, 0, 512).slice_lazy(64, 256, 64, 256)
 cropped = lazy_crop.collect()
 
-# Then: build lazy tensor views from a source scan
-lazy_view = oa.tensor_view(t=0, z=slice(0, 4), roi=(0, 0, 512, 512))
+# slice_lazy returns a new OMEArrow plan; collect does not mutate `oa`.
+# Build tensor_view from the returned sliced object to reuse that plan.
+lazy_view = cropped.tensor_view(t=0, z=slice(0, 4), roi=(0, 0, 512, 512))
 arr = lazy_view.to_numpy()
 ```
 

@@ -51,8 +51,8 @@ obj = OMEArrow.scan("example.ome.parquet")
 lazy_crop = obj.slice_lazy(0, 512, 0, 512).slice_lazy(64, 256, 64, 256)
 cropped = lazy_crop.collect()
 
-# Then execute lazy tensor selections.
-lazy_view = obj.tensor_view(t=0, z=slice(0, 8), roi=(128, 128, 256, 256))
+# Then execute tensor selections on the sliced result.
+lazy_view = cropped.tensor_view(t=0, z=slice(0, 8), roi=(128, 128, 256, 256))
 arr = lazy_view.to_numpy()
 ```
 
