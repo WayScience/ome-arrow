@@ -109,8 +109,8 @@ cropped = lazy_crop.collect()
 
 # slice_lazy returns a new OMEArrow plan; collect does not mutate `oa`.
 # Build tensor_view from the returned sliced object to reuse that plan.
-lazy_view = cropped.tensor_view(t=0, z=slice(0, 4), roi=(0, 0, 512, 512))
-arr = lazy_view.to_numpy()
+tensor_view_result = cropped.tensor_view(t=0, z=slice(0, 4), roi=(0, 0, 192, 192))
+arr = tensor_view_result.to_numpy()
 ```
 
 Advanced options:

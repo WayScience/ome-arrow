@@ -133,27 +133,52 @@ class LazyTensorView:
 
     @property
     def dtype(self) -> np.dtype:
-        """Return the tensor dtype."""
+        """Return the tensor dtype.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
         return self.collect().dtype
 
     @property
     def device(self) -> str:
-        """Return the tensor storage device."""
+        """Return the tensor storage device.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
         return self.collect().device
 
     @property
     def layout(self) -> str:
-        """Return the effective tensor layout."""
+        """Return the effective tensor layout.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
         return self.collect().layout
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """Return the tensor shape."""
+        """Return the tensor shape.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
         return self.collect().shape
 
     @property
     def strides(self) -> tuple[int, ...]:
-        """Return tensor strides in bytes."""
+        """Return tensor strides in bytes.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
         return self.collect().strides
 
     def to_numpy(self, *, contiguous: bool = False) -> np.ndarray:

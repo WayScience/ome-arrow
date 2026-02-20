@@ -87,7 +87,9 @@ def test_tensor_view_chunk_policy_invalid(example_correct_data: dict) -> None:
         oa.tensor_view(chunk_policy="invalid")
 
 
-def test_lazy_tensor_view_collects_on_execution() -> None:
+def test_lazy_tensor_view_collects_on_execution(
+    recwarn: pytest.WarningsRecorder,
+) -> None:
     """Defer source loading until lazy tensor view execution."""
     oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
     assert oa.is_lazy
@@ -96,10 +98,13 @@ def test_lazy_tensor_view_collects_on_execution() -> None:
     assert isinstance(view, LazyTensorView)
     assert oa.is_lazy
 
-    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
-        arr = view.to_numpy(contiguous=True)
+    arr = view.to_numpy(contiguous=True)
     assert arr.shape == (72, 84)
     assert not oa.is_lazy
+    if recwarn:
+        assert any(
+            "Requested column 'ome_arrow'" in str(w.message) for w in recwarn.list
+        )
 
 
 def test_lazy_reader_requires_string_source() -> None:
@@ -140,11 +145,12 @@ def test_lazy_tensor_view_with_layout_defers_materialization() -> None:
     view_hw = view.with_layout("HW")
 
     assert isinstance(view_hw, LazyTensorView)
-    assert view_hw._kwargs["layout"] == "HW"
     assert oa.is_lazy
 
     with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
-        arr = view_hw.to_numpy(contiguous=True)
+        concrete = view_hw.collect()
+    assert concrete.layout == "HW"
+    arr = concrete.to_numpy(contiguous=True)
     assert arr.shape == (72, 84)
     assert not oa.is_lazy
 

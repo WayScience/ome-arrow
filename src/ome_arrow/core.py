@@ -360,7 +360,11 @@ class OMEArrow:
 
     def _tensor_source(self) -> pa.StructScalar | pa.StructArray:
         self._ensure_materialized()
-        return self._struct_array if self._struct_array is not None else self.data
+        if self._struct_array is not None:
+            return self._struct_array
+        if self._data is None:
+            raise RuntimeError("OMEArrow data is not initialized.")
+        return self._data
 
     @staticmethod
     def _wrap_with_image_type(
