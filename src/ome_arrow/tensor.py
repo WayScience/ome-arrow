@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import threading
 import warnings
 from dataclasses import dataclass
 from typing import Any, Callable, Iterator, List, Literal, Sequence
@@ -17,7 +18,13 @@ from ome_arrow.meta import OME_ARROW_STRUCT
 _TZCHW = "TZCHW"
 _ALLOWED_DIMS = set(_TZCHW)
 _ALLOWED_MODES = {"arrow", "numpy"}
-_UNSET = object()
+
+
+class _Unset:
+    """Typed sentinel for arguments that were not provided."""
+
+
+_UNSET: _Unset = _Unset()
 
 
 @dataclass(frozen=True)
@@ -89,6 +96,7 @@ class LazyTensorView:
             "channel_policy": channel_policy,
         }
         self._resolved: TensorView | None = None
+        self._collect_lock = threading.Lock()
 
     def _spawn(self, **updates: Any) -> "LazyTensorView":
         kwargs = dict(self._kwargs)
@@ -97,9 +105,16 @@ class LazyTensorView:
 
     def collect(self) -> "TensorView":
         """Materialize this lazy plan into a concrete TensorView."""
-        if self._resolved is None:
-            self._resolved = TensorView(self._loader(), **self._kwargs)
-        return self._resolved
+        resolved = self._resolved
+        if resolved is not None:
+            return resolved
+
+        with self._collect_lock:
+            resolved = self._resolved
+            if resolved is None:
+                resolved = TensorView(self._loader(), **self._kwargs)
+                self._resolved = resolved
+        return resolved
 
     def with_layout(self, layout: str) -> "LazyTensorView":
         """Return a new lazy view with an updated layout."""
@@ -108,12 +123,12 @@ class LazyTensorView:
     def select(
         self,
         *,
-        t: Any = _UNSET,
-        z: Any = _UNSET,
-        c: Any = _UNSET,
-        roi: Any = _UNSET,
-        roi3d: Any = _UNSET,
-        tile: Any = _UNSET,
+        t: int | slice | Sequence[int] | None | _Unset = _UNSET,
+        z: int | slice | Sequence[int] | None | _Unset = _UNSET,
+        c: int | slice | Sequence[int] | None | _Unset = _UNSET,
+        roi: tuple[int, int, int, int] | None | _Unset = _UNSET,
+        roi3d: tuple[int, int, int, int, int, int] | None | _Unset = _UNSET,
+        tile: tuple[int, int] | None | _Unset = _UNSET,
     ) -> "LazyTensorView":
         """Return a new lazy plan with updated index/ROI selections."""
         updates = {}
@@ -146,10 +161,12 @@ class LazyTensorView:
         """Return the tensor storage device.
 
         Note:
-            Accessing this property calls ``collect()`` and may materialize data
-            from source files (for example Parquet/TIFF), which can be expensive.
+            For unresolved lazy plans, this returns ``"cpu"`` without calling
+            ``collect()``.
         """
-        return self.collect().device
+        if self._resolved is None:
+            return "cpu"
+        return self._resolved.device
 
     @property
     def layout(self) -> str:
