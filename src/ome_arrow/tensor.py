@@ -159,6 +159,9 @@ class LazyTensorView:
             Accessing this property calls ``collect()`` and may materialize data
             from source files (for example Parquet/TIFF), which can be expensive.
         """
+        layout = self._kwargs.get("layout")
+        if layout is not None:
+            return layout
         return self.collect().layout
 
     @property
