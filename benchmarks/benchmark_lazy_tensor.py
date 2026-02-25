@@ -105,7 +105,7 @@ def _print_results(results: list[BenchmarkResult]) -> None:
     print("-" * 92)
     for r in results:
         print(
-            f"{r.name:38} {r.median_ms:10.2f} {r.min_ms:10.2f} {r.max_ms:10.2f} {str(r.shape):>16}"
+            f"{r.name:38} {r.median_ms:10.2f} {r.min_ms:10.2f} {r.max_ms:10.2f} {r.shape!s:>16}"
         )
 
 
@@ -268,9 +268,11 @@ def main() -> None:
             cases.append(
                 (
                     "scan+tiff -> tensor_view(YX)",
-                    lambda: OMEArrow.scan(str(args.tiff_path))
-                    .tensor_view(t=0, z=0, c=0, layout="YX")
-                    .to_numpy(contiguous=True),
+                    lambda: (
+                        OMEArrow.scan(str(args.tiff_path))
+                        .tensor_view(t=0, z=0, c=0, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
                 )
             )
         else:
@@ -280,15 +282,19 @@ def main() -> None:
             [
                 (
                     "scan+parquet(planes) -> tensor_view(YX)",
-                    lambda: OMEArrow.scan(str(planes_path))
-                    .tensor_view(t=0, z=1, c=1, layout="YX")
-                    .to_numpy(contiguous=True),
+                    lambda: (
+                        OMEArrow.scan(str(planes_path))
+                        .tensor_view(t=0, z=1, c=1, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
                 ),
                 (
                     "scan+parquet(chunks) -> tensor_view(YX)",
-                    lambda: OMEArrow.scan(str(chunks_path))
-                    .tensor_view(t=0, z=1, c=1, layout="YX")
-                    .to_numpy(contiguous=True),
+                    lambda: (
+                        OMEArrow.scan(str(chunks_path))
+                        .tensor_view(t=0, z=1, c=1, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
                 ),
             ]
         )
