@@ -421,6 +421,38 @@ def test_scan_collect_roundtrip() -> None:
     assert oa.info()["shape"] == (1, 1, 1, 72, 84)
 
 
+@pytest.mark.parametrize(
+    ("input_data", "expected_shape"),
+    [
+        (
+            "tests/data/ome-artificial-5d-datasets/single-channel.ome.tiff",
+            (1, 1, 1, 167, 439),
+        ),  # 2D
+        (
+            "tests/data/ome-artificial-5d-datasets/time-series.ome.tif",
+            (7, 1, 1, 167, 439),
+        ),  # 2D timelapse
+        (
+            "tests/data/ome-artificial-5d-datasets/z-series.ome.tiff",
+            (1, 1, 5, 167, 439),
+        ),  # 3D
+    ],
+)
+@pytest.mark.filterwarnings(
+    "ignore:As of version 0.4.0, the parser argument is ignored.*:DeprecationWarning"
+)
+def test_scan_collect_roundtrip_non4d(
+    input_data: str, expected_shape: tuple[int, int, int, int, int]
+) -> None:
+    """Materialize lazy scans for non-4D sources and preserve shapes."""
+    oa = OMEArrow.scan(input_data)
+    assert oa.is_lazy
+
+    info = oa.collect().info()
+    assert not oa.is_lazy
+    assert info["shape"] == expected_shape
+
+
 def test_slice_lazy_scan_collect() -> None:
     """Queue a lazy slice and materialize it via collect()."""
     oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")

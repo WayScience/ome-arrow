@@ -7,23 +7,24 @@ and (optionally) GPU.
 Key defaults:
 
 - OME-Arrow tensor layouts always include channels (`C`) as a tensor axis.
-- Default layout is `CHW` when both `T` and `Z` are singleton in the source.
-- Otherwise, default layout is `TZCHW` (with singleton `T`/`Z` retained unless you override layout).
-- You can override with any valid TZCHW permutation/subset, for example `HWC`, `ZCHW`, or `CHW`.
+- Default layout is `CHW` (equivalent to `CYX`) when both `T` and `Z` are singleton in the source.
+- Otherwise, default layout is `TZCHW` (equivalent to `TZCYX`, with singleton `T`/`Z` retained unless you override layout).
+- You can override with any valid TZCHW/TZCYX permutation/subset, for example `YXC`, `ZCYX`, or `CYX`.
 
 Layout nomenclature:
 
 - `T`: time index
 - `Z`: z/depth index
 - `C`: channel index
-- `H`: image height (Y axis)
-- `W`: image width (X axis)
+- `Y`: image row axis (height)
+- `X`: image column axis (width)
+  (`H/W` aliases are also accepted for compatibility).
 
 Practical mapping:
 
-- 2D image content (`YX`) is typically exposed as `CHW`.
-- 3D z-stack content (`ZYX`) is typically exposed as `ZCHW` or `TZCHW` (with `T=1`).
-- Time-lapse and volumetric content use `TZCHW` by default.
+- 2D image content (`YX`) is typically exposed as `CYX`.
+- 3D z-stack content (`ZYX`) is typically exposed as `ZCYX` or `TZCYX` (with `T=1`).
+- Time-lapse and volumetric content use `TZCYX`/`TZCHW` by default.
 
 ## PyTorch
 
@@ -62,7 +63,7 @@ arr = tensor_view.to_numpy()
 from ome_arrow import OMEArrow
 
 obj = OMEArrow("example.ome.parquet")
-view = obj.tensor_view(t=0, z=0, c=0, layout="CHW")
+view = obj.tensor_view(t=0, z=0, c=0, layout="CYX")
 
 import jax.numpy as jnp
 
@@ -83,7 +84,7 @@ view = obj.tensor_view()
 # Batch over time (T) dimension.
 for cap in view.iter_dlpack(batch_size=2, shuffle=False, mode="numpy"):
     batch = np.from_dlpack(cap)
-    # batch shape: (batch, Z, C, H, W) in TZCHW layout
+    # batch shape: (batch, Z, C, Y, X) in TZCYX layout
 ```
 
 ```python
@@ -98,7 +99,7 @@ for cap in view.iter_dlpack(
     tile_size=(256, 256), shuffle=True, seed=123, mode="numpy"
 ):
     tile = np.from_dlpack(cap)
-    # tile shape: (C, H, W) in CHW layout
+    # tile shape: (C, Y, X) in CYX layout
 ```
 
 ## Ownership and lifetime

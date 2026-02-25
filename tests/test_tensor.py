@@ -53,15 +53,15 @@ def test_tensor_view_layout_and_values(example_correct_data: dict) -> None:
     )
     np.testing.assert_array_equal(arr, expected)
 
-    view_hwc = oa.tensor_view(t=0, z=0, layout="HWC")
-    arr_hwc = view_hwc.to_numpy(contiguous=False)
-    assert arr_hwc.shape == (3, 4, 2)
-    assert arr_hwc[0, 0, 0] == expected[0, 0, 0]
-    assert arr_hwc[0, 0, 1] == expected[1, 0, 0]
-    assert not arr_hwc.flags["C_CONTIGUOUS"]
+    view_yxc = oa.tensor_view(t=0, z=0, layout="YXC")
+    arr_yxc = view_yxc.to_numpy(contiguous=False)
+    assert arr_yxc.shape == (3, 4, 2)
+    assert arr_yxc[0, 0, 0] == expected[0, 0, 0]
+    assert arr_yxc[0, 0, 1] == expected[1, 0, 0]
+    assert not arr_yxc.flags["C_CONTIGUOUS"]
 
-    arr_hwc_contig = view_hwc.to_numpy(contiguous=True)
-    assert arr_hwc_contig.flags["C_CONTIGUOUS"]
+    arr_yxc_contig = view_yxc.to_numpy(contiguous=True)
+    assert arr_yxc_contig.flags["C_CONTIGUOUS"]
 
 
 def test_tensor_view_chunk_policy_modes(example_correct_data: dict) -> None:
@@ -94,7 +94,7 @@ def test_lazy_tensor_view_collects_on_execution(
     oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
     assert oa.is_lazy
 
-    view = oa.tensor_view(t=0, z=0, c=0, layout="HW")
+    view = oa.tensor_view(t=0, z=0, c=0, layout="YX")
     assert isinstance(view, LazyTensorView)
     assert oa.is_lazy
 
@@ -142,14 +142,15 @@ def test_lazy_tensor_view_with_layout_defers_materialization() -> None:
     assert oa.is_lazy
 
     view = oa.tensor_view(t=0, z=0, c=0)
-    view_hw = view.with_layout("HW")
+    view_yx = view.with_layout("YX")
 
-    assert isinstance(view_hw, LazyTensorView)
+    assert isinstance(view_yx, LazyTensorView)
+    assert view_yx.layout == "YX"
     assert oa.is_lazy
 
     with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
-        concrete = view_hw.collect()
-    assert concrete.layout == "HW"
+        concrete = view_yx.collect()
+    assert concrete.layout in {"YX", "HW"}
     arr = concrete.to_numpy(contiguous=True)
     assert arr.shape == (72, 84)
     assert not oa.is_lazy
@@ -180,18 +181,18 @@ def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
     assert tensor.data_ptr() == arr.__array_interface__["data"][0]
 
 
-def test_tensor_view_layout_hw_with_first_channel_policy(
+def test_tensor_view_layout_yx_with_first_channel_policy(
     example_correct_data: dict,
 ) -> None:
-    """Allow HW layout by selecting the first channel when requested."""
+    """Allow YX layout by selecting the first channel when requested."""
     oa = OMEArrow(example_correct_data)
 
-    view_hw = oa.tensor_view(t=0, z=0, layout="HW", channel_policy="first")
-    arr_hw = view_hw.to_numpy(contiguous=False)
+    view_yx = oa.tensor_view(t=0, z=0, layout="YX", channel_policy="first")
+    arr_yx = view_yx.to_numpy(contiguous=False)
 
-    expected_chw = oa.tensor_view(t=0, z=0, layout="CHW").to_numpy(contiguous=True)
-    np.testing.assert_array_equal(arr_hw, expected_chw[0])
-    assert arr_hw.shape == (3, 4)
+    expected_cyx = oa.tensor_view(t=0, z=0, layout="CYX").to_numpy(contiguous=True)
+    np.testing.assert_array_equal(arr_yx, expected_cyx[0])
+    assert arr_yx.shape == (3, 4)
 
 
 def test_tensor_view_roi3d_selects_z_and_roi() -> None:
@@ -199,7 +200,7 @@ def test_tensor_view_roi3d_selects_z_and_roi() -> None:
     arr = np.arange(1 * 1 * 3 * 4 * 5, dtype=np.uint16).reshape(1, 1, 3, 4, 5)
     oa = OMEArrow(arr)
 
-    view = oa.tensor_view(roi3d=(1, 1, 1, 3, 2, 2), layout="TZCHW")
+    view = oa.tensor_view(roi3d=(1, 1, 1, 3, 2, 2), layout="TZCYX")
     out = view.to_numpy(contiguous=True)
 
     expected = arr[:, :, 1:3, 1:3, 1:4]
@@ -215,6 +216,59 @@ def test_tensor_view_roi3d_conflicts_with_z() -> None:
 
     with pytest.raises(ValueError, match="Provide either z or roi3d"):
         oa.tensor_view(z=0, roi3d=(0, 0, 0, 2, 2, 1))
+
+
+def test_tensor_view_roi_nd_3d_selects_z_and_roi() -> None:
+    """Support roi_nd 3D bounds with explicit roi_type."""
+    arr = np.arange(1 * 1 * 3 * 4 * 5, dtype=np.uint16).reshape(1, 1, 3, 4, 5)
+    oa = OMEArrow(arr)
+
+    view = oa.tensor_view(roi_nd=(1, 1, 1, 3, 3, 4), roi_type="3d", layout="TZCYX")
+    out = view.to_numpy(contiguous=True)
+
+    expected = arr[:, :, 1:3, 1:3, 1:4]
+    expected = np.transpose(expected, (0, 2, 1, 3, 4))
+    np.testing.assert_array_equal(out, expected)
+    assert out.shape == (1, 2, 1, 2, 3)
+
+
+def test_tensor_view_roi_nd_2d_timelapse_selects_t_and_roi() -> None:
+    """Support roi_nd timelapse bounds with explicit roi_type."""
+    arr = np.arange(3 * 1 * 1 * 4 * 5, dtype=np.uint16).reshape(3, 1, 1, 4, 5)
+    oa = OMEArrow(arr)
+
+    view = oa.tensor_view(
+        roi_nd=(1, 1, 1, 3, 3, 4), roi_type="2d_timelapse", layout="TZCYX"
+    )
+    out = view.to_numpy(contiguous=True)
+
+    expected = arr[1:3, :, :, 1:3, 1:4]
+    expected = np.transpose(expected, (0, 2, 1, 3, 4))
+    np.testing.assert_array_equal(out, expected)
+    assert out.shape == (2, 1, 1, 2, 3)
+
+
+def test_tensor_view_roi_nd_4d_selects_t_z_and_roi() -> None:
+    """Support roi_nd 4D bounds with implicit roi_type by tuple length."""
+    arr = np.arange(3 * 1 * 4 * 5 * 6, dtype=np.uint16).reshape(3, 1, 4, 5, 6)
+    oa = OMEArrow(arr)
+
+    view = oa.tensor_view(roi_nd=(1, 1, 1, 2, 3, 3, 4, 5), layout="TZCYX")
+    out = view.to_numpy(contiguous=True)
+
+    expected = arr[1:3, :, 1:3, 1:4, 2:5]
+    expected = np.transpose(expected, (0, 2, 1, 3, 4))
+    np.testing.assert_array_equal(out, expected)
+    assert out.shape == (2, 2, 1, 3, 3)
+
+
+def test_tensor_view_roi_nd_len6_requires_roi_type() -> None:
+    """Reject ambiguous roi_nd tuples with 6 values unless roi_type is set."""
+    arr = np.arange(1 * 1 * 3 * 4 * 5, dtype=np.uint16).reshape(1, 1, 3, 4, 5)
+    oa = OMEArrow(arr)
+
+    with pytest.raises(ValueError, match="roi_nd with 6 values is ambiguous"):
+        oa.tensor_view(roi_nd=(0, 0, 0, 1, 2, 3))
 
 
 def test_dlpack_roundtrip_jax(example_correct_data: dict) -> None:
@@ -263,7 +317,7 @@ def test_layout_drop_non_singleton_errors() -> None:
     """Reject layout drops when the omitted axis is non-singleton."""
     arr = np.zeros((2, 1, 1, 2, 2), dtype=np.uint16)
     oa = OMEArrow(arr)
-    view = oa.tensor_view(layout="CHW")
+    view = oa.tensor_view(layout="CYX")
     with pytest.raises(ValueError, match="drops non-singleton"):
         view.to_numpy()
 

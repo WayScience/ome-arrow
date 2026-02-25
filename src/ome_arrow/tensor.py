@@ -18,6 +18,8 @@ from ome_arrow.meta import OME_ARROW_STRUCT
 _TZCHW = "TZCHW"
 _ALLOWED_DIMS = set(_TZCHW)
 _ALLOWED_MODES = {"arrow", "numpy"}
+_ROI_TYPES = {"2d", "2d_timelapse", "3d", "4d"}
+_LAYOUT_ALIASES = str.maketrans({"Y": "H", "X": "W"})
 
 
 class _Unset:
@@ -61,6 +63,8 @@ class LazyTensorView:
         c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
         roi3d: tuple[int, int, int, int, int, int] | None = None,
+        roi_nd: tuple[int, ...] | None = None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
@@ -76,8 +80,11 @@ class LazyTensorView:
             c: Channel index selection.
             roi: Spatial crop as ``(x, y, w, h)``.
             roi3d: Spatial + depth crop as ``(x, y, z, w, h, d)``.
+            roi_nd: General ROI tuple with min/max bounds.
+            roi_type: ROI interpretation mode for ``roi_nd``.
             tile: Tile index as ``(tile_y, tile_x)``.
-            layout: Requested output layout (TZCHW letters).
+            layout: Requested output layout (`TZCYX` preferred, `TZCHW`
+                aliases accepted).
             dtype: Output dtype override.
             chunk_policy: Chunk handling strategy for ChunkedArray inputs.
             channel_policy: Behavior when dropping ``C`` from layout.
@@ -89,6 +96,8 @@ class LazyTensorView:
             "c": c,
             "roi": roi,
             "roi3d": roi3d,
+            "roi_nd": roi_nd,
+            "roi_type": roi_type,
             "tile": tile,
             "layout": layout,
             "dtype": dtype,
@@ -128,6 +137,8 @@ class LazyTensorView:
         c: int | slice | Sequence[int] | None | _Unset = _UNSET,
         roi: tuple[int, int, int, int] | None | _Unset = _UNSET,
         roi3d: tuple[int, int, int, int, int, int] | None | _Unset = _UNSET,
+        roi_nd: tuple[int, ...] | None | _Unset = _UNSET,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None | _Unset = _UNSET,
         tile: tuple[int, int] | None | _Unset = _UNSET,
     ) -> "LazyTensorView":
         """Return a new lazy plan with updated index/ROI selections."""
@@ -142,6 +153,10 @@ class LazyTensorView:
             updates["roi"] = roi
         if roi3d is not _UNSET:
             updates["roi3d"] = roi3d
+        if roi_nd is not _UNSET:
+            updates["roi_nd"] = roi_nd
+        if roi_type is not _UNSET:
+            updates["roi_type"] = roi_type
         if tile is not _UNSET:
             updates["tile"] = tile
         return self._spawn(**updates)
@@ -358,9 +373,19 @@ class TensorView:
         roi3d: Spatial + depth crop (x, y, z, w, h, d). This is a
             convenience alias for ``roi=(x, y, w, h)`` and
             ``z=slice(z, z + d)``.
+        roi_nd: General ROI tuple with min/max bounds, interpreted by
+            ``roi_type``.
+        roi_type: ROI interpretation mode for ``roi_nd``. Supported values:
+            ``"2d"`` = ``(ymin, xmin, ymax, xmax)``;
+            ``"2d_timelapse"`` =
+            ``(tmin, ymin, xmin, tmax, ymax, xmax)``;
+            ``"3d"`` = ``(zmin, ymin, xmin, zmax, ymax, xmax)``;
+            ``"4d"`` =
+            ``(tmin, zmin, ymin, xmin, tmax, zmax, ymax, xmax)``.
         tile: Tile index (tile_y, tile_x) based on chunk grid.
-        layout: Desired layout string using TZCHW letters where
-            T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+        layout: Desired layout string using `TZCYX` letters where
+            T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+            `TZCHW` aliases are also accepted for compatibility.
         dtype: Output dtype override. Defaults to pixels_meta.type when valid.
         chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs. "auto"
             keeps multi-chunk arrays and unwraps single-chunk arrays.
@@ -380,6 +405,8 @@ class TensorView:
         c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
         roi3d: tuple[int, int, int, int, int, int] | None = None,
+        roi_nd: tuple[int, ...] | None = None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
@@ -397,9 +424,13 @@ class TensorView:
             roi3d: Spatial + depth crop (x, y, z, w, h, d). This is a
                 convenience alias for ``roi=(x, y, w, h)`` and
                 ``z=slice(z, z + d)``.
+            roi_nd: General ROI tuple with min/max bounds, interpreted by
+                ``roi_type``.
+            roi_type: ROI interpretation mode for ``roi_nd``.
             tile: Tile index (tile_y, tile_x) derived from chunk_grid.
-            layout: Desired layout string using TZCHW letters where
-                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+            layout: Desired layout string using `TZCYX` letters where
+                T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+                `TZCHW` aliases are also accepted for compatibility.
             dtype: Output dtype override.
             chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.
             channel_policy: Behavior when dropping `C` from layout while
@@ -448,7 +479,14 @@ class TensorView:
         self._dtype = np.dtype(dtype)
 
         self._selection = self._normalize_selection(
-            t=t, z=z, c=c, roi=roi, roi3d=roi3d, tile=tile
+            t=t,
+            z=z,
+            c=c,
+            roi=roi,
+            roi3d=roi3d,
+            roi_nd=roi_nd,
+            roi_type=roi_type,
+            tile=tile,
         )
         self._array: np.ndarray | None = None
         self._array_layout: str | None = None
@@ -492,8 +530,9 @@ class TensorView:
         """Return a new TensorView with a layout override.
 
         Args:
-            layout: Desired layout string using TZCHW letters where
-                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+            layout: Desired layout string using `TZCYX` letters where
+                T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+                `TZCHW` aliases are also accepted for compatibility.
 
         Returns:
             TensorView: New view with the requested layout.
@@ -910,8 +949,29 @@ class TensorView:
         c: int | slice | Sequence[int] | None,
         roi: tuple[int, int, int, int] | None,
         roi3d: tuple[int, int, int, int, int, int] | None,
+        roi_nd: tuple[int, ...] | None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None,
         tile: tuple[int, int] | None,
     ) -> _Selection:
+        if roi_nd is not None:
+            if roi is not None or roi3d is not None or tile is not None:
+                raise ValueError("Provide only one of roi_nd, roi3d, roi, or tile.")
+            roi, t_from_roi, z_from_roi = self._parse_roi_nd(roi_nd, roi_type)
+            if t_from_roi is not None:
+                if t is not None:
+                    raise ValueError(
+                        "Provide either t or roi_nd time bounds, not both."
+                    )
+                t = t_from_roi
+            if z_from_roi is not None:
+                if z is not None:
+                    raise ValueError(
+                        "Provide either z or roi_nd depth bounds, not both."
+                    )
+                z = z_from_roi
+        elif roi_type is not None:
+            raise ValueError("roi_type requires roi_nd.")
+
         if roi3d is not None:
             if roi is not None or tile is not None:
                 raise ValueError("Provide only one of roi3d, roi, or tile.")
@@ -950,6 +1010,65 @@ class TensorView:
             raise ValueError("roi is out of bounds")
 
         return _Selection(t=t_idx, z=z_idx, c=c_idx, roi=roi)
+
+    def _parse_roi_nd(
+        self,
+        roi_nd: tuple[int, ...],
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None,
+    ) -> tuple[tuple[int, int, int, int], slice | None, slice | None]:
+        vals = tuple(int(v) for v in roi_nd)
+        if roi_type is None:
+            if len(vals) == 4:
+                roi_type = "2d"
+            elif len(vals) == 8:
+                roi_type = "4d"
+            elif len(vals) == 6:
+                raise ValueError(
+                    "roi_nd with 6 values is ambiguous; provide roi_type "
+                    "('2d_timelapse' or '3d')."
+                )
+            else:
+                raise ValueError("roi_nd must have length 4, 6, or 8.")
+        if roi_type not in _ROI_TYPES:
+            raise ValueError(f"Unsupported roi_type: {roi_type!r}.")
+
+        t_sel: slice | None = None
+        z_sel: slice | None = None
+
+        if roi_type == "2d":
+            if len(vals) != 4:
+                raise ValueError("roi_type='2d' requires 4 values.")
+            ymin, xmin, ymax, xmax = vals
+        elif roi_type == "2d_timelapse":
+            if len(vals) != 6:
+                raise ValueError("roi_type='2d_timelapse' requires 6 values.")
+            tmin, ymin, xmin, tmax, ymax, xmax = vals
+            if tmin < 0 or tmax > self._size_t or tmax <= tmin:
+                raise ValueError("roi_nd time bounds are out of range.")
+            t_sel = slice(tmin, tmax)
+        elif roi_type == "3d":
+            if len(vals) != 6:
+                raise ValueError("roi_type='3d' requires 6 values.")
+            zmin, ymin, xmin, zmax, ymax, xmax = vals
+            if zmin < 0 or zmax > self._size_z or zmax <= zmin:
+                raise ValueError("roi_nd depth bounds are out of range.")
+            z_sel = slice(zmin, zmax)
+        else:
+            if len(vals) != 8:
+                raise ValueError("roi_type='4d' requires 8 values.")
+            tmin, zmin, ymin, xmin, tmax, zmax, ymax, xmax = vals
+            if tmin < 0 or tmax > self._size_t or tmax <= tmin:
+                raise ValueError("roi_nd time bounds are out of range.")
+            if zmin < 0 or zmax > self._size_z or zmax <= zmin:
+                raise ValueError("roi_nd depth bounds are out of range.")
+            t_sel = slice(tmin, tmax)
+            z_sel = slice(zmin, zmax)
+
+        x, y = int(xmin), int(ymin)
+        w, h = int(xmax - xmin), int(ymax - ymin)
+        if w <= 0 or h <= 0:
+            raise ValueError("roi_nd spatial bounds must satisfy max > min.")
+        return (x, y, w, h), t_sel, z_sel
 
     def _data_py_dict(self) -> dict[str, Any]:
         """Return the backing record as a Python dict.
@@ -1117,8 +1236,12 @@ def _normalize_layout(layout: str | None) -> str | None:
     layout = layout.strip().upper()
     if not layout:
         raise ValueError("layout must be non-empty")
+    layout = layout.translate(_LAYOUT_ALIASES)
     if any(dim not in _ALLOWED_DIMS for dim in layout):
-        raise ValueError("layout must use only TZCHW letters")
+        raise ValueError(
+            "layout must use only TZC + (Y/X or H/W) letters "
+            "(for example CYX, YXC, TZCYX)."
+        )
     if len(set(layout)) != len(layout):
         raise ValueError("layout cannot repeat dimensions")
     return layout

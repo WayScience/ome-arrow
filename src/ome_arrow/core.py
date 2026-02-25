@@ -704,6 +704,8 @@ class OMEArrow:
         c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
         roi3d: tuple[int, int, int, int, int, int] | None = None,
+        roi_nd: tuple[int, ...] | None = None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
@@ -721,9 +723,13 @@ class OMEArrow:
             roi3d: Spatial + depth crop (x, y, z, w, h, d) in pixels/planes.
                 This is a convenience alias for ``roi=(x, y, w, h)`` and
                 ``z=slice(z, z + d)``.
+            roi_nd: General ROI tuple with min/max bounds.
+            roi_type: ROI interpretation mode for ``roi_nd``. Supported values:
+                ``"2d"``, ``"2d_timelapse"``, ``"3d"``, and ``"4d"``.
             tile: Tile index (tile_y, tile_x) based on chunk grid.
-            layout: Desired layout string using TZCHW letters where
-                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+            layout: Desired layout string using `TZCYX` letters where
+                T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+                `TZCHW` aliases are also accepted for compatibility.
             dtype: Output dtype override.
             chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.
             channel_policy: Behavior when dropping `C` from layout while
@@ -750,6 +756,8 @@ class OMEArrow:
                 c=c,
                 roi=roi,
                 roi3d=roi3d,
+                roi_nd=roi_nd,
+                roi_type=roi_type,
                 tile=tile,
                 layout=layout,
                 dtype=dtype,
@@ -759,6 +767,7 @@ class OMEArrow:
 
         # TensorView uses an internal canonical axis basis (TZCHW) for shape/stride
         # math, then applies the requested layout permutation for output.
+        # Public layout examples prefer TZCYX (Y/X), with H/W accepted as aliases.
         return TensorView(
             self._struct_array if self._struct_array is not None else self.data,
             t=t,
@@ -766,6 +775,8 @@ class OMEArrow:
             c=c,
             roi=roi,
             roi3d=roi3d,
+            roi_nd=roi_nd,
+            roi_type=roi_type,
             tile=tile,
             layout=layout,
             dtype=dtype,

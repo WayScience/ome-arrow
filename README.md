@@ -86,11 +86,11 @@ from ome_arrow import OMEArrow
 
 oa = OMEArrow("your_image.ome.parquet")
 
-# Spatial ROI per plane
-view = oa.tensor_view(t=0, z=0, roi=(32, 32, 128, 128), layout="CHW")
+# Spatial ROI per plane (YX convention)
+view = oa.tensor_view(t=0, z=0, roi=(32, 32, 128, 128), layout="CYX")
 
 # Convenience 3D ROI (x, y, z, w, h, d)
-view3d = oa.tensor_view(roi3d=(32, 32, 2, 128, 128, 4), layout="TZCHW")
+view3d = oa.tensor_view(roi3d=(32, 32, 2, 128, 128, 4), layout="TZCYX")
 
 # 3D tiled iteration over (z, y, x)
 for cap in view3d.iter_tiles_3d(tile_size=(2, 64, 64), mode="numpy"):
