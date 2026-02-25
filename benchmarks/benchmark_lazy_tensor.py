@@ -105,7 +105,8 @@ def _print_results(results: list[BenchmarkResult]) -> None:
     print("-" * 92)
     for r in results:
         print(
-            f"{r.name:38} {r.median_ms:10.2f} {r.min_ms:10.2f} {r.max_ms:10.2f} {r.shape!s:>16}"
+            f"{r.name:38} {r.median_ms:10.2f} "
+            f"{r.min_ms:10.2f} {r.max_ms:10.2f} {r.shape!s:>16}"
         )
 
 
