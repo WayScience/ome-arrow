@@ -20,7 +20,7 @@ from ome_arrow.ingest import (
     to_ome_arrow,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
-from ome_arrow.tensor import TensorView
+from ome_arrow.tensor import LazyTensorView, TensorView
 from ome_arrow.utils import describe_ome_arrow, verify_ome_arrow
 from ome_arrow.view import view_matplotlib, view_pyvista
 

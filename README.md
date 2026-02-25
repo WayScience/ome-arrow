@@ -86,15 +86,31 @@ from ome_arrow import OMEArrow
 
 oa = OMEArrow("your_image.ome.parquet")
 
-# Spatial ROI per plane
-view = oa.tensor_view(t=0, z=0, roi=(32, 32, 128, 128), layout="CHW")
+# Spatial ROI per plane (YX convention)
+view = oa.tensor_view(t=0, z=0, roi=(32, 32, 128, 128), layout="CYX")
 
 # Convenience 3D ROI (x, y, z, w, h, d)
-view3d = oa.tensor_view(roi3d=(32, 32, 2, 128, 128, 4), layout="TZCHW")
+view3d = oa.tensor_view(roi3d=(32, 32, 2, 128, 128, 4), layout="TZCYX")
 
 # 3D tiled iteration over (z, y, x)
 for cap in view3d.iter_tiles_3d(tile_size=(2, 64, 64), mode="numpy"):
     pass
+```
+
+Lazy scan-style convention (Polars-like):
+
+```python
+from ome_arrow import OMEArrow
+
+oa = OMEArrow.scan("your_image.ome.parquet")  # deferred load
+# First: queue lazy spatial/index slicing
+lazy_crop = oa.slice_lazy(0, 512, 0, 512).slice_lazy(64, 256, 64, 256)
+cropped = lazy_crop.collect()
+
+# slice_lazy returns a new OMEArrow plan; collect does not mutate `oa`.
+# Build tensor_view from the returned sliced object to reuse that plan.
+tensor_view_result = cropped.tensor_view(t=0, z=slice(0, 4), roi=(0, 0, 192, 192))
+arr = tensor_view_result.to_numpy()
 ```
 
 Advanced options:
@@ -103,6 +119,32 @@ Advanced options:
 - `channel_policy="error" | "first"` controls behavior when dropping `C` from layout.
 
 See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
+
+## Benchmarking lazy reads
+
+Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor
+read paths (TIFF source-backed, Parquet planes, Parquet chunks):
+
+```bash
+uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
+```
+
+Notes:
+
+- This benchmark is for local iteration and relative comparisons.
+- It is not part of CI pass/fail checks.
+- CI also runs this benchmark in a dedicated `benchmark_canary` job and
+  uploads `benchmark-results.json` as a workflow artifact.
+
+Recalibrating `benchmarks/ci-baseline.json`:
+
+1. Run the benchmark on `main` a few times (for example 3-5 runs):
+   `uv run python benchmarks/benchmark_lazy_tensor.py --repeats 7 --warmup 2 --json-out benchmark-results.json`
+1. For each case, collect the observed `median_ms` values.
+1. Update `benchmarks/ci-baseline.json` with stable medians from those runs
+   (prefer a conservative value near the slower side, not the fastest sample).
+1. Keep CI canary tolerance (`regression_factor` + `absolute_slack_ms`) unchanged
+   unless you have repeated false positives.
 
 ## Contributing, Development, and Testing
 

@@ -5,6 +5,7 @@ Core of the ome_arrow package, used for classes and such.
 from __future__ import annotations
 
 import pathlib
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -34,9 +35,10 @@ from ome_arrow.ingest import (
     from_ome_zarr,
     from_stack_pattern_path,
     from_tiff,
+    open_lazy_plane_source,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT
-from ome_arrow.tensor import TensorView
+from ome_arrow.tensor import LazyTensorView, TensorView
 from ome_arrow.transform import slice_ome_arrow
 from ome_arrow.utils import describe_ome_arrow
 from ome_arrow.view import view_matplotlib, view_pyvista
@@ -44,6 +46,30 @@ from ome_arrow.view import view_matplotlib, view_pyvista
 # if not in runtime, import pyvista for type hints
 if TYPE_CHECKING:
     import pyvista
+
+
+@dataclass(frozen=True)
+class _LazySourceSpec:
+    """Deferred source description for lazy OMEArrow loading."""
+
+    data: str
+    column_name: str
+    row_index: int
+    image_type: str | None
+
+
+@dataclass(frozen=True)
+class _LazySliceSpec:
+    """Deferred spatial/index slice specification."""
+
+    x_min: int
+    x_max: int
+    y_min: int
+    y_max: int
+    t_indices: tuple[int, ...] | None
+    c_indices: tuple[int, ...] | None
+    z_indices: tuple[int, ...] | None
+    fill_missing: bool
 
 
 class OMEArrow:
@@ -70,6 +96,7 @@ class OMEArrow:
         column_name: str = "ome_arrow",
         row_index: int = 0,
         image_type: str | None = None,
+        lazy: bool = False,
     ) -> None:
         """
         Construct an OMEArrow from:
@@ -83,11 +110,32 @@ class OMEArrow:
         - a dict already matching the OME-Arrow schema
         - a pa.StructScalar already typed to OME_ARROW_STRUCT
         - optionally override/set image_type metadata on ingest
+        - optionally defer source-file ingestion with lazy=True
         """
 
         # set the tcz for viewing
         self.tcz = tcz
+        self._data: pa.StructScalar | None = None
         self._struct_array: pa.StructArray | None = None
+        self._lazy_source: _LazySourceSpec | None = None
+        self._lazy_slices: list[_LazySliceSpec] = []
+
+        if lazy:
+            if not isinstance(data, str):
+                raise TypeError("lazy=True currently supports only string file inputs.")
+            if any(c in data for c in "<>*"):
+                raise TypeError(
+                    "lazy=True does not support Bio-Formats pattern strings. "
+                    "Use OMEArrow(..., lazy=False) for pattern ingestion via "
+                    "from_stack_pattern_path."
+                )
+            self._lazy_source = _LazySourceSpec(
+                data=data,
+                column_name=column_name,
+                row_index=row_index,
+                image_type=image_type,
+            )
+            return
 
         # --- 1) Stack pattern (Bio-Formats-style) --------------------------------
         if isinstance(data, str) and any(c in data for c in "<>*"):
@@ -101,69 +149,12 @@ class OMEArrow:
 
         # --- 2) String path/URL: OME-Zarr / OME-Parquet / OME-TIFF ---------------
         elif isinstance(data, str):
-            s = data.strip()
-            path = pathlib.Path(s)
-
-            # Zarr detection
-            if (
-                s.lower().endswith(".zarr")
-                or s.lower().endswith(".ome.zarr")
-                or ".zarr/" in s.lower()
-                or (path.exists() and path.is_dir() and path.suffix.lower() == ".zarr")
-            ):
-                self.data = from_ome_zarr(s)
-                if image_type is not None:
-                    self.data = self._wrap_with_image_type(self.data, image_type)
-
-            # OME-Parquet
-            elif s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {
-                ".parquet",
-                ".pq",
-            }:
-                parquet_result = from_ome_parquet(
-                    s,
-                    column_name=column_name,
-                    row_index=row_index,
-                    return_array=True,
-                )
-                self.data, self._struct_array = parquet_result
-                if image_type is not None:
-                    self.data = self._wrap_with_image_type(self.data, image_type)
-
-            # Vortex
-            elif s.lower().endswith(".vortex") or path.suffix.lower() == ".vortex":
-                vortex_result = from_ome_vortex(
-                    s,
-                    column_name=column_name,
-                    row_index=row_index,
-                    return_array=True,
-                )
-                self.data, self._struct_array = vortex_result
-                if image_type is not None:
-                    self.data = self._wrap_with_image_type(self.data, image_type)
-
-            # TIFF
-            elif path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
-                (".tif", ".tiff")
-            ):
-                self.data = from_tiff(s)
-                if image_type is not None:
-                    self.data = self._wrap_with_image_type(self.data, image_type)
-
-            elif path.exists() and path.is_dir():
-                raise ValueError(
-                    f"Directory '{s}' exists but does not look like an OME-Zarr store "
-                    "(expected suffix '.zarr' or '.ome.zarr')."
-                )
-            else:
-                raise ValueError(
-                    "String input must be one of:\n"
-                    "  • Bio-Formats pattern string (contains '<', '>' or '*')\n"
-                    "  • OME-Zarr path/URL ending with '.zarr' or '.ome.zarr'\n"
-                    "  • OME-Parquet file ending with '.parquet' or '.pq'\n"
-                    "  • Vortex file ending with '.vortex'\n"
-                    "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
-                )
+            self.data, self._struct_array = self._load_from_string_source(
+                data,
+                column_name=column_name,
+                row_index=row_index,
+                image_type=image_type,
+            )
 
         # --- 3) NumPy ndarray ----------------------------------------------------
         elif isinstance(data, np.ndarray):
@@ -190,6 +181,236 @@ class OMEArrow:
             raise TypeError(
                 "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
             )
+
+    @classmethod
+    def scan(
+        cls,
+        data: str,
+        *,
+        tcz: Tuple[int, int, int] = (0, 0, 0),
+        column_name: str = "ome_arrow",
+        row_index: int = 0,
+        image_type: str | None = None,
+    ) -> "OMEArrow":
+        """Create a lazily-loaded OMEArrow, similar to Polars scan semantics.
+
+        Args:
+            data: Input source path/URL.
+            tcz: Default `(t, c, z)` indices used for view helpers.
+            column_name: OME-Arrow column name for tabular sources.
+            row_index: Row index for tabular sources.
+            image_type: Optional image type override.
+
+        Returns:
+            OMEArrow: Lazily planned OMEArrow instance.
+        """
+        return cls(
+            data=data,
+            tcz=tcz,
+            column_name=column_name,
+            row_index=row_index,
+            image_type=image_type,
+            lazy=True,
+        )
+
+    @property
+    def is_lazy(self) -> bool:
+        """Return whether this instance still has deferred work."""
+        return self._lazy_source is not None or bool(self._lazy_slices)
+
+    @property
+    def data(self) -> pa.StructScalar:
+        """Return the materialized OME-Arrow StructScalar.
+
+        Returns:
+            pa.StructScalar: Materialized OME-Arrow record.
+
+        Raises:
+            RuntimeError: If the record could not be initialized.
+        """
+        self._ensure_materialized()
+        if self._data is None:
+            raise RuntimeError("OMEArrow data is not initialized.")
+        return self._data
+
+    @data.setter
+    def data(self, value: pa.StructScalar) -> None:
+        self._data = value
+
+    def collect(self) -> "OMEArrow":
+        """Materialize deferred source data and return ``self``.
+
+        Returns:
+            OMEArrow: The same instance after materialization.
+        """
+        self._ensure_materialized()
+        return self
+
+    @staticmethod
+    def _load_from_string_source(
+        data: str,
+        *,
+        column_name: str,
+        row_index: int,
+        image_type: str | None,
+    ) -> tuple[pa.StructScalar, pa.StructArray | None]:
+        s = data.strip()
+        path = pathlib.Path(s)
+        struct_array: pa.StructArray | None = None
+
+        if (
+            s.lower().endswith(".zarr")
+            or s.lower().endswith(".ome.zarr")
+            or ".zarr/" in s.lower()
+            or (path.exists() and path.is_dir() and path.suffix.lower() == ".zarr")
+        ):
+            scalar = from_ome_zarr(s)
+            if image_type is not None:
+                scalar = OMEArrow._wrap_with_image_type(scalar, image_type)
+            return scalar, None
+
+        if s.lower().endswith((".parquet", ".pq")) or path.suffix.lower() in {
+            ".parquet",
+            ".pq",
+        }:
+            parquet_result = from_ome_parquet(
+                s,
+                column_name=column_name,
+                row_index=row_index,
+                return_array=True,
+            )
+            scalar, struct_array = parquet_result
+            if image_type is not None:
+                scalar = OMEArrow._wrap_with_image_type(scalar, image_type)
+            return scalar, struct_array
+
+        if s.lower().endswith(".vortex") or path.suffix.lower() == ".vortex":
+            vortex_result = from_ome_vortex(
+                s,
+                column_name=column_name,
+                row_index=row_index,
+                return_array=True,
+            )
+            scalar, struct_array = vortex_result
+            if image_type is not None:
+                scalar = OMEArrow._wrap_with_image_type(scalar, image_type)
+            return scalar, struct_array
+
+        if path.suffix.lower() in {".tif", ".tiff"} or s.lower().endswith(
+            (".tif", ".tiff")
+        ):
+            scalar = from_tiff(s)
+            if image_type is not None:
+                scalar = OMEArrow._wrap_with_image_type(scalar, image_type)
+            return scalar, None
+
+        if path.exists() and path.is_dir():
+            raise ValueError(
+                f"Directory '{s}' exists but does not look like an OME-Zarr store "
+                "(expected suffix '.zarr' or '.ome.zarr')."
+            )
+
+        raise ValueError(
+            "String input must be one of:\n"
+            "  • Bio-Formats pattern string (contains '<', '>' or '*')\n"
+            "  • OME-Zarr path/URL ending with '.zarr' or '.ome.zarr'\n"
+            "  • OME-Parquet file ending with '.parquet' or '.pq'\n"
+            "  • Vortex file ending with '.vortex'\n"
+            "  • OME-TIFF path/URL ending with '.tif' or '.tiff'"
+        )
+
+    def _ensure_materialized(self) -> None:
+        if self._lazy_source is None:
+            return
+        lazy_source = self._lazy_source
+        # Intentionally do not clear `_lazy_source` / `_lazy_slices` before load.
+        # If `_load_from_string_source(...)` raises, lazy state is preserved so
+        # callers can inspect/retry without losing the deferred plan.
+        scalar, struct_array = self._load_from_string_source(
+            lazy_source.data,
+            column_name=lazy_source.column_name,
+            row_index=lazy_source.row_index,
+            image_type=lazy_source.image_type,
+        )
+        if self._lazy_slices:
+            data = scalar
+            for spec in self._lazy_slices:
+                data = slice_ome_arrow(
+                    data=data,
+                    x_min=spec.x_min,
+                    x_max=spec.x_max,
+                    y_min=spec.y_min,
+                    y_max=spec.y_max,
+                    t_indices=spec.t_indices,
+                    c_indices=spec.c_indices,
+                    z_indices=spec.z_indices,
+                    fill_missing=spec.fill_missing,
+                )
+            # Applying lazy slices via `slice_ome_arrow` materializes through a
+            # StructScalar path, so we intentionally drop `_struct_array` here.
+            # Consequence: Arrow-backed zero-copy tensor paths
+            # (for example `tensor_view(...).to_dlpack(mode="arrow")`) are not
+            # available after lazy slicing.
+            self.data = data
+            self._struct_array = None
+        else:
+            self.data, self._struct_array = scalar, struct_array
+        # Lazy state is cleared only after a successful materialization.
+        self._lazy_source = None
+        self._lazy_slices = []
+
+    def _tensor_source(self) -> pa.StructScalar | pa.StructArray:
+        self._ensure_materialized()
+        if self._struct_array is not None:
+            return self._struct_array
+        if self._data is None:
+            raise RuntimeError("OMEArrow data is not initialized.")
+        return self._data
+
+    def _resolve_lazy_tensor_view(self, view_kwargs: dict[str, Any]) -> TensorView:
+        """Resolve a lazy tensor view plan without mutating this OMEArrow state.
+
+        Args:
+            view_kwargs: TensorView constructor kwargs captured by LazyTensorView.
+
+        Returns:
+            TensorView: Concrete tensor view for the planned selection.
+        """
+        # Deferred slice plans rely on slice_ome_arrow over a materialized scalar;
+        # keep the existing behavior for those plans.
+        if self._lazy_slices:
+            self._ensure_materialized()
+            return TensorView(self._tensor_source(), **view_kwargs)
+
+        if self._lazy_source is None:
+            return TensorView(self._tensor_source(), **view_kwargs)
+
+        lazy_source = self._lazy_source
+        lazy_plane_source = open_lazy_plane_source(lazy_source.data)
+        if lazy_plane_source is not None:
+            pixels_meta, plane_loader = lazy_plane_source
+            lazy_record = {
+                "id": None,
+                "name": None,
+                "image_type": lazy_source.image_type,
+                "acquisition_datetime": None,
+                "pixels_meta": pixels_meta,
+                "channels": [],
+                "planes": [],
+                "masks": [],
+                "chunk_grid": None,
+                "chunks": [],
+            }
+            return TensorView(lazy_record, plane_loader=plane_loader, **view_kwargs)
+
+        scalar, struct_array = self._load_from_string_source(
+            lazy_source.data,
+            column_name=lazy_source.column_name,
+            row_index=lazy_source.row_index,
+            image_type=lazy_source.image_type,
+        )
+        source = struct_array if struct_array is not None else scalar
+        return TensorView(source, **view_kwargs)
 
     @staticmethod
     def _wrap_with_image_type(
@@ -284,6 +505,8 @@ class OMEArrow:
         ValueError:
             Unknown 'how' or missing required params.
         """
+        self._ensure_materialized()
+
         # existing modes
         if how == "numpy":
             return to_numpy(self.data, dtype=dtype, strict=strict, clamp=clamp)
@@ -364,6 +587,7 @@ class OMEArrow:
                 - type: classification string
                 - summary: human-readable text
         """
+        self._ensure_materialized()
         return describe_ome_arrow(self.data)
 
     def view(
@@ -455,6 +679,8 @@ class OMEArrow:
 
         >>> plotter = obj.view(how="pyvista", clim=(100, 2000), show_axes=False)
         """
+        self._ensure_materialized()
+
         if how == "matplotlib":
             return view_matplotlib(
                 self.data,
@@ -524,12 +750,14 @@ class OMEArrow:
         c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
         roi3d: tuple[int, int, int, int, int, int] | None = None,
+        roi_nd: tuple[int, ...] | None = None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
         chunk_policy: Literal["auto", "combine", "keep"] = "auto",
         channel_policy: Literal["error", "first"] = "error",
-    ) -> TensorView:
+    ) -> TensorView | LazyTensorView:
         """Create a TensorView of the pixel data.
 
         Args:
@@ -541,9 +769,13 @@ class OMEArrow:
             roi3d: Spatial + depth crop (x, y, z, w, h, d) in pixels/planes.
                 This is a convenience alias for ``roi=(x, y, w, h)`` and
                 ``z=slice(z, z + d)``.
+            roi_nd: General ROI tuple with min/max bounds.
+            roi_type: ROI interpretation mode for ``roi_nd``. Supported values:
+                ``"2d"``, ``"2d_timelapse"``, ``"3d"``, and ``"4d"``.
             tile: Tile index (tile_y, tile_x) based on chunk grid.
-            layout: Desired layout string using TZCHW letters where
-                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+            layout: Desired layout string using `TZCYX` letters where
+                T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+                `TZCHW` aliases are also accepted for compatibility.
             dtype: Output dtype override.
             chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.
             channel_policy: Behavior when dropping `C` from layout while
@@ -551,7 +783,11 @@ class OMEArrow:
                 "first" keeps the first channel.
 
         Returns:
-            TensorView: Tensor view over the selected pixels.
+            TensorView | LazyTensorView: Tensor view over selected pixels.
+            In lazy mode, this returns a deferred ``LazyTensorView`` that
+            resolves on first execution call (for example ``to_numpy()``)
+            without forcing ``self`` to materialize unless deferred
+            ``slice_lazy`` operations are queued.
 
         Raises:
             ValueError: If an unsupported scene is requested.
@@ -560,8 +796,27 @@ class OMEArrow:
         if scene not in (None, 0):
             raise ValueError("Only scene=0 is supported for single-image records.")
 
+        if self._lazy_source is not None:
+            return LazyTensorView(
+                loader=self._tensor_source,
+                resolver=self._resolve_lazy_tensor_view,
+                t=t,
+                z=z,
+                c=c,
+                roi=roi,
+                roi3d=roi3d,
+                roi_nd=roi_nd,
+                roi_type=roi_type,
+                tile=tile,
+                layout=layout,
+                dtype=dtype,
+                chunk_policy=chunk_policy,
+                channel_policy=channel_policy,
+            )
+
         # TensorView uses an internal canonical axis basis (TZCHW) for shape/stride
         # math, then applies the requested layout permutation for output.
+        # Public layout examples prefer TZCYX (Y/X), with H/W accepted as aliases.
         return TensorView(
             self._struct_array if self._struct_array is not None else self.data,
             t=t,
@@ -569,6 +824,8 @@ class OMEArrow:
             c=c,
             roi=roi,
             roi3d=roi3d,
+            roi_nd=roi_nd,
+            roi_type=roi_type,
             tile=tile,
             layout=layout,
             dtype=dtype,
@@ -608,6 +865,7 @@ class OMEArrow:
         OMEArrow object
             New OME-Arrow record with updated sizes and planes.
         """
+        self._ensure_materialized()
 
         return OMEArrow(
             data=slice_ome_arrow(
@@ -623,11 +881,96 @@ class OMEArrow:
             )
         )
 
+    def slice_lazy(
+        self,
+        x_min: int,
+        x_max: int,
+        y_min: int,
+        y_max: int,
+        t_indices: Optional[Iterable[int]] = None,
+        c_indices: Optional[Iterable[int]] = None,
+        z_indices: Optional[Iterable[int]] = None,
+        fill_missing: bool = True,
+    ) -> OMEArrow:
+        """Return a lazily planned slice, collected on first execution.
+
+        For lazy sources created with ``OMEArrow.scan(...)``, this queues a
+        deferred slice operation and returns a new lazy OMEArrow plan produced
+        from ``OMEArrow.scan(...)``.
+        For already materialized sources, this falls back to eager ``slice()``.
+        This method does not mutate ``self``.
+
+        Notes:
+            ``slice_lazy`` always returns a new plan object. Internally, the
+            returned plan gets a fresh ``_lazy_slices`` list
+            (``[*self._lazy_slices, new_slice]``), so chained plans do not
+            share mutable slice state with the original ``OMEArrow``.
+            A common footgun is:
+            ``oa.slice_lazy(...).collect()`` followed by ``oa.tensor_view(...)``.
+            Those calls can load/materialize the same source twice because
+            ``oa`` remains the original plan. For a single-load workflow, keep
+            working from the value returned by ``slice_lazy`` / ``collect``.
+
+        Args:
+            x_min: Inclusive minimum X index for the crop.
+            x_max: Exclusive maximum X index for the crop.
+            y_min: Inclusive minimum Y index for the crop.
+            y_max: Exclusive maximum Y index for the crop.
+            t_indices: Optional time indices to retain.
+            c_indices: Optional channel indices to retain.
+            z_indices: Optional depth indices to retain.
+            fill_missing: Whether to zero-fill missing `(t, c, z)` planes.
+
+        Returns:
+            OMEArrow: Lazy plan when source is lazy; eager slice result otherwise.
+        """
+        if self._lazy_source is None:
+            return self.slice(
+                x_min=x_min,
+                x_max=x_max,
+                y_min=y_min,
+                y_max=y_max,
+                t_indices=t_indices,
+                c_indices=c_indices,
+                z_indices=z_indices,
+                fill_missing=fill_missing,
+            )
+
+        lazy_source = self._lazy_source
+        planned = OMEArrow.scan(
+            lazy_source.data,
+            tcz=self.tcz,
+            column_name=lazy_source.column_name,
+            row_index=lazy_source.row_index,
+            image_type=lazy_source.image_type,
+        )
+        planned._lazy_slices = [
+            *self._lazy_slices,
+            _LazySliceSpec(
+                x_min=int(x_min),
+                x_max=int(x_max),
+                y_min=int(y_min),
+                y_max=int(y_max),
+                t_indices=(
+                    None if t_indices is None else tuple(int(i) for i in t_indices)
+                ),
+                c_indices=(
+                    None if c_indices is None else tuple(int(i) for i in c_indices)
+                ),
+                z_indices=(
+                    None if z_indices is None else tuple(int(i) for i in z_indices)
+                ),
+                fill_missing=bool(fill_missing),
+            ),
+        ]
+        return planned
+
     def _repr_html_(self) -> str:
         """
         Auto-render a plane as inline PNG in Jupyter.
         """
         try:
+            self._ensure_materialized()
             view_matplotlib(
                 data=self.data,
                 tcz=self.tcz,

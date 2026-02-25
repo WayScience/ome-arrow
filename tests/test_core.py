@@ -8,6 +8,7 @@ import matplotlib
 import numpy as np
 import pytest
 
+from ome_arrow import ingest
 from ome_arrow.core import OMEArrow
 
 
@@ -408,3 +409,99 @@ def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     reloaded = OMEArrow(str(out), column_name="custom_ome_arrow")
 
     assert reloaded.info() == oa.info()
+
+
+def test_scan_collect_roundtrip() -> None:
+    """Materialize a lazily scanned parquet source via collect()."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    assert oa.is_lazy
+
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        oa.collect()
+    assert not oa.is_lazy
+    assert oa.info()["shape"] == (1, 1, 1, 72, 84)
+
+
+def test_parquet_read_avoids_full_table_scan(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Use row-group reads instead of eager pq.read_table for parquet ingest."""
+    path = "tests/data/JUMP-BR00117006/BR00117006.ome.parquet"
+
+    def _fail_read_table(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("pq.read_table should not be used for from_ome_parquet")
+
+    monkeypatch.setattr(ingest.pq, "read_table", _fail_read_table)
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        oa = OMEArrow(path)
+    assert oa.info()["shape"] == (1, 1, 1, 72, 84)
+
+
+@pytest.mark.parametrize(
+    ("input_data", "expected_shape"),
+    [
+        (
+            "tests/data/ome-artificial-5d-datasets/single-channel.ome.tiff",
+            (1, 1, 1, 167, 439),
+        ),  # 2D
+        (
+            "tests/data/ome-artificial-5d-datasets/time-series.ome.tif",
+            (7, 1, 1, 167, 439),
+        ),  # 2D timelapse
+        (
+            "tests/data/ome-artificial-5d-datasets/z-series.ome.tiff",
+            (1, 1, 5, 167, 439),
+        ),  # 3D
+    ],
+)
+@pytest.mark.filterwarnings(
+    "ignore:As of version 0.4.0, the parser argument is ignored.*:DeprecationWarning"
+)
+def test_scan_collect_roundtrip_non4d(
+    input_data: str, expected_shape: tuple[int, int, int, int, int]
+) -> None:
+    """Materialize lazy scans for non-4D sources and preserve shapes."""
+    oa = OMEArrow.scan(input_data)
+    assert oa.is_lazy
+
+    info = oa.collect().info()
+    assert not oa.is_lazy
+    assert info["shape"] == expected_shape
+
+
+def test_slice_lazy_scan_collect() -> None:
+    """Queue a lazy slice and materialize it via collect()."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    sliced = oa.slice_lazy(0, 10, 0, 8)
+
+    assert sliced.is_lazy
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        sliced.collect()
+    assert sliced.info()["shape"] == (1, 1, 1, 8, 10)
+
+
+def test_slice_lazy_chain_scan_collect() -> None:
+    """Allow chaining lazy slices before materialization."""
+    oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")
+    sliced = oa.slice_lazy(0, 20, 0, 20).slice_lazy(5, 15, 2, 12)
+
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        shape = sliced.collect().info()["shape"]
+    assert shape == (1, 1, 1, 10, 10)
+
+
+def test_slice_lazy_on_materialized_falls_back_to_eager() -> None:
+    """Use eager slice behavior when source is already materialized."""
+    arr = np.arange(1 * 1 * 1 * 6 * 7, dtype=np.uint16).reshape(1, 1, 1, 6, 7)
+    oa = OMEArrow(arr)
+    out = oa.slice_lazy(1, 5, 1, 4)
+
+    assert not out.is_lazy
+    assert out.info()["shape"] == (1, 1, 1, 3, 4)
+
+
+def test_scan_stack_pattern_rejected_in_lazy_mode() -> None:
+    """Reject Bio-Formats stack pattern strings when lazy scan is requested."""
+    pattern = "tests/data/nviz-artificial-4d-dataset/E99_C<111,222>_ZS<000-021>.tif"
+    with pytest.raises(
+        TypeError, match="lazy=True does not support Bio-Formats pattern strings"
+    ):
+        OMEArrow.scan(pattern)

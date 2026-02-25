@@ -8,7 +8,7 @@ import re
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import bioio_ome_tiff
 import bioio_tifffile
@@ -198,6 +198,75 @@ def _read_physical_pixel_sizes(
     unit = _normalize_unit(str(unit)) if unit is not None else None
 
     return psize_x, psize_y, psize_z, unit, True
+
+
+def open_lazy_plane_source(
+    source: str,
+) -> tuple[dict[str, Any], Callable[[int, int, int], np.ndarray]] | None:
+    """Open a source-backed per-plane loader for lazy tensor execution.
+
+    Args:
+        source: Input path/URL string for TIFF or OME-Zarr sources.
+
+    Returns:
+        A tuple of ``(pixels_meta, plane_loader)`` when source-backed lazy plane
+        loading is supported for ``source``; otherwise ``None``.
+    """
+    s = source.strip()
+    path = Path(s)
+    lower = s.lower()
+
+    if path.suffix.lower() in {".tif", ".tiff"} or lower.endswith((".tif", ".tiff")):
+        img = BioImage(
+            image=str(path),
+            reader=(
+                bioio_ome_tiff.Reader
+                if str(path).lower().endswith(("ome.tif", "ome.tiff"))
+                else bioio_tifffile.Reader
+            ),
+        )
+    elif (
+        lower.endswith(".zarr")
+        or lower.endswith(".ome.zarr")
+        or ".zarr/" in lower
+        or (path.exists() and path.is_dir() and path.suffix.lower() == ".zarr")
+    ):
+        img = BioImage(image=str(path), reader=OMEZarrReader)
+    else:
+        return None
+
+    dims = img.dims
+    size_t = int(dims.T or 1)
+    size_c = int(dims.C or 1)
+    size_z = int(dims.Z or 1)
+    size_y = int(dims.Y or 0)
+    size_x = int(dims.X or 0)
+    if size_x <= 0 or size_y <= 0:
+        sample = np.asarray(img.get_image_data("YX", T=0, C=0, Z=0))
+        size_y, size_x = int(sample.shape[-2]), int(sample.shape[-1])
+
+    dim_order = "XYCT" if size_z == 1 else "XYZCT"
+    pixels_meta = {
+        "dimension_order": dim_order,
+        "type": "uint16",
+        "size_x": size_x,
+        "size_y": size_y,
+        "size_z": size_z,
+        "size_c": size_c,
+        "size_t": size_t,
+        "physical_size_x": None,
+        "physical_size_y": None,
+        "physical_size_z": None,
+        "physical_size_unit": None,
+    }
+
+    def _plane_loader(t: int, z: int, c: int) -> np.ndarray:
+        plane = np.asarray(img.get_image_data("YX", T=t, C=c, Z=z))
+        if plane.dtype != np.uint16:
+            plane = np.clip(plane, 0, 65535).astype(np.uint16)
+        return plane
+
+    return pixels_meta, _plane_loader
 
 
 def _load_zarr_attrs(zarr_path: Path) -> dict:
@@ -1306,16 +1375,53 @@ def from_ome_parquet(
     Raises:
         FileNotFoundError: If the Parquet path does not exist.
         ValueError: If the row index is out of range or no suitable column exists.
+
+    Notes:
+        This reader targets the row group containing ``row_index`` and requests
+        only ``column_name`` when provided, avoiding eager full-table reads.
     """
     p = Path(parquet_path)
     if not p.exists():
         raise FileNotFoundError(f"No such file: {p}")
 
-    table = pq.read_table(p)
+    parquet_file = pq.ParquetFile(p)
+    metadata = parquet_file.metadata
+    if metadata is None or metadata.num_rows == 0:
+        raise ValueError("Table contains 0 rows; expected at least 1.")
+    if not (0 <= row_index < metadata.num_rows):
+        raise ValueError(
+            f"row_index {row_index} out of range [0, {metadata.num_rows})."
+        )
+
+    row_group_index = 0
+    row_index_in_group = row_index
+    for i in range(metadata.num_row_groups):
+        group_rows = metadata.row_group(i).num_rows
+        if row_index_in_group < group_rows:
+            row_group_index = i
+            break
+        row_index_in_group -= group_rows
+
+    requested_columns = [column_name] if column_name is not None else None
+    try:
+        table = parquet_file.read_row_group(row_group_index, columns=requested_columns)
+    except (KeyError, ValueError, pa.ArrowInvalid):
+        if requested_columns is None:
+            raise
+        # If the requested column is unavailable in the row group read path, fall
+        # back to all columns so downstream auto-detection/warnings remain intact.
+        table = parquet_file.read_row_group(row_group_index)
+    else:
+        if requested_columns is not None and column_name not in table.column_names:
+            # Some parquet backends return an empty projected table when a column
+            # is missing rather than raising. Retry with full row-group columns so
+            # _ome_arrow_from_table can auto-detect and emit the usual warning.
+            table = parquet_file.read_row_group(row_group_index)
+
     return _ome_arrow_from_table(
         table,
         column_name=column_name,
-        row_index=row_index,
+        row_index=row_index_in_group,
         strict_schema=strict_schema,
         return_array=return_array,
     )

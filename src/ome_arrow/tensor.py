@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import random
+import threading
 import warnings
 from dataclasses import dataclass
-from typing import Any, Iterator, List, Literal, Sequence
+from typing import Any, Callable, Iterator, List, Literal, Sequence
 
 import numpy as np
 import pyarrow as pa
@@ -17,6 +18,15 @@ from ome_arrow.meta import OME_ARROW_STRUCT
 _TZCHW = "TZCHW"
 _ALLOWED_DIMS = set(_TZCHW)
 _ALLOWED_MODES = {"arrow", "numpy"}
+_ROI_TYPES = {"2d", "2d_timelapse", "3d", "4d"}
+_LAYOUT_ALIASES = str.maketrans({"Y": "H", "X": "W"})
+
+
+class _Unset:
+    """Typed sentinel for arguments that were not provided."""
+
+
+_UNSET: _Unset = _Unset()
 
 
 @dataclass(frozen=True)
@@ -38,6 +48,326 @@ class _Selection:
     roi: tuple[int, int, int, int]
 
 
+class LazyTensorView:
+    """Deferred TensorView plan with Polars-style collect semantics."""
+
+    def __init__(
+        self,
+        *,
+        loader: Callable[
+            [],
+            dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
+        ],
+        resolver: Callable[[dict[str, Any]], "TensorView"] | None = None,
+        t: int | slice | Sequence[int] | None = None,
+        z: int | slice | Sequence[int] | None = None,
+        c: int | slice | Sequence[int] | None = None,
+        roi: tuple[int, int, int, int] | None = None,
+        roi3d: tuple[int, int, int, int, int, int] | None = None,
+        roi_nd: tuple[int, ...] | None = None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None = None,
+        tile: tuple[int, int] | None = None,
+        layout: str | None = None,
+        dtype: np.dtype | None = None,
+        chunk_policy: Literal["auto", "combine", "keep"] = "auto",
+        channel_policy: Literal["error", "first"] = "error",
+    ) -> None:
+        """Initialize a deferred TensorView plan.
+
+        Args:
+            loader: Callable that returns concrete OME-Arrow pixel data.
+            resolver: Optional callable that resolves this lazy plan directly to
+                a concrete ``TensorView`` using current selection kwargs.
+            t: Time index selection.
+            z: Depth index selection.
+            c: Channel index selection.
+            roi: Spatial crop as ``(x, y, w, h)``.
+            roi3d: Spatial + depth crop as ``(x, y, z, w, h, d)``.
+            roi_nd: General ROI tuple with min/max bounds.
+            roi_type: ROI interpretation mode for ``roi_nd``.
+            tile: Tile index as ``(tile_y, tile_x)``.
+            layout: Requested output layout (`TZCYX` preferred, `TZCHW`
+                aliases accepted).
+            dtype: Output dtype override.
+            chunk_policy: Chunk handling strategy for ChunkedArray inputs.
+            channel_policy: Behavior when dropping ``C`` from layout.
+        """
+        self._loader = loader
+        self._resolver = resolver
+        self._kwargs: dict[str, Any] = {
+            "t": t,
+            "z": z,
+            "c": c,
+            "roi": roi,
+            "roi3d": roi3d,
+            "roi_nd": roi_nd,
+            "roi_type": roi_type,
+            "tile": tile,
+            "layout": layout,
+            "dtype": dtype,
+            "chunk_policy": chunk_policy,
+            "channel_policy": channel_policy,
+        }
+        self._resolved: TensorView | None = None
+        self._collect_lock = threading.Lock()
+
+    def _spawn(self, **updates: Any) -> "LazyTensorView":
+        kwargs = dict(self._kwargs)
+        kwargs.update(updates)
+        return LazyTensorView(loader=self._loader, resolver=self._resolver, **kwargs)
+
+    def collect(self) -> "TensorView":
+        """Materialize this lazy plan into a concrete TensorView."""
+        resolved = self._resolved
+        if resolved is not None:
+            return resolved
+
+        with self._collect_lock:
+            resolved = self._resolved
+            if resolved is None:
+                if self._resolver is not None:
+                    resolved = self._resolver(dict(self._kwargs))
+                else:
+                    resolved = TensorView(self._loader(), **self._kwargs)
+                self._resolved = resolved
+        return resolved
+
+    def with_layout(self, layout: str) -> "LazyTensorView":
+        """Return a new lazy view with an updated layout."""
+        return self._spawn(layout=layout)
+
+    def select(
+        self,
+        *,
+        t: int | slice | Sequence[int] | None | _Unset = _UNSET,
+        z: int | slice | Sequence[int] | None | _Unset = _UNSET,
+        c: int | slice | Sequence[int] | None | _Unset = _UNSET,
+        roi: tuple[int, int, int, int] | None | _Unset = _UNSET,
+        roi3d: tuple[int, int, int, int, int, int] | None | _Unset = _UNSET,
+        roi_nd: tuple[int, ...] | None | _Unset = _UNSET,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None | _Unset = _UNSET,
+        tile: tuple[int, int] | None | _Unset = _UNSET,
+    ) -> "LazyTensorView":
+        """Return a new lazy plan with updated index/ROI selections."""
+        updates = {}
+        if t is not _UNSET:
+            updates["t"] = t
+        if z is not _UNSET:
+            updates["z"] = z
+        if c is not _UNSET:
+            updates["c"] = c
+        if roi is not _UNSET:
+            updates["roi"] = roi
+        if roi3d is not _UNSET:
+            updates["roi3d"] = roi3d
+        if roi_nd is not _UNSET:
+            updates["roi_nd"] = roi_nd
+        if roi_type is not _UNSET:
+            updates["roi_type"] = roi_type
+        if tile is not _UNSET:
+            updates["tile"] = tile
+        return self._spawn(**updates)
+
+    @property
+    def dtype(self) -> np.dtype:
+        """Return the tensor dtype.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
+        return self.collect().dtype
+
+    @property
+    def device(self) -> str:
+        """Return the tensor storage device.
+
+        Note:
+            For unresolved lazy plans, this returns ``"cpu"`` without calling
+            ``collect()``.
+        """
+        if self._resolved is None:
+            return "cpu"
+        return self._resolved.device
+
+    @property
+    def layout(self) -> str:
+        """Return the effective tensor layout.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
+        layout = self._kwargs.get("layout")
+        if layout is not None:
+            return layout
+        return self.collect().layout
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        """Return the tensor shape.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
+        return self.collect().shape
+
+    @property
+    def strides(self) -> tuple[int, ...]:
+        """Return tensor strides in bytes.
+
+        Note:
+            Accessing this property calls ``collect()`` and may materialize data
+            from source files (for example Parquet/TIFF), which can be expensive.
+        """
+        return self.collect().strides
+
+    def to_numpy(self, *, contiguous: bool = False) -> np.ndarray:
+        """Materialize as a NumPy array.
+
+        Args:
+            contiguous: When True, return a contiguous array copy.
+
+        Returns:
+            np.ndarray: Materialized array.
+        """
+        return self.collect().to_numpy(contiguous=contiguous)
+
+    def to_dlpack(
+        self,
+        *,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Any:
+        """Export the planned view as a DLPack object.
+
+        Args:
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Any: DLPack-compatible object.
+        """
+        return self.collect().to_dlpack(device=device, contiguous=contiguous, mode=mode)
+
+    def to_torch(
+        self,
+        *,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Any:
+        """Convert the planned view to a torch tensor.
+
+        Args:
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Any: ``torch.Tensor`` when torch is installed.
+        """
+        return self.collect().to_torch(device=device, contiguous=contiguous, mode=mode)
+
+    def to_jax(
+        self,
+        *,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Any:
+        """Convert the planned view to a JAX array.
+
+        Args:
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Any: JAX array when JAX is installed.
+        """
+        return self.collect().to_jax(device=device, contiguous=contiguous, mode=mode)
+
+    def iter_dlpack(
+        self,
+        *,
+        batch_size: int | None = None,
+        tile_size: tuple[int, int] | None = None,
+        tiles: tuple[int, int] | None = None,
+        shuffle: bool = False,
+        seed: int | None = None,
+        prefetch: int = 0,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "arrow",
+    ) -> Iterator[Any]:
+        """Iterate DLPack outputs in batches or 2D tiles.
+
+        Args:
+            batch_size: Number of time indices per batch.
+            tile_size: Optional tile size as ``(tile_h, tile_w)``.
+            tiles: Deprecated alias for ``tile_size``.
+            shuffle: Whether to shuffle iteration order.
+            seed: Optional random seed for deterministic shuffling.
+            prefetch: Placeholder prefetch count.
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (``"arrow"`` or ``"numpy"``).
+
+        Returns:
+            Iterator[Any]: Iterator of DLPack-compatible objects.
+        """
+        return self.collect().iter_dlpack(
+            batch_size=batch_size,
+            tile_size=tile_size,
+            tiles=tiles,
+            shuffle=shuffle,
+            seed=seed,
+            prefetch=prefetch,
+            device=device,
+            contiguous=contiguous,
+            mode=mode,
+        )
+
+    def iter_tiles_3d(
+        self,
+        *,
+        tile_size: tuple[int, int, int],
+        shuffle: bool = False,
+        seed: int | None = None,
+        prefetch: int = 0,
+        device: str = "cpu",
+        contiguous: bool = True,
+        mode: str = "numpy",
+    ) -> Iterator[Any]:
+        """Iterate DLPack outputs in 3D tiles.
+
+        Args:
+            tile_size: Tile shape as ``(tile_z, tile_h, tile_w)``.
+            shuffle: Whether to shuffle iteration order.
+            seed: Optional random seed for deterministic shuffling.
+            prefetch: Placeholder prefetch count.
+            device: Target device (``"cpu"`` or ``"cuda"``).
+            contiguous: When True, materialize contiguous data when needed.
+            mode: Export mode (currently ``"numpy"`` only).
+
+        Returns:
+            Iterator[Any]: Iterator of DLPack-compatible objects.
+        """
+        return self.collect().iter_tiles_3d(
+            tile_size=tile_size,
+            shuffle=shuffle,
+            seed=seed,
+            prefetch=prefetch,
+            device=device,
+            contiguous=contiguous,
+            mode=mode,
+        )
+
+
 class TensorView:
     """View OME-Arrow pixel data as a tensor-like object.
 
@@ -50,9 +380,19 @@ class TensorView:
         roi3d: Spatial + depth crop (x, y, z, w, h, d). This is a
             convenience alias for ``roi=(x, y, w, h)`` and
             ``z=slice(z, z + d)``.
+        roi_nd: General ROI tuple with min/max bounds, interpreted by
+            ``roi_type``.
+        roi_type: ROI interpretation mode for ``roi_nd``. Supported values:
+            ``"2d"`` = ``(ymin, xmin, ymax, xmax)``;
+            ``"2d_timelapse"`` =
+            ``(tmin, ymin, xmin, tmax, ymax, xmax)``;
+            ``"3d"`` = ``(zmin, ymin, xmin, zmax, ymax, xmax)``;
+            ``"4d"`` =
+            ``(tmin, zmin, ymin, xmin, tmax, zmax, ymax, xmax)``.
         tile: Tile index (tile_y, tile_x) based on chunk grid.
-        layout: Desired layout string using TZCHW letters where
-            T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+        layout: Desired layout string using `TZCYX` letters where
+            T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+            `TZCHW` aliases are also accepted for compatibility.
         dtype: Output dtype override. Defaults to pixels_meta.type when valid.
         chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs. "auto"
             keeps multi-chunk arrays and unwraps single-chunk arrays.
@@ -67,11 +407,14 @@ class TensorView:
         self,
         data: dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
         *,
+        plane_loader: Callable[[int, int, int], np.ndarray] | None = None,
         t: int | slice | Sequence[int] | None = None,
         z: int | slice | Sequence[int] | None = None,
         c: int | slice | Sequence[int] | None = None,
         roi: tuple[int, int, int, int] | None = None,
         roi3d: tuple[int, int, int, int, int, int] | None = None,
+        roi_nd: tuple[int, ...] | None = None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None = None,
         tile: tuple[int, int] | None = None,
         layout: str | None = None,
         dtype: np.dtype | None = None,
@@ -82,6 +425,9 @@ class TensorView:
 
         Args:
             data: OME-Arrow record as dict/StructScalar/StructArray/ChunkedArray.
+            plane_loader: Optional callback that returns one YX plane for
+                ``(t, z, c)``. When provided, per-plane reads use this loader
+                instead of ``planes``/``chunks`` payloads in ``data``.
             t: Time index selection (int, slice, or sequence). Default: all.
             z: Z index selection (int, slice, or sequence). Default: all.
             c: Channel index selection (int, slice, or sequence). Default: all.
@@ -89,9 +435,13 @@ class TensorView:
             roi3d: Spatial + depth crop (x, y, z, w, h, d). This is a
                 convenience alias for ``roi=(x, y, w, h)`` and
                 ``z=slice(z, z + d)``.
+            roi_nd: General ROI tuple with min/max bounds, interpreted by
+                ``roi_type``.
+            roi_type: ROI interpretation mode for ``roi_nd``.
             tile: Tile index (tile_y, tile_x) derived from chunk_grid.
-            layout: Desired layout string using TZCHW letters where
-                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+            layout: Desired layout string using `TZCYX` letters where
+                T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+                `TZCHW` aliases are also accepted for compatibility.
             dtype: Output dtype override.
             chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.
             channel_policy: Behavior when dropping `C` from layout while
@@ -125,6 +475,7 @@ class TensorView:
         # Keep normalized backing data so child TensorViews do not repeatedly
         # combine chunked Arrow arrays during iteration.
         self._data = data
+        self._plane_loader = plane_loader
         self._layout_override = _normalize_layout(layout) if layout else None
         self._channel_policy = _normalize_channel_policy(channel_policy)
 
@@ -140,7 +491,14 @@ class TensorView:
         self._dtype = np.dtype(dtype)
 
         self._selection = self._normalize_selection(
-            t=t, z=z, c=c, roi=roi, roi3d=roi3d, tile=tile
+            t=t,
+            z=z,
+            c=c,
+            roi=roi,
+            roi3d=roi3d,
+            roi_nd=roi_nd,
+            roi_type=roi_type,
+            tile=tile,
         )
         self._array: np.ndarray | None = None
         self._array_layout: str | None = None
@@ -184,8 +542,9 @@ class TensorView:
         """Return a new TensorView with a layout override.
 
         Args:
-            layout: Desired layout string using TZCHW letters where
-                T=time, Z=depth, C=channel, H=height (Y), W=width (X).
+            layout: Desired layout string using `TZCYX` letters where
+                T=time, Z=depth, C=channel, Y=row axis, X=column axis.
+                `TZCHW` aliases are also accepted for compatibility.
 
         Returns:
             TensorView: New view with the requested layout.
@@ -193,6 +552,7 @@ class TensorView:
 
         return TensorView(
             self._data,
+            plane_loader=self._plane_loader,
             t=self._selection.t,
             z=self._selection.z,
             c=self._selection.c,
@@ -445,6 +805,7 @@ class TensorView:
             t, z_batch, x, y, w, h = batch[0]
             view = TensorView(
                 self._data,
+                plane_loader=self._plane_loader,
                 t=[t],
                 z=list(z_batch),
                 c=self._selection.c,
@@ -481,6 +842,7 @@ class TensorView:
         for batch in _batched(t_indices, batch_size, prefetch=prefetch):
             view = TensorView(
                 self._data,
+                plane_loader=self._plane_loader,
                 t=batch,
                 z=self._selection.z,
                 c=self._selection.c,
@@ -523,6 +885,7 @@ class TensorView:
             x, y, w, h = batch[0]
             view = TensorView(
                 self._data,
+                plane_loader=self._plane_loader,
                 t=self._selection.t,
                 z=self._selection.z,
                 c=self._selection.c,
@@ -565,6 +928,9 @@ class TensorView:
     def _plane_map(self) -> dict[tuple[int, int, int], list[Any]]:
         if self._has_chunks():
             return {}
+        if self._struct_array is not None:
+            # Arrow-backed plane reads use _select_plane_values in _read_plane.
+            return {}
         plane_map = {}
         data_py = self._data_py_dict()
         for plane in data_py.get("planes", []):
@@ -580,6 +946,30 @@ class TensorView:
         z: int,
         c: int,
     ) -> np.ndarray:
+        if self._plane_loader is not None:
+            arr = np.asarray(self._plane_loader(t, z, c), dtype=self._dtype)
+            return arr.reshape(self._size_y, self._size_x)
+
+        if self._struct_array is not None and not self._has_chunks():
+            values = _select_plane_values(self._struct_array, t=t, z=z, c=c)
+            arr = values.to_numpy(zero_copy_only=False)
+            return np.asarray(arr, dtype=self._dtype).reshape(
+                self._size_y, self._size_x
+            )
+
+        if self._struct_array is not None and self._has_chunks():
+            chunk_order = str(self._chunk_grid().get("chunk_order") or "ZYX").upper()
+            return _plane_from_chunks_arrow(
+                self._struct_array,
+                t=t,
+                z=z,
+                c=c,
+                size_x=self._size_x,
+                size_y=self._size_y,
+                dtype=self._dtype,
+                chunk_order=chunk_order,
+            )
+
         if self._has_chunks():
             data_py = self._data_py_dict()
             return plane_from_chunks(data_py, t=t, z=z, c=c, dtype=self._dtype)
@@ -602,8 +992,29 @@ class TensorView:
         c: int | slice | Sequence[int] | None,
         roi: tuple[int, int, int, int] | None,
         roi3d: tuple[int, int, int, int, int, int] | None,
+        roi_nd: tuple[int, ...] | None,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None,
         tile: tuple[int, int] | None,
     ) -> _Selection:
+        if roi_nd is not None:
+            if roi is not None or roi3d is not None or tile is not None:
+                raise ValueError("Provide only one of roi_nd, roi3d, roi, or tile.")
+            roi, t_from_roi, z_from_roi = self._parse_roi_nd(roi_nd, roi_type)
+            if t_from_roi is not None:
+                if t is not None:
+                    raise ValueError(
+                        "Provide either t or roi_nd time bounds, not both."
+                    )
+                t = t_from_roi
+            if z_from_roi is not None:
+                if z is not None:
+                    raise ValueError(
+                        "Provide either z or roi_nd depth bounds, not both."
+                    )
+                z = z_from_roi
+        elif roi_type is not None:
+            raise ValueError("roi_type requires roi_nd.")
+
         if roi3d is not None:
             if roi is not None or tile is not None:
                 raise ValueError("Provide only one of roi3d, roi, or tile.")
@@ -642,6 +1053,65 @@ class TensorView:
             raise ValueError("roi is out of bounds")
 
         return _Selection(t=t_idx, z=z_idx, c=c_idx, roi=roi)
+
+    def _parse_roi_nd(
+        self,
+        roi_nd: tuple[int, ...],
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None,
+    ) -> tuple[tuple[int, int, int, int], slice | None, slice | None]:
+        vals = tuple(int(v) for v in roi_nd)
+        if roi_type is None:
+            if len(vals) == 4:
+                roi_type = "2d"
+            elif len(vals) == 8:
+                roi_type = "4d"
+            elif len(vals) == 6:
+                raise ValueError(
+                    "roi_nd with 6 values is ambiguous; provide roi_type "
+                    "('2d_timelapse' or '3d')."
+                )
+            else:
+                raise ValueError("roi_nd must have length 4, 6, or 8.")
+        if roi_type not in _ROI_TYPES:
+            raise ValueError(f"Unsupported roi_type: {roi_type!r}.")
+
+        t_sel: slice | None = None
+        z_sel: slice | None = None
+
+        if roi_type == "2d":
+            if len(vals) != 4:
+                raise ValueError("roi_type='2d' requires 4 values.")
+            ymin, xmin, ymax, xmax = vals
+        elif roi_type == "2d_timelapse":
+            if len(vals) != 6:
+                raise ValueError("roi_type='2d_timelapse' requires 6 values.")
+            tmin, ymin, xmin, tmax, ymax, xmax = vals
+            if tmin < 0 or tmax > self._size_t or tmax <= tmin:
+                raise ValueError("roi_nd time bounds are out of range.")
+            t_sel = slice(tmin, tmax)
+        elif roi_type == "3d":
+            if len(vals) != 6:
+                raise ValueError("roi_type='3d' requires 6 values.")
+            zmin, ymin, xmin, zmax, ymax, xmax = vals
+            if zmin < 0 or zmax > self._size_z or zmax <= zmin:
+                raise ValueError("roi_nd depth bounds are out of range.")
+            z_sel = slice(zmin, zmax)
+        else:
+            if len(vals) != 8:
+                raise ValueError("roi_type='4d' requires 8 values.")
+            tmin, zmin, ymin, xmin, tmax, zmax, ymax, xmax = vals
+            if tmin < 0 or tmax > self._size_t or tmax <= tmin:
+                raise ValueError("roi_nd time bounds are out of range.")
+            if zmin < 0 or zmax > self._size_z or zmax <= zmin:
+                raise ValueError("roi_nd depth bounds are out of range.")
+            t_sel = slice(tmin, tmax)
+            z_sel = slice(zmin, zmax)
+
+        x, y = int(xmin), int(ymin)
+        w, h = int(xmax - xmin), int(ymax - ymin)
+        if w <= 0 or h <= 0:
+            raise ValueError("roi_nd spatial bounds must satisfy max > min.")
+        return (x, y, w, h), t_sel, z_sel
 
     def _data_py_dict(self) -> dict[str, Any]:
         """Return the backing record as a Python dict.
@@ -809,8 +1279,12 @@ def _normalize_layout(layout: str | None) -> str | None:
     layout = layout.strip().upper()
     if not layout:
         raise ValueError("layout must be non-empty")
+    layout = layout.translate(_LAYOUT_ALIASES)
     if any(dim not in _ALLOWED_DIMS for dim in layout):
-        raise ValueError("layout must use only TZCHW letters")
+        raise ValueError(
+            "layout must use only TZC + (Y/X or H/W) letters "
+            "(for example CYX, YXC, TZCYX)."
+        )
     if len(set(layout)) != len(layout):
         raise ValueError("layout cannot repeat dimensions")
     return layout
@@ -1122,3 +1596,62 @@ def _select_chunk_values(
 
     pixels_list = selected.field("pixels")[0]
     return pixels_list.values
+
+
+def _plane_from_chunks_arrow(
+    struct_arr: pa.StructArray,
+    *,
+    t: int,
+    z: int,
+    c: int,
+    size_x: int,
+    size_y: int,
+    dtype: np.dtype,
+    chunk_order: str = "ZYX",
+) -> np.ndarray:
+    """Reconstruct one YX plane from Arrow chunk rows without Python dict casts."""
+    if chunk_order != "ZYX":
+        raise ValueError("Only chunk_order='ZYX' is supported for now.")
+
+    chunks_arr = struct_arr.field("chunks")
+    if len(chunks_arr) == 0 or chunks_arr.is_null().to_pylist()[0]:
+        return np.zeros((size_y, size_x), dtype=dtype)
+
+    chunks = chunks_arr[0].values
+    z_field = chunks.field("z")
+    sz_field = chunks.field("shape_z")
+    z_end = pc.add(z_field, sz_field)
+    mask = pc.and_(
+        pc.equal(chunks.field("t"), t),
+        pc.and_(
+            pc.equal(chunks.field("c"), c),
+            pc.and_(pc.less_equal(z_field, z), pc.greater(z_end, z)),
+        ),
+    )
+    selected = pc.filter(chunks, mask)
+
+    out = np.zeros((size_y, size_x), dtype=dtype)
+    for i in range(len(selected)):
+        z0 = int(selected.field("z")[i].as_py())
+        y0 = int(selected.field("y")[i].as_py())
+        x0 = int(selected.field("x")[i].as_py())
+        sz = int(selected.field("shape_z")[i].as_py())
+        sy = int(selected.field("shape_y")[i].as_py())
+        sx = int(selected.field("shape_x")[i].as_py())
+        if y0 < 0 or x0 < 0 or sz <= 0 or sy <= 0 or sx <= 0:
+            raise ValueError("Chunk has invalid shape or origin.")
+        if z0 + sz <= z or z0 > z:
+            continue
+        if y0 + sy > size_y or x0 + sx > size_x:
+            raise ValueError("Chunk extent out of range.")
+
+        pixels_values = selected.field("pixels")[i].values
+        pix = np.asarray(pixels_values.to_numpy(zero_copy_only=False), dtype=dtype)
+        expected_len = sz * sy * sx
+        if pix.size != expected_len:
+            raise ValueError(
+                f"Chunk pixels length {pix.size} != expected {expected_len}."
+            )
+        arr3d = pix.reshape(sz, sy, sx)
+        out[y0 : y0 + sy, x0 : x0 + sx] = arr3d[z - z0]
+    return out

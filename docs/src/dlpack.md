@@ -7,23 +7,24 @@ and (optionally) GPU.
 Key defaults:
 
 - OME-Arrow tensor layouts always include channels (`C`) as a tensor axis.
-- Default layout is `CHW` when both `T` and `Z` are singleton in the source.
-- Otherwise, default layout is `TZCHW` (with singleton `T`/`Z` retained unless you override layout).
-- You can override with any valid TZCHW permutation/subset, for example `HWC`, `ZCHW`, or `CHW`.
+- Default layout is `CHW` (equivalent to `CYX`) when both `T` and `Z` are singleton in the source.
+- Otherwise, default layout is `TZCHW` (equivalent to `TZCYX`, with singleton `T`/`Z` retained unless you override layout).
+- You can override with any valid TZCHW/TZCYX permutation/subset, for example `YXC`, `ZCYX`, or `CYX`.
 
 Layout nomenclature:
 
 - `T`: time index
 - `Z`: z/depth index
 - `C`: channel index
-- `H`: image height (Y axis)
-- `W`: image width (X axis)
+- `Y`: image row axis (height)
+- `X`: image column axis (width)
+  (`H/W` aliases are also accepted for compatibility).
 
 Practical mapping:
 
-- 2D image content (`YX`) is typically exposed as `CHW`.
-- 3D z-stack content (`ZYX`) is typically exposed as `ZCHW` or `TZCHW` (with `T=1`).
-- Time-lapse and volumetric content use `TZCHW` by default.
+- 2D image content (`YX`) is typically exposed as `CYX`.
+- 3D z-stack content (`ZYX`) is typically exposed as `ZCYX` or `TZCYX` (with `T=1`).
+- Time-lapse and volumetric content use `TZCYX`/`TZCHW` by default.
 
 ## PyTorch
 
@@ -41,13 +42,32 @@ flat = torch.utils.dlpack.from_dlpack(capsule)
 tensor = flat.reshape(view.shape)
 ```
 
+## Lazy scan-style slicing
+
+```python
+from ome_arrow import OMEArrow
+
+obj = OMEArrow.scan("example.ome.parquet")
+# Prioritize lazy slice planning first.
+lazy_crop = obj.slice_lazy(0, 512, 0, 512).slice_lazy(64, 256, 64, 256)
+cropped = lazy_crop.collect()
+
+# Then execute tensor selections on the sliced result.
+tensor_view = cropped.tensor_view(t=0, z=slice(0, 8), roi=(64, 64, 128, 128))
+arr = tensor_view.to_numpy()
+
+# Note: executing a LazyTensorView from OMEArrow.scan(...) does not
+# materialize the original OMEArrow object itself.
+# Call obj.collect() explicitly if you need to materialize `obj`.
+```
+
 ## JAX
 
 ```python
 from ome_arrow import OMEArrow
 
 obj = OMEArrow("example.ome.parquet")
-view = obj.tensor_view(t=0, z=0, c=0, layout="CHW")
+view = obj.tensor_view(t=0, z=0, c=0, layout="CYX")
 
 import jax.numpy as jnp
 
@@ -68,7 +88,7 @@ view = obj.tensor_view()
 # Batch over time (T) dimension.
 for cap in view.iter_dlpack(batch_size=2, shuffle=False, mode="numpy"):
     batch = np.from_dlpack(cap)
-    # batch shape: (batch, Z, C, H, W) in TZCHW layout
+    # batch shape: (batch, Z, C, Y, X) in TZCYX layout
 ```
 
 ```python
@@ -83,7 +103,7 @@ for cap in view.iter_dlpack(
     tile_size=(256, 256), shuffle=True, seed=123, mode="numpy"
 ):
     tile = np.from_dlpack(cap)
-    # tile shape: (C, H, W) in CHW layout
+    # tile shape: (C, Y, X) in CYX layout
 ```
 
 ## Ownership and lifetime
@@ -116,3 +136,37 @@ pip install "ome-arrow[dlpack-torch]"  # torch only
 pip install "ome-arrow[dlpack-jax]"    # jax only
 pip install "ome-arrow[dlpack]"        # both
 ```
+
+## Benchmarking lazy reads
+
+To quickly compare lazy tensor read paths (TIFF source-backed execution,
+Parquet planes, Parquet chunks), run:
+
+```bash
+uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
+```
+
+This is a lightweight local benchmark intended for directional performance
+checks during development.
+
+In CI, the `tests` workflow runs a `benchmark_canary` job that executes the
+same script and uploads a JSON report artifact.
+
+### Recalibrating `ci-baseline.json`
+
+When performance changes are intentional (or runner behavior shifts), update
+`benchmarks/ci-baseline.json` as follows:
+
+1. Check out the latest `main`.
+1. Run the benchmark multiple times:
+   `uv run python benchmarks/benchmark_lazy_tensor.py --repeats 7 --warmup 2 --json-out benchmark-results.json`
+1. Record `median_ms` per case across runs.
+1. Set each baseline value to a stable, slightly conservative median.
+1. Open a PR that updates baseline values only, with benchmark evidence.
+
+Expected variability:
+
+- Small fluctuations are normal on GitHub-hosted runners.
+- Relative ordering of cases is usually stable.
+- Typical drift should be modest, but occasional jumps can happen due to
+  runner image or dependency changes.

@@ -46,3 +46,87 @@ jobs:
         run: uv sync --frozen --extra viz --extra dlpack
       - name: Run pytest
         run: uv run --frozen pytest
+
+  benchmark_canary:
+    runs-on: ubuntu-24.04
+    env:
+      BENCH_ENFORCE: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Python setup
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+      - name: Sync dependencies
+        run: uv sync --frozen
+      - name: Run lazy tensor canary benchmark
+        run: |
+          extra_args=""
+          if [ "${BENCH_ENFORCE}" = "1" ]; then
+            extra_args="--fail-on-regression"
+          fi
+          uv run --frozen python benchmarks/benchmark_lazy_tensor.py \
+            --repeats 7 \
+            --warmup 2 \
+            --baseline-json benchmarks/ci-baseline.json \
+            --regression-factor 1.5 \
+            --absolute-slack-ms 5.0 \
+            --json-out benchmark-results.json \
+            ${extra_args}
+      - name: Write benchmark summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("benchmark-results.json").read_text())
+          lines = [
+              "## Lazy Tensor Benchmark Canary",
+              "",
+              f"- repeats: `{payload['repeats']}`",
+              f"- warmup: `{payload['warmup']}`",
+              "",
+              "| case | median (ms) | min (ms) | max (ms) |",
+              "|---|---:|---:|---:|",
+          ]
+          for r in payload["results"]:
+              lines.append(
+                  "| "
+                  f"{r['name']} | {r['median_ms']:.2f} "
+                  f"| {r['min_ms']:.2f} | {r['max_ms']:.2f} |"
+              )
+          lines.extend(
+              [
+                  "",
+                  "| case | baseline (ms) | threshold (ms) | status |",
+                  "|---|---:|---:|---|",
+              ]
+          )
+          for c in payload["regression_checks"]:
+              baseline = (
+                  "-"
+                  if c["baseline_ms"] is None
+                  else f"{c['baseline_ms']:.2f}"
+              )
+              threshold = (
+                  "-"
+                  if c["threshold_ms"] is None
+                  else f"{c['threshold_ms']:.2f}"
+              )
+              status = "regressed" if c["regressed"] else "ok"
+              lines.append(
+                  f"| {c['name']} | {baseline} | "
+                  f"{threshold} | {status} |"
+              )
+
+          summary_path = Path(__import__("os").environ["GITHUB_STEP_SUMMARY"])
+          summary_path.write_text("\n".join(lines) + "\n")
+          PY
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lazy-tensor-benchmark-${{ github.run_id }}
+          path: benchmark-results.json
