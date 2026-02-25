@@ -343,23 +343,24 @@ and (optionally) GPU.</p>
 <p>Key defaults:</p>
 <ul class="simple">
 <li><p>OME-Arrow tensor layouts always include channels (<code class="docutils literal notranslate"><span class="pre">C</span></code>) as a tensor axis.</p></li>
-<li><p>Default layout is <code class="docutils literal notranslate"><span class="pre">CHW</span></code> when both <code class="docutils literal notranslate"><span class="pre">T</span></code> and <code class="docutils literal notranslate"><span class="pre">Z</span></code> are singleton in the source.</p></li>
-<li><p>Otherwise, default layout is <code class="docutils literal notranslate"><span class="pre">TZCHW</span></code> (with singleton <code class="docutils literal notranslate"><span class="pre">T</span></code>/<code class="docutils literal notranslate"><span class="pre">Z</span></code> retained unless you override layout).</p></li>
-<li><p>You can override with any valid TZCHW permutation/subset, for example <code class="docutils literal notranslate"><span class="pre">HWC</span></code>, <code class="docutils literal notranslate"><span class="pre">ZCHW</span></code>, or <code class="docutils literal notranslate"><span class="pre">CHW</span></code>.</p></li>
+<li><p>Default layout is <code class="docutils literal notranslate"><span class="pre">CHW</span></code> (equivalent to <code class="docutils literal notranslate"><span class="pre">CYX</span></code>) when both <code class="docutils literal notranslate"><span class="pre">T</span></code> and <code class="docutils literal notranslate"><span class="pre">Z</span></code> are singleton in the source.</p></li>
+<li><p>Otherwise, default layout is <code class="docutils literal notranslate"><span class="pre">TZCHW</span></code> (equivalent to <code class="docutils literal notranslate"><span class="pre">TZCYX</span></code>, with singleton <code class="docutils literal notranslate"><span class="pre">T</span></code>/<code class="docutils literal notranslate"><span class="pre">Z</span></code> retained unless you override layout).</p></li>
+<li><p>You can override with any valid TZCHW/TZCYX permutation/subset, for example <code class="docutils literal notranslate"><span class="pre">YXC</span></code>, <code class="docutils literal notranslate"><span class="pre">ZCYX</span></code>, or <code class="docutils literal notranslate"><span class="pre">CYX</span></code>.</p></li>
 </ul>
 <p>Layout nomenclature:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">T</span></code>: time index</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Z</span></code>: z/depth index</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">C</span></code>: channel index</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">H</span></code>: image height (Y axis)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">W</span></code>: image width (X axis)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Y</span></code>: image row axis (height)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">X</span></code>: image column axis (width)
+(<code class="docutils literal notranslate"><span class="pre">H/W</span></code> aliases are also accepted for compatibility).</p></li>
 </ul>
 <p>Practical mapping:</p>
 <ul class="simple">
-<li><p>2D image content (<code class="docutils literal notranslate"><span class="pre">YX</span></code>) is typically exposed as <code class="docutils literal notranslate"><span class="pre">CHW</span></code>.</p></li>
-<li><p>3D z-stack content (<code class="docutils literal notranslate"><span class="pre">ZYX</span></code>) is typically exposed as <code class="docutils literal notranslate"><span class="pre">ZCHW</span></code> or <code class="docutils literal notranslate"><span class="pre">TZCHW</span></code> (with <code class="docutils literal notranslate"><span class="pre">T=1</span></code>).</p></li>
-<li><p>Time-lapse and volumetric content use <code class="docutils literal notranslate"><span class="pre">TZCHW</span></code> by default.</p></li>
+<li><p>2D image content (<code class="docutils literal notranslate"><span class="pre">YX</span></code>) is typically exposed as <code class="docutils literal notranslate"><span class="pre">CYX</span></code>.</p></li>
+<li><p>3D z-stack content (<code class="docutils literal notranslate"><span class="pre">ZYX</span></code>) is typically exposed as <code class="docutils literal notranslate"><span class="pre">ZCYX</span></code> or <code class="docutils literal notranslate"><span class="pre">TZCYX</span></code> (with <code class="docutils literal notranslate"><span class="pre">T=1</span></code>).</p></li>
+<li><p>Time-lapse and volumetric content use <code class="docutils literal notranslate"><span class="pre">TZCYX</span></code>/<code class="docutils literal notranslate"><span class="pre">TZCHW</span></code> by default.</p></li>
 </ul>
 <section id="pytorch">
 <h2>PyTorch<a class="headerlink" href="#pytorch" title="Link to this heading">#</a></h2>
@@ -377,12 +378,31 @@ and (optionally) GPU.</p>
 </pre></div>
 </div>
 </section>
+<section id="lazy-scan-style-slicing">
+<h2>Lazy scan-style slicing<a class="headerlink" href="#lazy-scan-style-slicing" title="Link to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
+
+<span class="n">obj</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s2">&quot;example.ome.parquet&quot;</span><span class="p">)</span>
+<span class="c1"># Prioritize lazy slice planning first.</span>
+<span class="n">lazy_crop</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">slice_lazy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span><span class="o">.</span><span class="n">slice_lazy</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+<span class="n">cropped</span> <span class="o">=</span> <span class="n">lazy_crop</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="c1"># Then execute tensor selections on the sliced result.</span>
+<span class="n">tensor_view</span> <span class="o">=</span> <span class="n">cropped</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="n">roi</span><span class="o">=</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">))</span>
+<span class="n">arr</span> <span class="o">=</span> <span class="n">tensor_view</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+<span class="c1"># Note: executing a LazyTensorView from OMEArrow.scan(...) does not</span>
+<span class="c1"># materialize the original OMEArrow object itself.</span>
+<span class="c1"># Call obj.collect() explicitly if you need to materialize `obj`.</span>
+</pre></div>
+</div>
+</section>
 <section id="jax">
 <h2>JAX<a class="headerlink" href="#jax" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
 
 <span class="n">obj</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="s2">&quot;example.ome.parquet&quot;</span><span class="p">)</span>
-<span class="n">view</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;CHW&quot;</span><span class="p">)</span>
+<span class="n">view</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;CYX&quot;</span><span class="p">)</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 
@@ -403,7 +423,7 @@ and (optionally) GPU.</p>
 <span class="c1"># Batch over time (T) dimension.</span>
 <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">view</span><span class="o">.</span><span class="n">iter_dlpack</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">):</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">cap</span><span class="p">)</span>
-    <span class="c1"># batch shape: (batch, Z, C, H, W) in TZCHW layout</span>
+    <span class="c1"># batch shape: (batch, Z, C, Y, X) in TZCYX layout</span>
 </pre></div>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
@@ -417,7 +437,7 @@ and (optionally) GPU.</p>
     <span class="n">tile_size</span><span class="o">=</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">123</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span>
 <span class="p">):</span>
     <span class="n">tile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">cap</span><span class="p">)</span>
-    <span class="c1"># tile shape: (C, H, W) in CHW layout</span>
+    <span class="c1"># tile shape: (C, Y, X) in CYX layout</span>
 </pre></div>
 </div>
 </section>
@@ -448,6 +468,38 @@ pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot
 pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;ome-arrow[dlpack]&quot;</span><span class="w">        </span><span class="c1"># both</span>
 </pre></div>
 </div>
+</section>
+<section id="benchmarking-lazy-reads">
+<h2>Benchmarking lazy reads<a class="headerlink" href="#benchmarking-lazy-reads" title="Link to this heading">#</a></h2>
+<p>To quickly compare lazy tensor read paths (TIFF source-backed execution,
+Parquet planes, Parquet chunks), run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/benchmark_lazy_tensor.py<span class="w"> </span>--repeats<span class="w"> </span><span class="m">5</span><span class="w"> </span>--warmup<span class="w"> </span><span class="m">1</span>
+</pre></div>
+</div>
+<p>This is a lightweight local benchmark intended for directional performance
+checks during development.</p>
+<p>In CI, the <code class="docutils literal notranslate"><span class="pre">tests</span></code> workflow runs a <code class="docutils literal notranslate"><span class="pre">benchmark_canary</span></code> job that executes the
+same script and uploads a JSON report artifact.</p>
+<section id="recalibrating-ci-baseline-json">
+<h3>Recalibrating <code class="docutils literal notranslate"><span class="pre">ci-baseline.json</span></code><a class="headerlink" href="#recalibrating-ci-baseline-json" title="Link to this heading">#</a></h3>
+<p>When performance changes are intentional (or runner behavior shifts), update
+<code class="docutils literal notranslate"><span class="pre">benchmarks/ci-baseline.json</span></code> as follows:</p>
+<ol class="arabic simple">
+<li><p>Check out the latest <code class="docutils literal notranslate"><span class="pre">main</span></code>.</p></li>
+<li><p>Run the benchmark multiple times:
+<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">benchmarks/benchmark_lazy_tensor.py</span> <span class="pre">--repeats</span> <span class="pre">7</span> <span class="pre">--warmup</span> <span class="pre">2</span> <span class="pre">--json-out</span> <span class="pre">benchmark-results.json</span></code></p></li>
+<li><p>Record <code class="docutils literal notranslate"><span class="pre">median_ms</span></code> per case across runs.</p></li>
+<li><p>Set each baseline value to a stable, slightly conservative median.</p></li>
+<li><p>Open a PR that updates baseline values only, with benchmark evidence.</p></li>
+</ol>
+<p>Expected variability:</p>
+<ul class="simple">
+<li><p>Small fluctuations are normal on GitHub-hosted runners.</p></li>
+<li><p>Relative ordering of cases is usually stable.</p></li>
+<li><p>Typical drift should be modest, but occasional jumps can happen due to
+runner image or dependency changes.</p></li>
+</ul>
+</section>
 </section>
 </section>
 

@@ -382,15 +382,29 @@ Please also reference an example notebook: <a class="reference external" href="h
 
 <span class="n">oa</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="s2">&quot;your_image.ome.parquet&quot;</span><span class="p">)</span>
 
-<span class="c1"># Spatial ROI per plane</span>
-<span class="n">view</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;CHW&quot;</span><span class="p">)</span>
+<span class="c1"># Spatial ROI per plane (YX convention)</span>
+<span class="n">view</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;CYX&quot;</span><span class="p">)</span>
 
 <span class="c1"># Convenience 3D ROI (x, y, z, w, h, d)</span>
-<span class="n">view3d</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">roi3d</span><span class="o">=</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;TZCHW&quot;</span><span class="p">)</span>
+<span class="n">view3d</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">roi3d</span><span class="o">=</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;TZCYX&quot;</span><span class="p">)</span>
 
 <span class="c1"># 3D tiled iteration over (z, y, x)</span>
 <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">view3d</span><span class="o">.</span><span class="n">iter_tiles_3d</span><span class="p">(</span><span class="n">tile_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">):</span>
     <span class="k">pass</span>
+</pre></div>
+</div>
+<p>Lazy scan-style convention (Polars-like):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
+
+<span class="n">oa</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s2">&quot;your_image.ome.parquet&quot;</span><span class="p">)</span>  <span class="c1"># deferred load</span>
+<span class="c1"># First: queue lazy spatial/index slicing</span>
+<span class="n">lazy_crop</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">slice_lazy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span><span class="o">.</span><span class="n">slice_lazy</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+<span class="n">cropped</span> <span class="o">=</span> <span class="n">lazy_crop</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="c1"># slice_lazy returns a new OMEArrow plan; collect does not mutate `oa`.</span>
+<span class="c1"># Build tensor_view from the returned sliced object to reuse that plan.</span>
+<span class="n">tensor_view_result</span> <span class="o">=</span> <span class="n">cropped</span><span class="o">.</span><span class="n">tensor_view</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">roi</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">192</span><span class="p">))</span>
+<span class="n">arr</span> <span class="o">=</span> <span class="n">tensor_view_result</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>Advanced options:</p>
@@ -399,6 +413,31 @@ Please also reference an example notebook: <a class="reference external" href="h
 <li><p><code class="docutils literal notranslate"><span class="pre">channel_policy=&quot;error&quot;</span> <span class="pre">|</span> <span class="pre">&quot;first&quot;</span></code> controls behavior when dropping <code class="docutils literal notranslate"><span class="pre">C</span></code> from layout.</p></li>
 </ul>
 <p>See full docs: <a class="reference internal" href="dlpack.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">docs/src/dlpack.md</span></code></span></a></p>
+</section>
+<section id="benchmarking-lazy-reads">
+<h2>Benchmarking lazy reads<a class="headerlink" href="#benchmarking-lazy-reads" title="Link to this heading">#</a></h2>
+<p>Use the lightweight benchmark utility in <code class="docutils literal notranslate"><span class="pre">benchmarks/</span></code> to compare lazy tensor
+read paths (TIFF source-backed, Parquet planes, Parquet chunks):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/benchmark_lazy_tensor.py<span class="w"> </span>--repeats<span class="w"> </span><span class="m">5</span><span class="w"> </span>--warmup<span class="w"> </span><span class="m">1</span>
+</pre></div>
+</div>
+<p>Notes:</p>
+<ul class="simple">
+<li><p>This benchmark is for local iteration and relative comparisons.</p></li>
+<li><p>It is not part of CI pass/fail checks.</p></li>
+<li><p>CI also runs this benchmark in a dedicated <code class="docutils literal notranslate"><span class="pre">benchmark_canary</span></code> job and
+uploads <code class="docutils literal notranslate"><span class="pre">benchmark-results.json</span></code> as a workflow artifact.</p></li>
+</ul>
+<p>Recalibrating <code class="docutils literal notranslate"><span class="pre">benchmarks/ci-baseline.json</span></code>:</p>
+<ol class="arabic simple">
+<li><p>Run the benchmark on <code class="docutils literal notranslate"><span class="pre">main</span></code> a few times (for example 3-5 runs):
+<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">benchmarks/benchmark_lazy_tensor.py</span> <span class="pre">--repeats</span> <span class="pre">7</span> <span class="pre">--warmup</span> <span class="pre">2</span> <span class="pre">--json-out</span> <span class="pre">benchmark-results.json</span></code></p></li>
+<li><p>For each case, collect the observed <code class="docutils literal notranslate"><span class="pre">median_ms</span></code> values.</p></li>
+<li><p>Update <code class="docutils literal notranslate"><span class="pre">benchmarks/ci-baseline.json</span></code> with stable medians from those runs
+(prefer a conservative value near the slower side, not the fastest sample).</p></li>
+<li><p>Keep CI canary tolerance (<code class="docutils literal notranslate"><span class="pre">regression_factor</span></code> + <code class="docutils literal notranslate"><span class="pre">absolute_slack_ms</span></code>) unchanged
+unless you have repeated false positives.</p></li>
+</ol>
 </section>
 <section id="contributing-development-and-testing">
 <h2>Contributing, Development, and Testing<a class="headerlink" href="#contributing-development-and-testing" title="Link to this heading">#</a></h2>
@@ -419,6 +458,7 @@ Please also reference an example notebook: <a class="reference external" href="h
 <li class="toctree-l1"><a class="reference internal" href="python-api.html">Python API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="python-api.html#module-src.ome_arrow.meta">ome_arrow.meta</a></li>
 <li class="toctree-l2"><a class="reference internal" href="python-api.html#module-src.ome_arrow.tensor">ome_arrow.tensor</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#src.ome_arrow.tensor.LazyTensorView"><code class="docutils literal notranslate"><span class="pre">LazyTensorView</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="python-api.html#src.ome_arrow.tensor.TensorView"><code class="docutils literal notranslate"><span class="pre">TensorView</span></code></a></li>
 </ul>
 </li>
@@ -426,10 +466,15 @@ Please also reference an example notebook: <a class="reference external" href="h
 </li>
 <li class="toctree-l1"><a class="reference internal" href="dlpack.html">Exporting OME-Arrow pixel data via DLPack</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="dlpack.html#pytorch">PyTorch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dlpack.html#lazy-scan-style-slicing">Lazy scan-style slicing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dlpack.html#jax">JAX</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dlpack.html#iteration-examples">Iteration examples</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dlpack.html#ownership-and-lifetime">Ownership and lifetime</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dlpack.html#optional-dependencies">Optional dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dlpack.html#benchmarking-lazy-reads">Benchmarking lazy reads</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dlpack.html#recalibrating-ci-baseline-json">Recalibrating <code class="docutils literal notranslate"><span class="pre">ci-baseline.json</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
