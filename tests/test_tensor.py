@@ -7,6 +7,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
+import ome_arrow.core as core_module
 from ome_arrow import OMEArrow
 from ome_arrow.export import to_ome_parquet
 from ome_arrow.meta import OME_ARROW_STRUCT
@@ -100,7 +101,7 @@ def test_lazy_tensor_view_collects_on_execution(
 
     arr = view.to_numpy(contiguous=True)
     assert arr.shape == (72, 84)
-    assert not oa.is_lazy
+    assert oa.is_lazy
     if recwarn:
         assert any(
             "Requested column 'ome_arrow'" in str(w.message) for w in recwarn.list
@@ -133,7 +134,7 @@ def test_lazy_tensor_view_select_preserves_existing_dims() -> None:
 
     arr = view_z.to_numpy(contiguous=True)
     assert arr.shape == (1, 167, 439)
-    assert not oa.is_lazy
+    assert oa.is_lazy
 
 
 def test_lazy_tensor_view_with_layout_defers_materialization() -> None:
@@ -153,7 +154,7 @@ def test_lazy_tensor_view_with_layout_defers_materialization() -> None:
     assert concrete.layout in {"YX", "HW"}
     arr = concrete.to_numpy(contiguous=True)
     assert arr.shape == (72, 84)
-    assert not oa.is_lazy
+    assert oa.is_lazy
 
 
 def test_dlpack_roundtrip_torch(example_correct_data: dict) -> None:
@@ -444,6 +445,77 @@ def test_arrow_mode_zero_copy_parquet_jax(
     ptr_jax = _jax_buffer_ptr(arr)
     if ptr_jax != ptr_arrow:
         pytest.skip("JAX did not preserve zero-copy for pyarrow DLPack.")
+
+
+def test_scan_tensor_view_to_numpy_avoids_python_record_materialization(
+    tmp_path: pathlib.Path,
+    example_correct_data: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Read selected planes from Arrow without building a full Python record."""
+    out = tmp_path / "lazy_arrow_plane.parquet"
+    record = dict(example_correct_data)
+    record["chunk_grid"] = None
+    record["chunks"] = []
+    to_ome_parquet(record, out_path=str(out), column_name="ome_arrow")
+
+    oa = OMEArrow.scan(str(out))
+
+    def _fail_data_py_dict(self: TensorView) -> dict:
+        raise AssertionError("_data_py_dict should not be used for Arrow plane reads")
+
+    monkeypatch.setattr(TensorView, "_data_py_dict", _fail_data_py_dict)
+    arr = oa.tensor_view(t=0, z=0, c=0, layout="YX").to_numpy(contiguous=True)
+
+    assert arr.shape == (3, 4)
+    assert oa.is_lazy
+
+
+def test_scan_chunked_parquet_tensor_view_avoids_python_record_materialization(
+    tmp_path: pathlib.Path,
+    example_correct_data: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Read chunked parquet planes through Arrow path without _data_py_dict."""
+    out = tmp_path / "lazy_chunked.parquet"
+    to_ome_parquet(example_correct_data, out_path=str(out), column_name="ome_arrow")
+
+    oa = OMEArrow.scan(str(out))
+
+    def _fail_data_py_dict(self: TensorView) -> dict:
+        raise AssertionError(
+            "_data_py_dict should not be used for Arrow chunked plane reads"
+        )
+
+    monkeypatch.setattr(TensorView, "_data_py_dict", _fail_data_py_dict)
+    arr = oa.tensor_view(t=0, z=0, c=1, layout="YX").to_numpy(contiguous=True)
+
+    expected = np.array(
+        [[100, 101, 102, 103], [110, 111, 112, 113], [120, 121, 122, 123]],
+        dtype=np.uint16,
+    )
+    np.testing.assert_array_equal(arr, expected)
+    assert oa.is_lazy
+
+
+@pytest.mark.filterwarnings(
+    "ignore:As of version 0.4.0, the parser argument is ignored.*:DeprecationWarning"
+)
+def test_scan_tiff_tensor_view_uses_source_plane_loader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Execute lazy TIFF tensor views without calling eager from_tiff ingestion."""
+    path = "tests/data/ome-artificial-5d-datasets/single-channel.ome.tiff"
+    oa = OMEArrow.scan(path)
+
+    def _fail_from_tiff(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("from_tiff should not be used for lazy tensor execution")
+
+    monkeypatch.setattr(core_module, "from_tiff", _fail_from_tiff)
+    arr = oa.tensor_view(t=0, z=0, c=0, layout="YX").to_numpy(contiguous=True)
+
+    assert arr.shape == (167, 439)
+    assert oa.is_lazy
 
 
 def _jax_buffer_ptr(arr: object) -> int:

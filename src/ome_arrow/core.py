@@ -35,6 +35,7 @@ from ome_arrow.ingest import (
     from_ome_zarr,
     from_stack_pattern_path,
     from_tiff,
+    open_lazy_plane_source,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT
 from ome_arrow.tensor import LazyTensorView, TensorView
@@ -365,6 +366,51 @@ class OMEArrow:
         if self._data is None:
             raise RuntimeError("OMEArrow data is not initialized.")
         return self._data
+
+    def _resolve_lazy_tensor_view(self, view_kwargs: dict[str, Any]) -> TensorView:
+        """Resolve a lazy tensor view plan without mutating this OMEArrow state.
+
+        Args:
+            view_kwargs: TensorView constructor kwargs captured by LazyTensorView.
+
+        Returns:
+            TensorView: Concrete tensor view for the planned selection.
+        """
+        # Deferred slice plans rely on slice_ome_arrow over a materialized scalar;
+        # keep the existing behavior for those plans.
+        if self._lazy_slices:
+            self._ensure_materialized()
+            return TensorView(self._tensor_source(), **view_kwargs)
+
+        if self._lazy_source is None:
+            return TensorView(self._tensor_source(), **view_kwargs)
+
+        lazy_source = self._lazy_source
+        lazy_plane_source = open_lazy_plane_source(lazy_source.data)
+        if lazy_plane_source is not None:
+            pixels_meta, plane_loader = lazy_plane_source
+            lazy_record = {
+                "id": None,
+                "name": None,
+                "image_type": lazy_source.image_type,
+                "acquisition_datetime": None,
+                "pixels_meta": pixels_meta,
+                "channels": [],
+                "planes": [],
+                "masks": [],
+                "chunk_grid": None,
+                "chunks": [],
+            }
+            return TensorView(lazy_record, plane_loader=plane_loader, **view_kwargs)
+
+        scalar, struct_array = self._load_from_string_source(
+            lazy_source.data,
+            column_name=lazy_source.column_name,
+            row_index=lazy_source.row_index,
+            image_type=lazy_source.image_type,
+        )
+        source = struct_array if struct_array is not None else scalar
+        return TensorView(source, **view_kwargs)
 
     @staticmethod
     def _wrap_with_image_type(
@@ -739,7 +785,9 @@ class OMEArrow:
         Returns:
             TensorView | LazyTensorView: Tensor view over selected pixels.
             In lazy mode, this returns a deferred ``LazyTensorView`` that
-            materializes on first execution call (for example ``to_numpy()``).
+            resolves on first execution call (for example ``to_numpy()``)
+            without forcing ``self`` to materialize unless deferred
+            ``slice_lazy`` operations are queued.
 
         Raises:
             ValueError: If an unsupported scene is requested.
@@ -751,6 +799,7 @@ class OMEArrow:
         if self._lazy_source is not None:
             return LazyTensorView(
                 loader=self._tensor_source,
+                resolver=self._resolve_lazy_tensor_view,
                 t=t,
                 z=z,
                 c=c,

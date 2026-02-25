@@ -55,6 +55,10 @@ cropped = lazy_crop.collect()
 # Then execute tensor selections on the sliced result.
 tensor_view = cropped.tensor_view(t=0, z=slice(0, 8), roi=(64, 64, 128, 128))
 arr = tensor_view.to_numpy()
+
+# Note: executing a LazyTensorView from OMEArrow.scan(...) does not
+# materialize the original OMEArrow object itself.
+# Call obj.collect() explicitly if you need to materialize `obj`.
 ```
 
 ## JAX
@@ -132,3 +136,37 @@ pip install "ome-arrow[dlpack-torch]"  # torch only
 pip install "ome-arrow[dlpack-jax]"    # jax only
 pip install "ome-arrow[dlpack]"        # both
 ```
+
+## Benchmarking lazy reads
+
+To quickly compare lazy tensor read paths (TIFF source-backed execution,
+Parquet planes, Parquet chunks), run:
+
+```bash
+uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
+```
+
+This is a lightweight local benchmark intended for directional performance
+checks during development.
+
+In CI, the `tests` workflow runs a `benchmark_canary` job that executes the
+same script and uploads a JSON report artifact.
+
+### Recalibrating `ci-baseline.json`
+
+When performance changes are intentional (or runner behavior shifts), update
+`benchmarks/ci-baseline.json` as follows:
+
+1. Check out the latest `main`.
+1. Run the benchmark multiple times:
+   `uv run python benchmarks/benchmark_lazy_tensor.py --repeats 7 --warmup 2 --json-out benchmark-results.json`
+1. Record `median_ms` per case across runs.
+1. Set each baseline value to a stable, slightly conservative median.
+1. Open a PR that updates baseline values only, with benchmark evidence.
+
+Expected variability:
+
+- Small fluctuations are normal on GitHub-hosted runners.
+- Relative ordering of cases is usually stable.
+- Typical drift should be modest, but occasional jumps can happen due to
+  runner image or dependency changes.

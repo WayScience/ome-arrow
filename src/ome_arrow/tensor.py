@@ -58,6 +58,7 @@ class LazyTensorView:
             [],
             dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
         ],
+        resolver: Callable[[dict[str, Any]], "TensorView"] | None = None,
         t: int | slice | Sequence[int] | None = None,
         z: int | slice | Sequence[int] | None = None,
         c: int | slice | Sequence[int] | None = None,
@@ -75,6 +76,8 @@ class LazyTensorView:
 
         Args:
             loader: Callable that returns concrete OME-Arrow pixel data.
+            resolver: Optional callable that resolves this lazy plan directly to
+                a concrete ``TensorView`` using current selection kwargs.
             t: Time index selection.
             z: Depth index selection.
             c: Channel index selection.
@@ -90,6 +93,7 @@ class LazyTensorView:
             channel_policy: Behavior when dropping ``C`` from layout.
         """
         self._loader = loader
+        self._resolver = resolver
         self._kwargs: dict[str, Any] = {
             "t": t,
             "z": z,
@@ -110,7 +114,7 @@ class LazyTensorView:
     def _spawn(self, **updates: Any) -> "LazyTensorView":
         kwargs = dict(self._kwargs)
         kwargs.update(updates)
-        return LazyTensorView(loader=self._loader, **kwargs)
+        return LazyTensorView(loader=self._loader, resolver=self._resolver, **kwargs)
 
     def collect(self) -> "TensorView":
         """Materialize this lazy plan into a concrete TensorView."""
@@ -121,7 +125,10 @@ class LazyTensorView:
         with self._collect_lock:
             resolved = self._resolved
             if resolved is None:
-                resolved = TensorView(self._loader(), **self._kwargs)
+                if self._resolver is not None:
+                    resolved = self._resolver(dict(self._kwargs))
+                else:
+                    resolved = TensorView(self._loader(), **self._kwargs)
                 self._resolved = resolved
         return resolved
 
@@ -400,6 +407,7 @@ class TensorView:
         self,
         data: dict[str, Any] | pa.StructScalar | pa.StructArray | pa.ChunkedArray,
         *,
+        plane_loader: Callable[[int, int, int], np.ndarray] | None = None,
         t: int | slice | Sequence[int] | None = None,
         z: int | slice | Sequence[int] | None = None,
         c: int | slice | Sequence[int] | None = None,
@@ -417,6 +425,9 @@ class TensorView:
 
         Args:
             data: OME-Arrow record as dict/StructScalar/StructArray/ChunkedArray.
+            plane_loader: Optional callback that returns one YX plane for
+                ``(t, z, c)``. When provided, per-plane reads use this loader
+                instead of ``planes``/``chunks`` payloads in ``data``.
             t: Time index selection (int, slice, or sequence). Default: all.
             z: Z index selection (int, slice, or sequence). Default: all.
             c: Channel index selection (int, slice, or sequence). Default: all.
@@ -464,6 +475,7 @@ class TensorView:
         # Keep normalized backing data so child TensorViews do not repeatedly
         # combine chunked Arrow arrays during iteration.
         self._data = data
+        self._plane_loader = plane_loader
         self._layout_override = _normalize_layout(layout) if layout else None
         self._channel_policy = _normalize_channel_policy(channel_policy)
 
@@ -540,6 +552,7 @@ class TensorView:
 
         return TensorView(
             self._data,
+            plane_loader=self._plane_loader,
             t=self._selection.t,
             z=self._selection.z,
             c=self._selection.c,
@@ -792,6 +805,7 @@ class TensorView:
             t, z_batch, x, y, w, h = batch[0]
             view = TensorView(
                 self._data,
+                plane_loader=self._plane_loader,
                 t=[t],
                 z=list(z_batch),
                 c=self._selection.c,
@@ -828,6 +842,7 @@ class TensorView:
         for batch in _batched(t_indices, batch_size, prefetch=prefetch):
             view = TensorView(
                 self._data,
+                plane_loader=self._plane_loader,
                 t=batch,
                 z=self._selection.z,
                 c=self._selection.c,
@@ -870,6 +885,7 @@ class TensorView:
             x, y, w, h = batch[0]
             view = TensorView(
                 self._data,
+                plane_loader=self._plane_loader,
                 t=self._selection.t,
                 z=self._selection.z,
                 c=self._selection.c,
@@ -912,6 +928,9 @@ class TensorView:
     def _plane_map(self) -> dict[tuple[int, int, int], list[Any]]:
         if self._has_chunks():
             return {}
+        if self._struct_array is not None:
+            # Arrow-backed plane reads use _select_plane_values in _read_plane.
+            return {}
         plane_map = {}
         data_py = self._data_py_dict()
         for plane in data_py.get("planes", []):
@@ -927,6 +946,30 @@ class TensorView:
         z: int,
         c: int,
     ) -> np.ndarray:
+        if self._plane_loader is not None:
+            arr = np.asarray(self._plane_loader(t, z, c), dtype=self._dtype)
+            return arr.reshape(self._size_y, self._size_x)
+
+        if self._struct_array is not None and not self._has_chunks():
+            values = _select_plane_values(self._struct_array, t=t, z=z, c=c)
+            arr = values.to_numpy(zero_copy_only=False)
+            return np.asarray(arr, dtype=self._dtype).reshape(
+                self._size_y, self._size_x
+            )
+
+        if self._struct_array is not None and self._has_chunks():
+            chunk_order = str(self._chunk_grid().get("chunk_order") or "ZYX").upper()
+            return _plane_from_chunks_arrow(
+                self._struct_array,
+                t=t,
+                z=z,
+                c=c,
+                size_x=self._size_x,
+                size_y=self._size_y,
+                dtype=self._dtype,
+                chunk_order=chunk_order,
+            )
+
         if self._has_chunks():
             data_py = self._data_py_dict()
             return plane_from_chunks(data_py, t=t, z=z, c=c, dtype=self._dtype)
@@ -1553,3 +1596,62 @@ def _select_chunk_values(
 
     pixels_list = selected.field("pixels")[0]
     return pixels_list.values
+
+
+def _plane_from_chunks_arrow(
+    struct_arr: pa.StructArray,
+    *,
+    t: int,
+    z: int,
+    c: int,
+    size_x: int,
+    size_y: int,
+    dtype: np.dtype,
+    chunk_order: str = "ZYX",
+) -> np.ndarray:
+    """Reconstruct one YX plane from Arrow chunk rows without Python dict casts."""
+    if chunk_order != "ZYX":
+        raise ValueError("Only chunk_order='ZYX' is supported for now.")
+
+    chunks_arr = struct_arr.field("chunks")
+    if len(chunks_arr) == 0 or chunks_arr.is_null().to_pylist()[0]:
+        return np.zeros((size_y, size_x), dtype=dtype)
+
+    chunks = chunks_arr[0].values
+    z_field = chunks.field("z")
+    sz_field = chunks.field("shape_z")
+    z_end = pc.add(z_field, sz_field)
+    mask = pc.and_(
+        pc.equal(chunks.field("t"), t),
+        pc.and_(
+            pc.equal(chunks.field("c"), c),
+            pc.and_(pc.less_equal(z_field, z), pc.greater(z_end, z)),
+        ),
+    )
+    selected = pc.filter(chunks, mask)
+
+    out = np.zeros((size_y, size_x), dtype=dtype)
+    for i in range(len(selected)):
+        z0 = int(selected.field("z")[i].as_py())
+        y0 = int(selected.field("y")[i].as_py())
+        x0 = int(selected.field("x")[i].as_py())
+        sz = int(selected.field("shape_z")[i].as_py())
+        sy = int(selected.field("shape_y")[i].as_py())
+        sx = int(selected.field("shape_x")[i].as_py())
+        if y0 < 0 or x0 < 0 or sz <= 0 or sy <= 0 or sx <= 0:
+            raise ValueError("Chunk has invalid shape or origin.")
+        if z0 + sz <= z or z0 > z:
+            continue
+        if y0 + sy > size_y or x0 + sx > size_x:
+            raise ValueError("Chunk extent out of range.")
+
+        pixels_values = selected.field("pixels")[i].values
+        pix = np.asarray(pixels_values.to_numpy(zero_copy_only=False), dtype=dtype)
+        expected_len = sz * sy * sx
+        if pix.size != expected_len:
+            raise ValueError(
+                f"Chunk pixels length {pix.size} != expected {expected_len}."
+            )
+        arr3d = pix.reshape(sz, sy, sx)
+        out[y0 : y0 + sy, x0 : x0 + sx] = arr3d[z - z0]
+    return out

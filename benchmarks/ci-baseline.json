@@ -1,0 +1,7 @@
+{
+  "cases": {
+    "scan+tiff -> tensor_view(YX)": 20.0,
+    "scan+parquet(planes) -> tensor_view(YX)": 12.0,
+    "scan+parquet(chunks) -> tensor_view(YX)": 12.0
+  }
+}

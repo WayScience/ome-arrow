@@ -8,6 +8,7 @@ import matplotlib
 import numpy as np
 import pytest
 
+from ome_arrow import ingest
 from ome_arrow.core import OMEArrow
 
 
@@ -418,6 +419,19 @@ def test_scan_collect_roundtrip() -> None:
     with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
         oa.collect()
     assert not oa.is_lazy
+    assert oa.info()["shape"] == (1, 1, 1, 72, 84)
+
+
+def test_parquet_read_avoids_full_table_scan(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Use row-group reads instead of eager pq.read_table for parquet ingest."""
+    path = "tests/data/JUMP-BR00117006/BR00117006.ome.parquet"
+
+    def _fail_read_table(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("pq.read_table should not be used for from_ome_parquet")
+
+    monkeypatch.setattr(ingest.pq, "read_table", _fail_read_table)
+    with pytest.warns(UserWarning, match="Requested column 'ome_arrow'"):
+        oa = OMEArrow(path)
     assert oa.info()["shape"] == (1, 1, 1, 72, 84)
 
 

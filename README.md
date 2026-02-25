@@ -120,6 +120,32 @@ Advanced options:
 
 See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
+## Benchmarking lazy reads
+
+Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor
+read paths (TIFF source-backed, Parquet planes, Parquet chunks):
+
+```bash
+uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
+```
+
+Notes:
+
+- This benchmark is for local iteration and relative comparisons.
+- It is not part of CI pass/fail checks.
+- CI also runs this benchmark in a dedicated `benchmark_canary` job and
+  uploads `benchmark-results.json` as a workflow artifact.
+
+Recalibrating `benchmarks/ci-baseline.json`:
+
+1. Run the benchmark on `main` a few times (for example 3-5 runs):
+   `uv run python benchmarks/benchmark_lazy_tensor.py --repeats 7 --warmup 2 --json-out benchmark-results.json`
+1. For each case, collect the observed `median_ms` values.
+1. Update `benchmarks/ci-baseline.json` with stable medians from those runs
+   (prefer a conservative value near the slower side, not the fastest sample).
+1. Keep CI canary tolerance (`regression_factor` + `absolute_slack_ms`) unchanged
+   unless you have repeated false positives.
+
 ## Contributing, Development, and Testing
 
 Please see our [contributing documentation](https://github.com/wayscience/ome-arrow/tree/main/CONTRIBUTING.md) for more details on contributions, development, and testing.
