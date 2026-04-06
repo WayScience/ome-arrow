@@ -809,6 +809,200 @@ def from_numpy(
     )
 
 
+def _is_torch_array(data: Any) -> bool:
+    """Return True when ``data`` looks like a torch tensor."""
+    module = getattr(type(data), "__module__", "")
+    return module == "torch" or module.startswith("torch.")
+
+
+def _is_jax_array(data: Any) -> bool:
+    """Return True when ``data`` looks like a JAX array."""
+    module = getattr(type(data), "__module__", "")
+    return module.startswith("jax.") or module.startswith("jaxlib.")
+
+
+def _infer_dim_order_for_tensor_rank(ndim: int) -> str:
+    """Infer a practical default dim order for tensor backends."""
+    if ndim == 2:
+        return "YX"
+    if ndim == 3:
+        return "CYX"
+    if ndim == 4:
+        return "TCYX"
+    if ndim == 5:
+        return "TCZYX"
+    raise ValueError(
+        "Unable to infer dim_order for tensor rank "
+        f"{ndim}. Provide dim_order explicitly."
+    )
+
+
+def from_torch_array(
+    arr: Any,
+    *,
+    dim_order: str | None = None,
+    image_id: Optional[str] = None,
+    name: Optional[str] = None,
+    image_type: Optional[str] = None,
+    channel_names: Optional[Sequence[str]] = None,
+    acquisition_datetime: Optional[datetime] = None,
+    clamp_to_uint16: bool = True,
+    chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
+    chunk_order: str = "ZYX",
+    build_chunks: bool = True,
+    # meta
+    physical_size_x: float = 1.0,
+    physical_size_y: float = 1.0,
+    physical_size_z: float = 1.0,
+    physical_size_unit: str = "µm",
+    dtype_meta: Optional[str] = None,
+) -> pa.StructScalar:
+    """Build an OME-Arrow StructScalar from a torch tensor.
+
+    Args:
+        arr: ``torch.Tensor`` image data.
+        dim_order: Axis labels for ``arr``. If None, infer from rank:
+            2D->"YX", 3D->"CYX", 4D->"TCYX", 5D->"TCZYX".
+        image_id: Optional stable image identifier.
+        name: Optional human label.
+        image_type: Open-ended image kind (e.g., "image", "label").
+        channel_names: Names for channels; defaults to C0..C{n-1}.
+        acquisition_datetime: Defaults to now (UTC) if None.
+        clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
+        chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
+        chunk_order: Flattening order for chunk pixels (default "ZYX").
+        build_chunks: If True, build chunked pixels from planes.
+        physical_size_x: Spatial pixel size (µm) for X.
+        physical_size_y: Spatial pixel size (µm) for Y.
+        physical_size_z: Spatial pixel size (µm) for Z when present.
+        physical_size_unit: Unit string for spatial axes (default "µm").
+        dtype_meta: Pixel dtype string to place in metadata.
+
+    Returns:
+        pa.StructScalar: Typed OME-Arrow record.
+    """
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError(
+            "Torch is not installed. Install extras: "
+            "pip install 'ome-arrow[dlpack-torch]'."
+        ) from exc
+
+    if not isinstance(arr, torch.Tensor):
+        raise TypeError("from_torch_array expects a torch.Tensor.")
+
+    tensor = arr.detach()
+    if tensor.layout != torch.strided:
+        tensor = tensor.to_dense()
+    if getattr(tensor, "is_conj", lambda: False)():
+        tensor = tensor.resolve_conj()
+    if getattr(tensor, "is_neg", lambda: False)():
+        tensor = tensor.resolve_neg()
+    if tensor.device.type != "cpu":
+        # OME-Arrow ingest currently serializes from host memory.
+        tensor = tensor.to(device="cpu")
+
+    # For CPU strided tensors this is typically a zero-copy NumPy view.
+    np_arr = tensor.numpy()
+    resolved_dim_order = dim_order or _infer_dim_order_for_tensor_rank(np_arr.ndim)
+    return from_numpy(
+        np_arr,
+        dim_order=resolved_dim_order,
+        image_id=image_id,
+        name=name,
+        image_type=image_type,
+        channel_names=channel_names,
+        acquisition_datetime=acquisition_datetime,
+        clamp_to_uint16=clamp_to_uint16,
+        chunk_shape=chunk_shape,
+        chunk_order=chunk_order,
+        build_chunks=build_chunks,
+        physical_size_x=physical_size_x,
+        physical_size_y=physical_size_y,
+        physical_size_z=physical_size_z,
+        physical_size_unit=physical_size_unit,
+        dtype_meta=dtype_meta,
+    )
+
+
+def from_jax_array(
+    arr: Any,
+    *,
+    dim_order: str | None = None,
+    image_id: Optional[str] = None,
+    name: Optional[str] = None,
+    image_type: Optional[str] = None,
+    channel_names: Optional[Sequence[str]] = None,
+    acquisition_datetime: Optional[datetime] = None,
+    clamp_to_uint16: bool = True,
+    chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
+    chunk_order: str = "ZYX",
+    build_chunks: bool = True,
+    # meta
+    physical_size_x: float = 1.0,
+    physical_size_y: float = 1.0,
+    physical_size_z: float = 1.0,
+    physical_size_unit: str = "µm",
+    dtype_meta: Optional[str] = None,
+) -> pa.StructScalar:
+    """Build an OME-Arrow StructScalar from a JAX array.
+
+    Args:
+        arr: ``jax.Array`` image data.
+        dim_order: Axis labels for ``arr``. If None, infer from rank:
+            2D->"YX", 3D->"CYX", 4D->"TCYX", 5D->"TCZYX".
+        image_id: Optional stable image identifier.
+        name: Optional human label.
+        image_type: Open-ended image kind (e.g., "image", "label").
+        channel_names: Names for channels; defaults to C0..C{n-1}.
+        acquisition_datetime: Defaults to now (UTC) if None.
+        clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
+        chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
+        chunk_order: Flattening order for chunk pixels (default "ZYX").
+        build_chunks: If True, build chunked pixels from planes.
+        physical_size_x: Spatial pixel size (µm) for X.
+        physical_size_y: Spatial pixel size (µm) for Y.
+        physical_size_z: Spatial pixel size (µm) for Z when present.
+        physical_size_unit: Unit string for spatial axes (default "µm").
+        dtype_meta: Pixel dtype string to place in metadata.
+
+    Returns:
+        pa.StructScalar: Typed OME-Arrow record.
+    """
+    try:
+        import jax
+    except ImportError as exc:
+        raise RuntimeError(
+            "JAX is not installed. Install extras: pip install 'ome-arrow[dlpack-jax]'."
+        ) from exc
+
+    if not isinstance(arr, jax.Array):
+        raise TypeError("from_jax_array expects a jax.Array.")
+
+    # Materializes a host NumPy view/copy as needed before Arrow serialization.
+    np_arr = np.asarray(arr)
+    resolved_dim_order = dim_order or _infer_dim_order_for_tensor_rank(np_arr.ndim)
+    return from_numpy(
+        np_arr,
+        dim_order=resolved_dim_order,
+        image_id=image_id,
+        name=name,
+        image_type=image_type,
+        channel_names=channel_names,
+        acquisition_datetime=acquisition_datetime,
+        clamp_to_uint16=clamp_to_uint16,
+        chunk_shape=chunk_shape,
+        chunk_order=chunk_order,
+        build_chunks=build_chunks,
+        physical_size_x=physical_size_x,
+        physical_size_y=physical_size_y,
+        physical_size_z=physical_size_z,
+        physical_size_unit=physical_size_unit,
+        dtype_meta=dtype_meta,
+    )
+
+
 def from_tiff(
     tiff_path: str | Path,
     image_id: Optional[str] = None,

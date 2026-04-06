@@ -42,6 +42,17 @@ flat = torch.utils.dlpack.from_dlpack(capsule)
 tensor = flat.reshape(view.shape)
 ```
 
+You can also ingest torch tensors directly:
+
+```python
+from ome_arrow import OMEArrow
+
+oa = OMEArrow(torch_tensor)  # inferred dim_order by rank
+oa_zyx = OMEArrow(torch_volume, dim_order="ZYX")  # explicit override
+```
+
+`dim_order` is only supported for array/tensor ingest paths.
+
 ## Lazy scan-style slicing
 
 ```python
@@ -74,6 +85,15 @@ import jax.numpy as jnp
 capsule = view.to_dlpack(mode="arrow", device="cpu")
 flat = jnp.from_dlpack(capsule)
 arr = flat.reshape(view.shape)
+```
+
+You can also ingest JAX arrays directly:
+
+```python
+from ome_arrow import OMEArrow
+
+oa = OMEArrow(jax_array)  # inferred dim_order by rank
+oa_zyx = OMEArrow(jax_volume, dim_order="ZYX")  # explicit override
 ```
 
 ## Iteration examples

@@ -29,12 +29,16 @@ from ome_arrow.export import (
     to_ome_zarr,
 )
 from ome_arrow.ingest import (
+    _is_jax_array,
+    _is_torch_array,
+    from_jax_array,
     from_numpy,
     from_ome_parquet,
     from_ome_vortex,
     from_ome_zarr,
     from_stack_pattern_path,
     from_tiff,
+    from_torch_array,
     open_lazy_plane_source,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT
@@ -92,6 +96,7 @@ class OMEArrow:
     def __init__(
         self,
         data: str | dict | pa.StructScalar | "np.ndarray",
+        dim_order: str | None = None,
         tcz: Tuple[int, int, int] = (0, 0, 0),
         column_name: str = "ome_arrow",
         row_index: int = 0,
@@ -107,11 +112,31 @@ class OMEArrow:
         - a path/URL to a Vortex file (.vortex)
         - a NumPy ndarray (2D-5D; interpreted
             with from_numpy defaults)
+        - a torch.Tensor (2D-5D; inferred dim order by rank unless provided via
+            `dim_order`)
+        - a jax.Array (2D-5D; inferred dim order by rank unless provided via
+            `dim_order`)
         - a dict already matching the OME-Arrow schema
         - a pa.StructScalar already typed to OME_ARROW_STRUCT
         - optionally override/set image_type metadata on ingest
         - optionally defer source-file ingestion with lazy=True
+
+        Args:
+            data: Input source or record payload.
+            dim_order: Axis labels used only for array/tensor ingest
+                (NumPy, torch, JAX). Ignored inputs are rejected to prevent
+                silent configuration mistakes.
         """
+
+        # `dim_order` only applies to in-memory array/tensor ingestion paths.
+        # Rejecting incompatible combinations avoids silently ignoring user intent.
+        if dim_order is not None and not (
+            isinstance(data, np.ndarray) or _is_torch_array(data) or _is_jax_array(data)
+        ):
+            raise ValueError(
+                "dim_order is supported only for numpy.ndarray, torch.Tensor, "
+                "or jax.Array inputs."
+            )
 
         # set the tcz for viewing
         self.tcz = tcz
@@ -161,15 +186,35 @@ class OMEArrow:
             # Uses from_numpy defaults: dim_order="TCZYX", clamp_to_uint16=True, etc.
             # If the array is YX/ZYX/CYX/etc.,
             # from_numpy will expand/reorder accordingly.
-            self.data = from_numpy(data, image_type=image_type)
+            self.data = from_numpy(
+                data,
+                dim_order=dim_order or "TCZYX",
+                image_type=image_type,
+            )
 
-        # --- 4) Already-typed Arrow scalar ---------------------------------------
+        # --- 4) Torch tensor ------------------------------------------------------
+        elif _is_torch_array(data):
+            self.data = from_torch_array(
+                data,
+                dim_order=dim_order,
+                image_type=image_type,
+            )
+
+        # --- 5) JAX array --------------------------------------------------------
+        elif _is_jax_array(data):
+            self.data = from_jax_array(
+                data,
+                dim_order=dim_order,
+                image_type=image_type,
+            )
+
+        # --- 6) Already-typed Arrow scalar ---------------------------------------
         elif isinstance(data, pa.StructScalar):
             self.data = data
             if image_type is not None:
                 self.data = self._wrap_with_image_type(self.data, image_type)
 
-        # --- 5) Plain dict matching the schema -----------------------------------
+        # --- 7) Plain dict matching the schema -----------------------------------
         elif isinstance(data, dict):
             record = {f.name: data.get(f.name) for f in OME_ARROW_STRUCT}
             self.data = pa.scalar(record, type=OME_ARROW_STRUCT)
@@ -179,7 +224,8 @@ class OMEArrow:
         # --- otherwise ------------------------------------------------------------
         else:
             raise TypeError(
-                "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
+                "input data must be str, dict, pa.StructScalar, numpy.ndarray, "
+                "torch.Tensor, or jax.Array"
             )
 
     @classmethod

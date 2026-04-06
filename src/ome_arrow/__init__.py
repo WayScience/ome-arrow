@@ -12,11 +12,13 @@ from ome_arrow.export import (
     to_ome_zarr,
 )
 from ome_arrow.ingest import (
+    from_jax_array,
     from_numpy,
     from_ome_parquet,
     from_ome_vortex,
     from_ome_zarr,
     from_tiff,
+    from_torch_array,
     to_ome_arrow,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION

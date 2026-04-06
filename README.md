@@ -120,6 +120,39 @@ Advanced options:
 
 See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
+## Tensor ingest (PyTorch/JAX)
+
+You can now ingest torch or JAX arrays directly with `OMEArrow(...)`, or use
+explicit helper functions from `ome_arrow.ingest`.
+
+```python
+from ome_arrow import OMEArrow
+
+# Direct constructor support:
+# inferred defaults are rank-based:
+# 2D -> "YX", 3D -> "CYX", 4D -> "TCYX", 5D -> "TCZYX"
+oa_torch = OMEArrow(torch_tensor)
+oa_jax = OMEArrow(jax_array)
+
+# Optional: override dim order when shape is ambiguous
+oa_zyx = OMEArrow(torch_volume, dim_order="ZYX")
+```
+
+```python
+from ome_arrow.ingest import from_torch_array, from_jax_array
+
+scalar_torch = from_torch_array(torch_tensor, dim_order="TCYX")
+scalar_jax = from_jax_array(jax_array, dim_order="TCYX")
+```
+
+Notes:
+
+- Torch/JAX support is optional; install extras as needed:
+  `pip install "ome-arrow[dlpack-torch]"` or
+  `pip install "ome-arrow[dlpack-jax]"`.
+- Torch tensors are detached and converted on CPU for ingest.
+- `dim_order` is accepted only for NumPy/torch/JAX array inputs.
+
 ## Benchmarking lazy reads
 
 Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor

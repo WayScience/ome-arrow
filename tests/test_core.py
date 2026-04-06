@@ -395,6 +395,86 @@ def test_parquet_roundtrip_preserves_image_type(tmp_path: pathlib.Path) -> None:
     assert reloaded.data.as_py()["image_type"] == "label"
 
 
+def test_constructor_accepts_torch_tensor() -> None:
+    """Accept torch tensors directly in OMEArrow constructor."""
+    torch = pytest.importorskip("torch")
+
+    tensor = torch.arange(2 * 3 * 4).reshape(2, 3, 4).to(dtype=torch.uint16)
+    oa = OMEArrow(tensor)
+
+    exported = oa.export(how="numpy")
+    assert exported.shape == (1, 2, 1, 3, 4)
+    np.testing.assert_array_equal(exported[0, :, 0], tensor.numpy())
+
+
+def test_constructor_accepts_jax_array() -> None:
+    """Accept JAX arrays directly in OMEArrow constructor."""
+    jnp = pytest.importorskip("jax.numpy")
+
+    arr = jnp.arange(2 * 3 * 4, dtype=jnp.uint16).reshape(2, 3, 4)
+    oa = OMEArrow(arr)
+
+    exported = oa.export(how="numpy")
+    assert exported.shape == (1, 2, 1, 3, 4)
+    np.testing.assert_array_equal(exported[0, :, 0], np.asarray(arr))
+
+
+def test_from_torch_array_explicit_dim_order() -> None:
+    """Support explicit dim order when ingesting torch arrays."""
+    torch = pytest.importorskip("torch")
+
+    tensor = torch.arange(2 * 3 * 4 * 5).reshape(2, 3, 4, 5).to(dtype=torch.uint16)
+    scalar = ingest.from_torch_array(tensor, dim_order="TCYX")
+    oa = OMEArrow(scalar)
+
+    exported = oa.export(how="numpy")
+    assert exported.shape == (2, 3, 1, 4, 5)
+    np.testing.assert_array_equal(exported[:, :, 0], tensor.numpy())
+
+
+def test_from_jax_array_explicit_dim_order() -> None:
+    """Support explicit dim order when ingesting JAX arrays."""
+    jnp = pytest.importorskip("jax.numpy")
+
+    arr = jnp.arange(2 * 3 * 4 * 5, dtype=jnp.uint16).reshape(2, 3, 4, 5)
+    scalar = ingest.from_jax_array(arr, dim_order="TCYX")
+    oa = OMEArrow(scalar)
+
+    exported = oa.export(how="numpy")
+    assert exported.shape == (2, 3, 1, 4, 5)
+    np.testing.assert_array_equal(exported[:, :, 0], np.asarray(arr))
+
+
+def test_constructor_dim_order_override_torch_tensor() -> None:
+    """Allow explicit constructor dim_order for ambiguous torch tensor ranks."""
+    torch = pytest.importorskip("torch")
+
+    tensor = torch.arange(3 * 4 * 5).reshape(3, 4, 5).to(dtype=torch.uint16)
+    oa = OMEArrow(tensor, dim_order="ZYX")
+
+    exported = oa.export(how="numpy")
+    assert exported.shape == (1, 1, 3, 4, 5)
+    np.testing.assert_array_equal(exported[0, 0], tensor.numpy())
+
+
+def test_constructor_dim_order_override_jax_array() -> None:
+    """Allow explicit constructor dim_order for ambiguous JAX array ranks."""
+    jnp = pytest.importorskip("jax.numpy")
+
+    arr = jnp.arange(3 * 4 * 5, dtype=jnp.uint16).reshape(3, 4, 5)
+    oa = OMEArrow(arr, dim_order="ZYX")
+
+    exported = oa.export(how="numpy")
+    assert exported.shape == (1, 1, 3, 4, 5)
+    np.testing.assert_array_equal(exported[0, 0], np.asarray(arr))
+
+
+def test_constructor_dim_order_rejects_non_array_input() -> None:
+    """Reject dim_order for non-array sources to avoid silent no-op configs."""
+    with pytest.raises(ValueError, match="dim_order is supported only"):
+        OMEArrow("tests/data/JUMP-BR00117006/BR00117006.ome.parquet", dim_order="ZYX")
+
+
 def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     """Ensure custom Vortex column names are preserved on round-trip."""
     pytest.importorskip(
