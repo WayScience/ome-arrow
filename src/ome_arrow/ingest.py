@@ -905,7 +905,11 @@ def from_torch_array(
 
     # For CPU strided tensors this is typically a zero-copy NumPy view.
     np_arr = tensor.numpy()
-    resolved_dim_order = dim_order or _infer_dim_order_for_tensor_rank(np_arr.ndim)
+    resolved_dim_order = (
+        _infer_dim_order_for_tensor_rank(np_arr.ndim)
+        if dim_order is None
+        else dim_order
+    )
     return from_numpy(
         np_arr,
         dim_order=resolved_dim_order,
@@ -982,7 +986,11 @@ def from_jax_array(
 
     # Materializes a host NumPy view/copy as needed before Arrow serialization.
     np_arr = np.asarray(arr)
-    resolved_dim_order = dim_order or _infer_dim_order_for_tensor_rank(np_arr.ndim)
+    resolved_dim_order = (
+        _infer_dim_order_for_tensor_rank(np_arr.ndim)
+        if dim_order is None
+        else dim_order
+    )
     return from_numpy(
         np_arr,
         dim_order=resolved_dim_order,
