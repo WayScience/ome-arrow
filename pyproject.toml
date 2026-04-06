@@ -31,11 +31,11 @@ dependencies = [
   "pyarrow>=22",
 ]
 optional-dependencies.dlpack = [
-  "jax>=0.4",
+  "jax>=0.4.1",
   "torch>=2.1",
 ]
 optional-dependencies.dlpack-jax = [
-  "jax>=0.4",
+  "jax>=0.4.1",
 ]
 optional-dependencies.dlpack-torch = [
   "torch>=2.1",
