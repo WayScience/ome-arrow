@@ -395,78 +395,69 @@ def test_parquet_roundtrip_preserves_image_type(tmp_path: pathlib.Path) -> None:
     assert reloaded.data.as_py()["image_type"] == "label"
 
 
-def test_constructor_accepts_torch_tensor() -> None:
-    """Accept torch tensors directly in OMEArrow constructor."""
-    torch = pytest.importorskip("torch")
+def _backend_symbols(backend: str) -> dict[str, object]:
+    """Return backend-specific tensor constructors and converters."""
+    if backend == "torch":
+        torch = pytest.importorskip("torch")
+        return {
+            "array_from_1d": lambda n, shape: (
+                torch.arange(n).reshape(*shape).to(dtype=torch.uint16)
+            ),
+            "to_numpy": lambda x: x.numpy(),
+            "from_array": ingest.from_torch_array,
+        }
 
-    tensor = torch.arange(2 * 3 * 4).reshape(2, 3, 4).to(dtype=torch.uint16)
-    oa = OMEArrow(tensor)
-
-    exported = oa.export(how="numpy")
-    assert exported.shape == (1, 1, 2, 3, 4)
-    np.testing.assert_array_equal(exported[0, 0], tensor.numpy())
-
-
-def test_constructor_accepts_jax_array() -> None:
-    """Accept JAX arrays directly in OMEArrow constructor."""
     jnp = pytest.importorskip("jax.numpy")
+    return {
+        "array_from_1d": lambda n, shape: jnp.arange(n, dtype=jnp.uint16).reshape(
+            *shape
+        ),
+        "to_numpy": np.asarray,
+        "from_array": ingest.from_jax_array,
+    }
 
-    arr = jnp.arange(2 * 3 * 4, dtype=jnp.uint16).reshape(2, 3, 4)
+
+@pytest.mark.parametrize("backend", ["torch", "jax"])
+def test_constructor_accepts_array_backend(backend: str) -> None:
+    """Accept backend arrays directly in OMEArrow constructor."""
+    symbols = _backend_symbols(backend)
+    arr = symbols["array_from_1d"](2 * 3 * 4, (2, 3, 4))
+    expected = symbols["to_numpy"](arr)
+
     oa = OMEArrow(arr)
-
     exported = oa.export(how="numpy")
+
     assert exported.shape == (1, 1, 2, 3, 4)
-    np.testing.assert_array_equal(exported[0, 0], np.asarray(arr))
+    np.testing.assert_array_equal(exported[0, 0], expected)
 
 
-def test_from_torch_array_explicit_dim_order() -> None:
-    """Support explicit dim order when ingesting torch arrays."""
-    torch = pytest.importorskip("torch")
+@pytest.mark.parametrize("backend", ["torch", "jax"])
+def test_from_array_explicit_dim_order_backend(backend: str) -> None:
+    """Support explicit dim_order with backend-specific from_* helpers."""
+    symbols = _backend_symbols(backend)
+    arr = symbols["array_from_1d"](2 * 3 * 4 * 5, (2, 3, 4, 5))
+    expected = symbols["to_numpy"](arr)
+    scalar = symbols["from_array"](arr, dim_order="TCYX")
 
-    tensor = torch.arange(2 * 3 * 4 * 5).reshape(2, 3, 4, 5).to(dtype=torch.uint16)
-    scalar = ingest.from_torch_array(tensor, dim_order="TCYX")
     oa = OMEArrow(scalar)
-
     exported = oa.export(how="numpy")
+
     assert exported.shape == (2, 3, 1, 4, 5)
-    np.testing.assert_array_equal(exported[:, :, 0], tensor.numpy())
+    np.testing.assert_array_equal(exported[:, :, 0], expected)
 
 
-def test_from_jax_array_explicit_dim_order() -> None:
-    """Support explicit dim order when ingesting JAX arrays."""
-    jnp = pytest.importorskip("jax.numpy")
+@pytest.mark.parametrize("backend", ["torch", "jax"])
+def test_constructor_dim_order_override_backend(backend: str) -> None:
+    """Allow explicit constructor dim_order for ambiguous backend array ranks."""
+    symbols = _backend_symbols(backend)
+    arr = symbols["array_from_1d"](3 * 4 * 5, (3, 4, 5))
+    expected = symbols["to_numpy"](arr)
 
-    arr = jnp.arange(2 * 3 * 4 * 5, dtype=jnp.uint16).reshape(2, 3, 4, 5)
-    scalar = ingest.from_jax_array(arr, dim_order="TCYX")
-    oa = OMEArrow(scalar)
-
-    exported = oa.export(how="numpy")
-    assert exported.shape == (2, 3, 1, 4, 5)
-    np.testing.assert_array_equal(exported[:, :, 0], np.asarray(arr))
-
-
-def test_constructor_dim_order_override_torch_tensor() -> None:
-    """Allow explicit constructor dim_order for ambiguous torch tensor ranks."""
-    torch = pytest.importorskip("torch")
-
-    tensor = torch.arange(3 * 4 * 5).reshape(3, 4, 5).to(dtype=torch.uint16)
-    oa = OMEArrow(tensor, dim_order="ZYX")
-
-    exported = oa.export(how="numpy")
-    assert exported.shape == (1, 1, 3, 4, 5)
-    np.testing.assert_array_equal(exported[0, 0], tensor.numpy())
-
-
-def test_constructor_dim_order_override_jax_array() -> None:
-    """Allow explicit constructor dim_order for ambiguous JAX array ranks."""
-    jnp = pytest.importorskip("jax.numpy")
-
-    arr = jnp.arange(3 * 4 * 5, dtype=jnp.uint16).reshape(3, 4, 5)
     oa = OMEArrow(arr, dim_order="ZYX")
-
     exported = oa.export(how="numpy")
+
     assert exported.shape == (1, 1, 3, 4, 5)
-    np.testing.assert_array_equal(exported[0, 0], np.asarray(arr))
+    np.testing.assert_array_equal(exported[0, 0], expected)
 
 
 def test_constructor_dim_order_rejects_non_array_input() -> None:
