@@ -61,6 +61,34 @@ oa_cyx = OMEArrow(torch_volume, dim_order="CYX")
 Use `dim_order` when the inferred axis order does not match your tensor layout.
 `dim_order` is only supported for array/tensor ingest paths.
 
+To persist with this interpreted axis mapping, export the resulting OME-Arrow
+record (for example to parquet):
+
+```python
+from ome_arrow import OMEArrow
+import torch
+
+torch_volume = torch.randint(0, 256, (16, 128, 128), dtype=torch.uint16)
+oa = OMEArrow(torch_volume, dim_order="ZYX")
+oa.export(how="parquet", out="volume.ome.parquet")
+```
+
+OME-Arrow stores pixels in canonical OME-style fields (`size_t`, `size_c`,
+`size_z`, `size_y`, `size_x`) rather than preserving a free-form input label
+string. The interpreted mapping is preserved through those axis sizes and can
+be read back with `tensor_view(...)` layouts.
+
+"Batch" dimension note:
+
+- There is no separate `B` axis in the OME-Arrow schema.
+- For model batches, map batch to `T` during ingest.
+- Examples:
+  - `B,C,Y,X` -> use `dim_order="TCYX"`
+  - `B,C,Z,Y,X` -> use `dim_order="TCZYX"`
+  - `B,Y,X,C` -> use `dim_order="TYXC"`
+- If `T` is already meaningful in your data, represent batch as table rows
+  (one OME-Arrow record per batch item) instead of overloading another image axis.
+
 ## Lazy scan-style slicing
 
 ```python
