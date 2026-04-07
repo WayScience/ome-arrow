@@ -654,7 +654,9 @@ class OMEArrow:
         clim: tuple[float, float] | None = None,
         show_axes: bool = True,
         scaling_values: tuple[float, float, float] | None = None,
-    ) -> matplotlib.figure.Figure | "pyvista.Plotter":
+    ) -> (
+        tuple[matplotlib.figure.Figure, Any, Any] | "pyvista.Plotter"
+    ):
         """Render an OME-Arrow record using Matplotlib or PyVista.
 
         This convenience method supports two rendering backends:
@@ -685,8 +687,11 @@ class OMEArrow:
                 PyVista. If ``None``, uses OME metadata-derived scaling.
 
         Returns:
-            matplotlib.figure.Figure | pyvista.Plotter: Matplotlib figure for
-            ``how="matplotlib"`` or PyVista plotter for ``how="pyvista"``.
+            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes,
+            matplotlib.image.AxesImage] | pyvista.Plotter:
+            For ``how="matplotlib"``, returns the tuple emitted by
+            :func:`ome_arrow.view.view_matplotlib` as ``(figure, axes, image)``.
+            For ``how="pyvista"``, returns a :class:`pyvista.Plotter`.
 
         Raises:
             ValueError: If a requested plane is not found or the render mode
@@ -702,6 +707,11 @@ class OMEArrow:
             - When ``show=False`` and ``how="pyvista"``, the returned
               :class:`pyvista.Plotter` can be shown later.
         """
+        if how not in {"matplotlib", "pyvista"}:
+            raise ValueError(
+                f"Unsupported view mode: {how!r}. Use 'matplotlib' or 'pyvista'."
+            )
+
         self._ensure_materialized()
 
         if how == "matplotlib":

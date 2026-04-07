@@ -482,6 +482,14 @@ def test_view_rejects_unsupported_mode() -> None:
         oa.view(how="foo")
 
 
+def test_view_rejects_unsupported_mode_before_lazy_materialization() -> None:
+    """Validate render mode before touching lazy source materialization."""
+    oa = OMEArrow.scan("tests/data/does-not-exist.ome.parquet")
+
+    with pytest.raises(ValueError, match="Unsupported view mode"):
+        oa.view(how="foo")
+
+
 def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     """Ensure custom Vortex column names are preserved on round-trip."""
     pytest.importorskip(
