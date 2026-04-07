@@ -130,7 +130,7 @@ from ome_arrow import OMEArrow
 
 # Direct constructor support:
 # inferred defaults are rank-based:
-# 2D -> "YX", 3D -> "CYX", 4D -> "TCYX", 5D -> "TCZYX"
+# 2D -> "YX", 3D -> "ZYX", 4D -> "TCYX", 5D -> "TCZYX"
 oa_torch = OMEArrow(torch_tensor)
 oa_jax = OMEArrow(jax_array)
 

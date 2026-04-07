@@ -826,7 +826,7 @@ def _infer_dim_order_for_tensor_rank(ndim: int) -> str:
     if ndim == 2:
         return "YX"
     if ndim == 3:
-        return "CYX"
+        return "ZYX"
     if ndim == 4:
         return "TCYX"
     if ndim == 5:
@@ -862,7 +862,7 @@ def from_torch_array(
     Args:
         arr: ``torch.Tensor`` image data.
         dim_order: Axis labels for ``arr``. If None, infer from rank:
-            2D->"YX", 3D->"CYX", 4D->"TCYX", 5D->"TCZYX".
+            2D->"YX", 3D->"ZYX", 4D->"TCYX", 5D->"TCZYX".
         image_id: Optional stable image identifier.
         name: Optional human label.
         image_type: Open-ended image kind (e.g., "image", "label").
@@ -955,7 +955,7 @@ def from_jax_array(
     Args:
         arr: ``jax.Array`` image data.
         dim_order: Axis labels for ``arr``. If None, infer from rank:
-            2D->"YX", 3D->"CYX", 4D->"TCYX", 5D->"TCZYX".
+            2D->"YX", 3D->"ZYX", 4D->"TCYX", 5D->"TCZYX".
         image_id: Optional stable image identifier.
         name: Optional human label.
         image_type: Open-ended image kind (e.g., "image", "label").

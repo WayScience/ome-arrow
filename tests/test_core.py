@@ -403,8 +403,8 @@ def test_constructor_accepts_torch_tensor() -> None:
     oa = OMEArrow(tensor)
 
     exported = oa.export(how="numpy")
-    assert exported.shape == (1, 2, 1, 3, 4)
-    np.testing.assert_array_equal(exported[0, :, 0], tensor.numpy())
+    assert exported.shape == (1, 1, 2, 3, 4)
+    np.testing.assert_array_equal(exported[0, 0], tensor.numpy())
 
 
 def test_constructor_accepts_jax_array() -> None:
@@ -415,8 +415,8 @@ def test_constructor_accepts_jax_array() -> None:
     oa = OMEArrow(arr)
 
     exported = oa.export(how="numpy")
-    assert exported.shape == (1, 2, 1, 3, 4)
-    np.testing.assert_array_equal(exported[0, :, 0], np.asarray(arr))
+    assert exported.shape == (1, 1, 2, 3, 4)
+    np.testing.assert_array_equal(exported[0, 0], np.asarray(arr))
 
 
 def test_from_torch_array_explicit_dim_order() -> None:

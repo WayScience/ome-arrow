@@ -46,11 +46,19 @@ You can also ingest torch tensors directly:
 
 ```python
 from ome_arrow import OMEArrow
+import torch
 
-oa = OMEArrow(torch_tensor)  # inferred dim_order by rank
-oa_zyx = OMEArrow(torch_volume, dim_order="ZYX")  # explicit override
+# 2D tensor interpreted as YX by default.
+torch_tensor = torch.randint(0, 256, (128, 128), dtype=torch.uint16)
+oa = OMEArrow(torch_tensor)
+
+# 3D tensors are inferred as ZYX by default.
+# Use dim_order when your tensor is arranged differently (for example CYX).
+torch_volume = torch.randint(0, 256, (16, 128, 128), dtype=torch.uint16)
+oa_cyx = OMEArrow(torch_volume, dim_order="CYX")
 ```
 
+Use `dim_order` when the inferred axis order does not match your tensor layout.
 `dim_order` is only supported for array/tensor ingest paths.
 
 ## Lazy scan-style slicing
@@ -91,9 +99,16 @@ You can also ingest JAX arrays directly:
 
 ```python
 from ome_arrow import OMEArrow
+import jax.numpy as jnp
 
-oa = OMEArrow(jax_array)  # inferred dim_order by rank
-oa_zyx = OMEArrow(jax_volume, dim_order="ZYX")  # explicit override
+# 2D array interpreted as YX by default.
+jax_array = jnp.arange(128 * 128, dtype=jnp.uint16).reshape(128, 128)
+oa = OMEArrow(jax_array)
+
+# 3D arrays are inferred as ZYX by default.
+# Use dim_order when your array is arranged differently (for example CYX).
+jax_volume = jnp.arange(16 * 128 * 128, dtype=jnp.uint16).reshape(16, 128, 128)
+oa_cyx = OMEArrow(jax_volume, dim_order="CYX")
 ```
 
 ## Iteration examples
