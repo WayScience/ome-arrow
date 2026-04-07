@@ -124,8 +124,8 @@ class OMEArrow:
         Args:
             data: Input source or record payload.
             dim_order: Axis labels used only for array/tensor ingest
-                (NumPy, torch, JAX). Ignored inputs are rejected to prevent
-                silent configuration mistakes.
+                (NumPy, torch, JAX). Invalid or unrecognized combinations
+                raise an error instead of being silently ignored.
         """
 
         # `dim_order` only applies to in-memory array/tensor ingestion paths.
