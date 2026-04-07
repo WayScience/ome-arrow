@@ -862,6 +862,11 @@ def from_torch_array(
 ) -> pa.StructScalar:
     """Build an OME-Arrow StructScalar from a torch tensor.
 
+    This is useful when your pipeline already works with ``torch.Tensor``
+    objects (for example model inputs/outputs) and you want a direct path into
+    the canonical OME-Arrow struct without manually converting and reshaping in
+    user code.
+
     Args:
         arr: ``torch.Tensor`` image data.
         dim_order: Axis labels for ``arr``. If None, infer from rank:
@@ -957,6 +962,10 @@ def from_jax_array(
     dtype_meta: Optional[str] = None,
 ) -> pa.StructScalar:
     """Build an OME-Arrow StructScalar from a JAX array.
+
+    This is useful when your pipeline already works with ``jax.Array`` objects
+    and you want a direct path into the canonical OME-Arrow struct without
+    manual conversion boilerplate in user code.
 
     Args:
         arr: ``jax.Array`` image data.
