@@ -676,7 +676,10 @@ def from_numpy(
         image_id: Optional stable image identifier.
         name: Optional human label.
         image_type: Open-ended image kind (e.g., "image", "label").
-        channel_names: Names for channels; defaults to C0..C{n-1}.
+        channel_names: Optional channel names. Defaults to ``None``. When
+            ``None`` (or length does not match channel count), names are
+            auto-generated as ``C0..C{n-1}`` (for example, 3 channels become
+            ``C0``, ``C1``, ``C2``).
         acquisition_datetime: Defaults to now (UTC) if None.
         clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
         chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
@@ -866,7 +869,10 @@ def from_torch_array(
         image_id: Optional stable image identifier.
         name: Optional human label.
         image_type: Open-ended image kind (e.g., "image", "label").
-        channel_names: Names for channels; defaults to C0..C{n-1}.
+        channel_names: Optional channel names. Defaults to ``None``. When
+            ``None`` (or length does not match channel count), names are
+            auto-generated as ``C0..C{n-1}`` (for example, 3 channels become
+            ``C0``, ``C1``, ``C2``).
         acquisition_datetime: Defaults to now (UTC) if None.
         clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
         chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
