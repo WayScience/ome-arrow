@@ -128,7 +128,8 @@ class OMEArrow:
                 raise an error instead of being silently ignored.
         """
 
-        # `dim_order` only applies to in-memory array/tensor ingestion paths.
+        # `dim_order` applies only when the constructor input itself is a raw
+        # NumPy/torch/JAX array object (not string/file-path sources).
         # Rejecting incompatible combinations avoids silently ignoring user intent.
         if dim_order is not None and not (
             isinstance(data, np.ndarray) or _is_torch_array(data) or _is_jax_array(data)
