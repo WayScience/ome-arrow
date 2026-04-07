@@ -693,8 +693,11 @@ class OMEArrow:
             TypeError: If parameter types are invalid.
 
         Notes:
-            - The PyVista path attempts to embed a static PNG snapshot for
-              non-interactive renderers.
+            - The ``how="pyvista"`` mode normally outputs an interactive
+              visualization, but attempts to embed a static PNG snapshot for
+              non-interactive renderers (for example, static docs builds,
+              nbconvert HTML/PDF exports, rendered/read-only notebook views
+              such as GitHub notebook previews, and CI log viewers).
             - When ``show=False`` and ``how="pyvista"``, the returned
               :class:`pyvista.Plotter` can be shown later.
         """
