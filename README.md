@@ -122,8 +122,18 @@ See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
 ## Tensor ingest (PyTorch/JAX)
 
-You can now ingest torch or JAX arrays directly with `OMEArrow(...)`, or use
-explicit helper functions from `ome_arrow.ingest`.
+You can ingest torch or JAX arrays directly with `OMEArrow(...)`.
+You can also use explicit helper functions from `ome_arrow.ingest`.
+
+Why this is useful:
+
+- It removes conversion boilerplate in model/data pipelines that already use torch or JAX tensors.
+- It keeps axis handling in one place (`dim_order`).
+- This reduces mistakes when moving between tensor layouts and OME-Arrow records.
+- It can reduce overhead in some paths.
+- For example, CPU torch tensors often expose a NumPy view without an extra copy.
+- Ingest still materializes OME-Arrow planes/chunks.
+- This is more about clean interoperability than dramatic end-to-end speedups.
 
 ```python
 from ome_arrow import OMEArrow
@@ -147,11 +157,13 @@ scalar_jax = from_jax_array(jax_array, dim_order="TCYX")
 
 Notes:
 
-- Torch/JAX support is optional; install extras as needed:
-  `pip install "ome-arrow[dlpack-torch]"` or
-  `pip install "ome-arrow[dlpack-jax]"`.
+- Torch/JAX support is optional.
+- Install extras as needed:
+  `pip install "ome-arrow[dlpack-torch]"` or `pip install "ome-arrow[dlpack-jax]"`.
 - Torch tensors are detached and converted on CPU for ingest.
 - `dim_order` is accepted only for NumPy/torch/JAX array inputs.
+- Ingest now passes flattened NumPy pixel buffers directly to Arrow.
+- This avoids materializing Python `list` payloads per plane/chunk.
 
 ## Benchmarking lazy reads
 
