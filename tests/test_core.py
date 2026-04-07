@@ -466,6 +466,22 @@ def test_constructor_dim_order_rejects_non_array_input() -> None:
         OMEArrow("tests/data/JUMP-BR00117006/BR00117006.ome.parquet", dim_order="ZYX")
 
 
+def test_constructor_second_positional_arg_still_binds_tcz() -> None:
+    """Preserve positional ABI: second positional argument is tcz, not dim_order."""
+    arr = np.arange(12, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    oa = OMEArrow(arr, (0, 0, 1))
+    assert oa.tcz == (0, 0, 1)
+
+
+def test_view_rejects_unsupported_mode() -> None:
+    """Unsupported view modes should raise a clear ValueError."""
+    arr = np.arange(12, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    oa = OMEArrow(arr)
+
+    with pytest.raises(ValueError, match="Unsupported view mode"):
+        oa.view(how="foo")
+
+
 def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     """Ensure custom Vortex column names are preserved on round-trip."""
     pytest.importorskip(

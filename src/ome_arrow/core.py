@@ -96,8 +96,9 @@ class OMEArrow:
     def __init__(
         self,
         data: str | dict | pa.StructScalar | "np.ndarray",
-        dim_order: str | None = None,
         tcz: Tuple[int, int, int] = (0, 0, 0),
+        *,
+        dim_order: str | None = None,
         column_name: str = "ome_arrow",
         row_index: int = 0,
         image_type: str | None = None,
@@ -762,6 +763,8 @@ class OMEArrow:
                 print(f"Warning: could not save PyVista snapshot: {e}")
 
             return plotter
+
+        raise ValueError(f"Unsupported view mode: {how!r}. Use 'matplotlib' or 'pyvista'.")
 
     def tensor_view(
         self,
