@@ -224,9 +224,10 @@ class OMEArrow:
 
         # --- otherwise ------------------------------------------------------------
         else:
+            data_type = f"{type(data).__module__}.{type(data).__qualname__}"
             raise TypeError(
                 "input data must be str, dict, pa.StructScalar, numpy.ndarray, "
-                "torch.Tensor, or jax.Array"
+                f"torch.Tensor, or jax.Array; got {data_type}"
             )
 
     @classmethod
