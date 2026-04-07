@@ -127,13 +127,11 @@ You can also use explicit helper functions from `ome_arrow.ingest`.
 
 Why this is useful:
 
-- It removes conversion boilerplate in model/data pipelines that already use torch or JAX tensors.
-- It keeps axis handling in one place (`dim_order`).
-- This reduces mistakes when moving between tensor layouts and OME-Arrow records.
-- It can reduce overhead in some paths.
-- For example, CPU torch tensors often expose a NumPy view without an extra copy.
+- It reduces compute overhead by removing conversion code boilerplate in separate model/data pipelines that already use torch or JAX tensors (i.e., it provides a direct port of OME-arrow into popular deep learning libraries).
+- However, this is more about clean interoperability than dramatic end-to-end speedups (although we expect fewer handoffs to result in speedups). Specifically:
+- It makes it easier for a user to update dimension ordering input in the same place without requiring separate functionality (see argument `dim_order`).
+- This smooths handoffs and reduces mistakes when moving between tensor layouts and OME-Arrow records. For example, CPU torch tensors often expose a NumPy view without an extra copy.
 - Ingest still materializes OME-Arrow planes/chunks.
-- This is more about clean interoperability than dramatic end-to-end speedups.
 
 ```python
 from ome_arrow import OMEArrow
