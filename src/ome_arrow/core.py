@@ -774,7 +774,9 @@ class OMEArrow:
 
             return plotter
 
-        raise ValueError(f"Unsupported view mode: {how!r}. Use 'matplotlib' or 'pyvista'.")
+        raise ValueError(
+            f"Unsupported view mode: {how!r}. Use 'matplotlib' or 'pyvista'."
+        )
 
     def tensor_view(
         self,
