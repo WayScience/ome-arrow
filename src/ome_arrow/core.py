@@ -674,6 +674,8 @@ class OMEArrow:
             c: Channel index override for PyVista. If ``None``, uses
                 ``tcz[1]``.
             downsample: Integer downsampling factor for PyVista views.
+                Higher values render faster for large volumes but reduce
+                spatial resolution.
             opacity: Opacity for PyVista. Either a float in ``[0, 1]`` or
                 ``"sigmoid"``.
             clim: Contrast limits ``(low, high)`` for PyVista rendering.
