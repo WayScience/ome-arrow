@@ -654,9 +654,7 @@ class OMEArrow:
         clim: tuple[float, float] | None = None,
         show_axes: bool = True,
         scaling_values: tuple[float, float, float] | None = None,
-    ) -> (
-        tuple[matplotlib.figure.Figure, Any, Any] | "pyvista.Plotter"
-    ):
+    ) -> tuple[matplotlib.figure.Figure, Any, Any] | "pyvista.Plotter":
         """Render an OME-Arrow record using Matplotlib or PyVista.
 
         This convenience method supports two rendering backends:
