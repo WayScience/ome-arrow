@@ -46,6 +46,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'dlpack';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Learning to fly with OME-Arrow" href="examples/learning_to_fly_with_ome-arrow.html" />
     <link rel="prev" title="Python API" href="python-api.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -135,6 +136,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#">
     Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
   </a>
 </li>
 
@@ -233,6 +241,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#">
     Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
   </a>
 </li>
 
@@ -377,6 +392,50 @@ and (optionally) GPU.</p>
 <span class="n">tensor</span> <span class="o">=</span> <span class="n">flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>You can also ingest torch tensors directly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="c1"># 2D tensor interpreted as YX by default.</span>
+<span class="n">torch_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+<span class="n">oa</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">torch_tensor</span><span class="p">)</span>
+
+<span class="c1"># 3D tensors are inferred as ZYX by default.</span>
+<span class="c1"># Use dim_order when your tensor is arranged differently (for example CYX).</span>
+<span class="n">torch_volume</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+<span class="n">oa_cyx</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">torch_volume</span><span class="p">,</span> <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;CYX&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">dim_order</span></code> when the inferred axis order does not match your tensor layout.
+<code class="docutils literal notranslate"><span class="pre">dim_order</span></code> is only supported for array/tensor ingest paths.</p>
+<p>To persist with this interpreted axis mapping, export the resulting OME-Arrow
+record (for example to parquet):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="n">torch_volume</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+<span class="n">oa</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">torch_volume</span><span class="p">,</span> <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;ZYX&quot;</span><span class="p">)</span>
+<span class="n">oa</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">how</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="s2">&quot;volume.ome.parquet&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>OME-Arrow stores pixels in canonical OME-style fields (<code class="docutils literal notranslate"><span class="pre">size_t</span></code>, <code class="docutils literal notranslate"><span class="pre">size_c</span></code>,
+<code class="docutils literal notranslate"><span class="pre">size_z</span></code>, <code class="docutils literal notranslate"><span class="pre">size_y</span></code>, <code class="docutils literal notranslate"><span class="pre">size_x</span></code>) rather than preserving a free-form input label
+string. The interpreted mapping is preserved through those axis sizes and can
+be read back with <code class="docutils literal notranslate"><span class="pre">tensor_view(...)</span></code> layouts.</p>
+<p>“Batch” dimension note:</p>
+<ul class="simple">
+<li><p>There is no separate <code class="docutils literal notranslate"><span class="pre">B</span></code> axis in the OME-Arrow schema.</p></li>
+<li><p>For model batches, map batch to <code class="docutils literal notranslate"><span class="pre">T</span></code> during ingest.</p></li>
+<li><p>Examples:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">B,C,Y,X</span></code> -&gt; use <code class="docutils literal notranslate"><span class="pre">dim_order=&quot;TCYX&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">B,C,Z,Y,X</span></code> -&gt; use <code class="docutils literal notranslate"><span class="pre">dim_order=&quot;TCZYX&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">B,Y,X,C</span></code> -&gt; use <code class="docutils literal notranslate"><span class="pre">dim_order=&quot;TYXC&quot;</span></code></p></li>
+</ul>
+</li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">T</span></code> is already meaningful in your data, represent batch as table rows
+(one OME-Arrow record per batch item) instead of overloading another image axis.</p></li>
+</ul>
 </section>
 <section id="lazy-scan-style-slicing">
 <h2>Lazy scan-style slicing<a class="headerlink" href="#lazy-scan-style-slicing" title="Link to this heading">#</a></h2>
@@ -409,6 +468,20 @@ and (optionally) GPU.</p>
 <span class="n">capsule</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">to_dlpack</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;arrow&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
 <span class="n">flat</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">capsule</span><span class="p">)</span>
 <span class="n">arr</span> <span class="o">=</span> <span class="n">flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can also ingest JAX arrays directly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+
+<span class="c1"># 2D array interpreted as YX by default.</span>
+<span class="n">jax_array</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">128</span> <span class="o">*</span> <span class="mi">128</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+<span class="n">oa</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">jax_array</span><span class="p">)</span>
+
+<span class="c1"># 3D arrays are inferred as ZYX by default.</span>
+<span class="c1"># Use dim_order when your array is arranged differently (for example CYX).</span>
+<span class="n">jax_volume</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">16</span> <span class="o">*</span> <span class="mi">128</span> <span class="o">*</span> <span class="mi">128</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+<span class="n">oa_cyx</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">jax_volume</span><span class="p">,</span> <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;CYX&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -521,6 +594,15 @@ runner image or dependency changes.</p></li>
         <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Python API</p>
       </div>
+    </a>
+    <a class="right-next"
+       href="examples/learning_to_fly_with_ome-arrow.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Learning to fly with OME-Arrow</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
     </a>
 </div>
                 </footer>

@@ -1,0 +1,1473 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ome_arrow.core &#8212; ome_arrow  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ome_arrow/core';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ome_arrow</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../python-api.html">
+    Python API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../dlpack.html">
+    Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/wayscience/ome-arrow" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../python-api.html">
+    Python API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../dlpack.html">
+    Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/wayscience/ome-arrow" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">ome_arrow.core</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for ome_arrow.core</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Core of the ome_arrow package, used for classes and such.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pathlib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">TYPE_CHECKING</span><span class="p">,</span>
+    <span class="n">Any</span><span class="p">,</span>
+    <span class="n">Dict</span><span class="p">,</span>
+    <span class="n">Iterable</span><span class="p">,</span>
+    <span class="n">Literal</span><span class="p">,</span>
+    <span class="n">Optional</span><span class="p">,</span>
+    <span class="n">Sequence</span><span class="p">,</span>
+    <span class="n">Tuple</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.export</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">to_numpy</span><span class="p">,</span>
+    <span class="n">to_ome_parquet</span><span class="p">,</span>
+    <span class="n">to_ome_tiff</span><span class="p">,</span>
+    <span class="n">to_ome_vortex</span><span class="p">,</span>
+    <span class="n">to_ome_zarr</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.ingest</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_is_jax_array</span><span class="p">,</span>
+    <span class="n">_is_torch_array</span><span class="p">,</span>
+    <span class="n">from_jax_array</span><span class="p">,</span>
+    <span class="n">from_numpy</span><span class="p">,</span>
+    <span class="n">from_ome_parquet</span><span class="p">,</span>
+    <span class="n">from_ome_vortex</span><span class="p">,</span>
+    <span class="n">from_ome_zarr</span><span class="p">,</span>
+    <span class="n">from_stack_pattern_path</span><span class="p">,</span>
+    <span class="n">from_tiff</span><span class="p">,</span>
+    <span class="n">from_torch_array</span><span class="p">,</span>
+    <span class="n">open_lazy_plane_source</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.meta</span><span class="w"> </span><span class="kn">import</span> <span class="n">OME_ARROW_STRUCT</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyTensorView</span><span class="p">,</span> <span class="n">TensorView</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.transform</span><span class="w"> </span><span class="kn">import</span> <span class="n">slice_ome_arrow</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">describe_ome_arrow</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.view</span><span class="w"> </span><span class="kn">import</span> <span class="n">view_matplotlib</span><span class="p">,</span> <span class="n">view_pyvista</span>
+
+<span class="c1"># if not in runtime, import pyvista for type hints</span>
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pyvista</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_LazySourceSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Deferred source description for lazy OMEArrow loading.&quot;&quot;&quot;</span>
+
+    <span class="n">data</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">column_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">row_index</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">image_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_LazySliceSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Deferred spatial/index slice specification.&quot;&quot;&quot;</span>
+
+    <span class="n">x_min</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">x_max</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">y_min</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">y_max</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">t_indices</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">c_indices</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">z_indices</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">fill_missing</span><span class="p">:</span> <span class="nb">bool</span>
+
+
+<div class="viewcode-block" id="OMEArrow">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">OMEArrow</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Small convenience toolkit for working with ome-arrow data.</span>
+
+<span class="sd">    If `input` is a TIFF path, this loads it via `tiff_to_ome_arrow`.</span>
+<span class="sd">    If `input` is a dict, it will be converted using `to_struct_scalar`.</span>
+<span class="sd">    If `input` is already a `pa.StructScalar`, it is used as-is.</span>
+
+<span class="sd">    In Jupyter, evaluating the instance will render the first plane using</span>
+<span class="sd">    matplotlib (via `_repr_html_`). Call `view_matplotlib()` to select a</span>
+<span class="sd">    specific (z, t, c) plane.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        input: TIFF path, nested dict, or `pa.StructScalar`.</span>
+<span class="sd">        struct: Expected Arrow StructType (e.g., OME_ARROW_STRUCT).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">dict</span> <span class="o">|</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span> <span class="o">|</span> <span class="s2">&quot;np.ndarray&quot;</span><span class="p">,</span>
+        <span class="n">tcz</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">dim_order</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">column_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ome_arrow&quot;</span><span class="p">,</span>
+        <span class="n">row_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">image_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct an OMEArrow from:</span>
+<span class="sd">        - a Bio-Formats-style stack pattern string (contains &#39;&lt;&#39;, &#39;&gt;&#39;, or &#39;*&#39;)</span>
+<span class="sd">        - a path/URL to an OME-TIFF (.tif/.tiff)</span>
+<span class="sd">        - a path/URL to an OME-Zarr store (.zarr / .ome.zarr)</span>
+<span class="sd">        - a path/URL to an OME-Parquet file (.parquet / .pq)</span>
+<span class="sd">        - a path/URL to a Vortex file (.vortex)</span>
+<span class="sd">        - a NumPy ndarray (2D-5D; interpreted</span>
+<span class="sd">            with from_numpy defaults)</span>
+<span class="sd">        - a torch.Tensor (2D-5D; inferred dim order by rank unless provided via</span>
+<span class="sd">            `dim_order`)</span>
+<span class="sd">        - a jax.Array (2D-5D; inferred dim order by rank unless provided via</span>
+<span class="sd">            `dim_order`)</span>
+<span class="sd">        - a dict already matching the OME-Arrow schema</span>
+<span class="sd">        - a pa.StructScalar already typed to OME_ARROW_STRUCT</span>
+<span class="sd">        - optionally override/set image_type metadata on ingest</span>
+<span class="sd">        - optionally defer source-file ingestion with lazy=True</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: Input source or record payload.</span>
+<span class="sd">            dim_order: Axis labels used only for array/tensor ingest</span>
+<span class="sd">                (NumPy, torch, JAX). Invalid or unrecognized combinations</span>
+<span class="sd">                raise an error instead of being silently ignored.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># `dim_order` applies only when the constructor input itself is a raw</span>
+        <span class="c1"># NumPy/torch/JAX array object (not string/file-path sources).</span>
+        <span class="c1"># Rejecting incompatible combinations avoids silently ignoring user intent.</span>
+        <span class="k">if</span> <span class="n">dim_order</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_is_torch_array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_is_jax_array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;dim_order is supported only for numpy.ndarray, torch.Tensor, &quot;</span>
+                <span class="s2">&quot;or jax.Array inputs.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># set the tcz for viewing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tcz</span> <span class="o">=</span> <span class="n">tcz</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span><span class="p">:</span> <span class="n">_LazySourceSpec</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_LazySliceSpec</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">lazy</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;lazy=True currently supports only string file inputs.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="s2">&quot;&lt;&gt;*&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s2">&quot;lazy=True does not support Bio-Formats pattern strings. &quot;</span>
+                    <span class="s2">&quot;Use OMEArrow(..., lazy=False) for pattern ingestion via &quot;</span>
+                    <span class="s2">&quot;from_stack_pattern_path.&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="o">=</span> <span class="n">_LazySourceSpec</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+                <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># --- 1) Stack pattern (Bio-Formats-style) --------------------------------</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="s2">&quot;&lt;&gt;*&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">from_stack_pattern_path</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">default_dim_for_unspecified</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">,</span>
+                <span class="n">map_series_to</span><span class="o">=</span><span class="s2">&quot;T&quot;</span><span class="p">,</span>
+                <span class="n">clamp_to_uint16</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># --- 2) String path/URL: OME-Zarr / OME-Parquet / OME-TIFF ---------------</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_string_source</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+                <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># --- 3) NumPy ndarray ----------------------------------------------------</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="c1"># Uses from_numpy defaults: dim_order=&quot;TCZYX&quot;, clamp_to_uint16=True, etc.</span>
+            <span class="c1"># If the array is YX/ZYX/CYX/etc.,</span>
+            <span class="c1"># from_numpy will expand/reorder accordingly.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">from_numpy</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;TCZYX&quot;</span> <span class="k">if</span> <span class="n">dim_order</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dim_order</span><span class="p">,</span>
+                <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># --- 4) Torch tensor ------------------------------------------------------</span>
+        <span class="k">elif</span> <span class="n">_is_torch_array</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">from_torch_array</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">dim_order</span><span class="o">=</span><span class="n">dim_order</span><span class="p">,</span>
+                <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># --- 5) JAX array --------------------------------------------------------</span>
+        <span class="k">elif</span> <span class="n">_is_jax_array</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">from_jax_array</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">dim_order</span><span class="o">=</span><span class="n">dim_order</span><span class="p">,</span>
+                <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># --- 6) Already-typed Arrow scalar ---------------------------------------</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">if</span> <span class="n">image_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_with_image_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">image_type</span><span class="p">)</span>
+
+        <span class="c1"># --- 7) Plain dict matching the schema -----------------------------------</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">OME_ARROW_STRUCT</span><span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">OME_ARROW_STRUCT</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">image_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_with_image_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">image_type</span><span class="p">)</span>
+
+        <span class="c1"># --- otherwise ------------------------------------------------------------</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data_type</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="vm">__qualname__</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;input data must be str, dict, pa.StructScalar, numpy.ndarray, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;torch.Tensor, or jax.Array; got </span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="OMEArrow.scan">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.scan">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">tcz</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">column_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ome_arrow&quot;</span><span class="p">,</span>
+        <span class="n">row_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">image_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;OMEArrow&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a lazily-loaded OMEArrow, similar to Polars scan semantics.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: Input source path/URL.</span>
+<span class="sd">            tcz: Default `(t, c, z)` indices used for view helpers.</span>
+<span class="sd">            column_name: OME-Arrow column name for tabular sources.</span>
+<span class="sd">            row_index: Row index for tabular sources.</span>
+<span class="sd">            image_type: Optional image type override.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            OMEArrow: Lazily planned OMEArrow instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">tcz</span><span class="o">=</span><span class="n">tcz</span><span class="p">,</span>
+            <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+            <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+            <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+            <span class="n">lazy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_lazy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return whether this instance still has deferred work.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the materialized OME-Arrow StructScalar.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pa.StructScalar: Materialized OME-Arrow record.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            RuntimeError: If the record could not be initialized.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;OMEArrow data is not initialized.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span>
+
+    <span class="nd">@data</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">value</span>
+
+<div class="viewcode-block" id="OMEArrow.collect">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.collect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">collect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;OMEArrow&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Materialize deferred source data and return ``self``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            OMEArrow: The same instance after materialization.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_from_string_source</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">column_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">row_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">image_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">struct_array</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.zarr&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.ome.zarr&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="s2">&quot;.zarr/&quot;</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="ow">or</span> <span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.zarr&quot;</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">scalar</span> <span class="o">=</span> <span class="n">from_ome_zarr</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">image_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">scalar</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="o">.</span><span class="n">_wrap_with_image_type</span><span class="p">(</span><span class="n">scalar</span><span class="p">,</span> <span class="n">image_type</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">scalar</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.parquet&quot;</span><span class="p">,</span> <span class="s2">&quot;.pq&quot;</span><span class="p">))</span> <span class="ow">or</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span>
+            <span class="s2">&quot;.parquet&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;.pq&quot;</span><span class="p">,</span>
+        <span class="p">}:</span>
+            <span class="n">parquet_result</span> <span class="o">=</span> <span class="n">from_ome_parquet</span><span class="p">(</span>
+                <span class="n">s</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+                <span class="n">return_array</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">scalar</span><span class="p">,</span> <span class="n">struct_array</span> <span class="o">=</span> <span class="n">parquet_result</span>
+            <span class="k">if</span> <span class="n">image_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">scalar</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="o">.</span><span class="n">_wrap_with_image_type</span><span class="p">(</span><span class="n">scalar</span><span class="p">,</span> <span class="n">image_type</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">scalar</span><span class="p">,</span> <span class="n">struct_array</span>
+
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.vortex&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.vortex&quot;</span><span class="p">:</span>
+            <span class="n">vortex_result</span> <span class="o">=</span> <span class="n">from_ome_vortex</span><span class="p">(</span>
+                <span class="n">s</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+                <span class="n">return_array</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">scalar</span><span class="p">,</span> <span class="n">struct_array</span> <span class="o">=</span> <span class="n">vortex_result</span>
+            <span class="k">if</span> <span class="n">image_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">scalar</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="o">.</span><span class="n">_wrap_with_image_type</span><span class="p">(</span><span class="n">scalar</span><span class="p">,</span> <span class="n">image_type</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">scalar</span><span class="p">,</span> <span class="n">struct_array</span>
+
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.tif&quot;</span><span class="p">,</span> <span class="s2">&quot;.tiff&quot;</span><span class="p">}</span> <span class="ow">or</span> <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span>
+            <span class="p">(</span><span class="s2">&quot;.tif&quot;</span><span class="p">,</span> <span class="s2">&quot;.tiff&quot;</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">scalar</span> <span class="o">=</span> <span class="n">from_tiff</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">image_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">scalar</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="o">.</span><span class="n">_wrap_with_image_type</span><span class="p">(</span><span class="n">scalar</span><span class="p">,</span> <span class="n">image_type</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">scalar</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Directory &#39;</span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2">&#39; exists but does not look like an OME-Zarr store &quot;</span>
+                <span class="s2">&quot;(expected suffix &#39;.zarr&#39; or &#39;.ome.zarr&#39;).&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;String input must be one of:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  • Bio-Formats pattern string (contains &#39;&lt;&#39;, &#39;&gt;&#39; or &#39;*&#39;)</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  • OME-Zarr path/URL ending with &#39;.zarr&#39; or &#39;.ome.zarr&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  • OME-Parquet file ending with &#39;.parquet&#39; or &#39;.pq&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  • Vortex file ending with &#39;.vortex&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  • OME-TIFF path/URL ending with &#39;.tif&#39; or &#39;.tiff&#39;&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_materialized</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">lazy_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span>
+        <span class="c1"># Intentionally do not clear `_lazy_source` / `_lazy_slices` before load.</span>
+        <span class="c1"># If `_load_from_string_source(...)` raises, lazy state is preserved so</span>
+        <span class="c1"># callers can inspect/retry without losing the deferred plan.</span>
+        <span class="n">scalar</span><span class="p">,</span> <span class="n">struct_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_string_source</span><span class="p">(</span>
+            <span class="n">lazy_source</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">column_name</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">column_name</span><span class="p">,</span>
+            <span class="n">row_index</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">row_index</span><span class="p">,</span>
+            <span class="n">image_type</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">image_type</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">scalar</span>
+            <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">slice_ome_arrow</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                    <span class="n">x_min</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">x_min</span><span class="p">,</span>
+                    <span class="n">x_max</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">x_max</span><span class="p">,</span>
+                    <span class="n">y_min</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">y_min</span><span class="p">,</span>
+                    <span class="n">y_max</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">y_max</span><span class="p">,</span>
+                    <span class="n">t_indices</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">t_indices</span><span class="p">,</span>
+                    <span class="n">c_indices</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">c_indices</span><span class="p">,</span>
+                    <span class="n">z_indices</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">z_indices</span><span class="p">,</span>
+                    <span class="n">fill_missing</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">fill_missing</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="c1"># Applying lazy slices via `slice_ome_arrow` materializes through a</span>
+            <span class="c1"># StructScalar path, so we intentionally drop `_struct_array` here.</span>
+            <span class="c1"># Consequence: Arrow-backed zero-copy tensor paths</span>
+            <span class="c1"># (for example `tensor_view(...).to_dlpack(mode=&quot;arrow&quot;)`) are not</span>
+            <span class="c1"># available after lazy slicing.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="o">=</span> <span class="n">scalar</span><span class="p">,</span> <span class="n">struct_array</span>
+        <span class="c1"># Lazy state is cleared only after a successful materialization.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_tensor_source</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span> <span class="o">|</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructArray</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;OMEArrow data is not initialized.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_lazy_tensor_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TensorView</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve a lazy tensor view plan without mutating this OMEArrow state.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            view_kwargs: TensorView constructor kwargs captured by LazyTensorView.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TensorView: Concrete tensor view for the planned selection.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Deferred slice plans rely on slice_ome_arrow over a materialized scalar;</span>
+        <span class="c1"># keep the existing behavior for those plans.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">TensorView</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_source</span><span class="p">(),</span> <span class="o">**</span><span class="n">view_kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">TensorView</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_source</span><span class="p">(),</span> <span class="o">**</span><span class="n">view_kwargs</span><span class="p">)</span>
+
+        <span class="n">lazy_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span>
+        <span class="n">lazy_plane_source</span> <span class="o">=</span> <span class="n">open_lazy_plane_source</span><span class="p">(</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">lazy_plane_source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pixels_meta</span><span class="p">,</span> <span class="n">plane_loader</span> <span class="o">=</span> <span class="n">lazy_plane_source</span>
+            <span class="n">lazy_record</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;image_type&quot;</span><span class="p">:</span> <span class="n">lazy_source</span><span class="o">.</span><span class="n">image_type</span><span class="p">,</span>
+                <span class="s2">&quot;acquisition_datetime&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;pixels_meta&quot;</span><span class="p">:</span> <span class="n">pixels_meta</span><span class="p">,</span>
+                <span class="s2">&quot;channels&quot;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s2">&quot;planes&quot;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s2">&quot;masks&quot;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s2">&quot;chunk_grid&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;chunks&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="p">}</span>
+            <span class="k">return</span> <span class="n">TensorView</span><span class="p">(</span><span class="n">lazy_record</span><span class="p">,</span> <span class="n">plane_loader</span><span class="o">=</span><span class="n">plane_loader</span><span class="p">,</span> <span class="o">**</span><span class="n">view_kwargs</span><span class="p">)</span>
+
+        <span class="n">scalar</span><span class="p">,</span> <span class="n">struct_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_string_source</span><span class="p">(</span>
+            <span class="n">lazy_source</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">column_name</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">column_name</span><span class="p">,</span>
+            <span class="n">row_index</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">row_index</span><span class="p">,</span>
+            <span class="n">image_type</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">image_type</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">struct_array</span> <span class="k">if</span> <span class="n">struct_array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">scalar</span>
+        <span class="k">return</span> <span class="n">TensorView</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="o">**</span><span class="n">view_kwargs</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_wrap_with_image_type</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">,</span> <span class="n">image_type</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="o">**</span><span class="n">data</span><span class="o">.</span><span class="n">as_py</span><span class="p">(),</span>
+                <span class="s2">&quot;image_type&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">image_type</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">OME_ARROW_STRUCT</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="OMEArrow.export">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.export">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">export</span><span class="p">(</span>  <span class="c1"># noqa: PLR0911</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">how</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;numpy&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">,</span>
+        <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">clamp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="c1"># common writer args</span>
+        <span class="n">out</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dim_order</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;TCZYX&quot;</span><span class="p">,</span>
+        <span class="c1"># OME-TIFF args</span>
+        <span class="n">compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;zlib&quot;</span><span class="p">,</span>
+        <span class="n">compression_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+        <span class="n">tile</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="c1"># OME-Zarr args</span>
+        <span class="n">chunks</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># (T,C,Z,Y,X)</span>
+        <span class="n">zarr_compressor</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;zstd&quot;</span><span class="p">,</span>
+        <span class="n">zarr_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span>
+        <span class="c1"># optional display metadata (both paths guard/ignore if unsafe)</span>
+        <span class="n">use_channel_colors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="c1"># Parquet args</span>
+        <span class="n">parquet_column_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ome_arrow&quot;</span><span class="p">,</span>
+        <span class="n">parquet_compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;zstd&quot;</span><span class="p">,</span>
+        <span class="n">parquet_metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">vortex_column_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ome_arrow&quot;</span><span class="p">,</span>
+        <span class="n">vortex_metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="o">|</span> <span class="nb">dict</span> <span class="o">|</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span> <span class="o">|</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Export the OME-Arrow content in a chosen representation.</span>
+
+<span class="sd">        Args</span>
+<span class="sd">        ----</span>
+<span class="sd">        how:</span>
+<span class="sd">            &quot;numpy&quot;     → TCZYX np.ndarray</span>
+<span class="sd">            &quot;dict&quot;      → plain Python dict</span>
+<span class="sd">            &quot;scalar&quot;    → pa.StructScalar (as-is)</span>
+<span class="sd">            &quot;ome-tiff&quot;  → write OME-TIFF via BioIO</span>
+<span class="sd">            &quot;ome-zarr&quot;  → write OME-Zarr (OME-NGFF) via BioIO</span>
+<span class="sd">            &quot;parquet&quot;   → write a single-row Parquet with one struct column</span>
+<span class="sd">            &quot;vortex&quot;    → write a single-row Vortex file with one struct column</span>
+<span class="sd">        dtype:</span>
+<span class="sd">            Target dtype for &quot;numpy&quot;/writers (default: np.uint16).</span>
+<span class="sd">        strict:</span>
+<span class="sd">            For &quot;numpy&quot;: raise if a plane has wrong pixel length.</span>
+<span class="sd">        clamp:</span>
+<span class="sd">            For &quot;numpy&quot;/writers: clamp values into dtype range before cast.</span>
+
+<span class="sd">        Keyword-only (writer specific)</span>
+<span class="sd">        ------------------------------</span>
+<span class="sd">        out:</span>
+<span class="sd">            Output path (required for &#39;ome-tiff&#39;, &#39;ome-zarr&#39;, and &#39;parquet&#39;).</span>
+<span class="sd">        dim_order:</span>
+<span class="sd">            Axes string for BioIO writers; default &quot;TCZYX&quot;.</span>
+<span class="sd">        compression / compression_level / tile:</span>
+<span class="sd">            OME-TIFF options (passed through to tifffile via BioIO).</span>
+<span class="sd">        chunks / zarr_compressor / zarr_level :</span>
+<span class="sd">            OME-Zarr options (chunk shape, compressor hint, level). If chunks is</span>
+<span class="sd">            None, a TCZYX default is chosen (1,1,&lt;=4,&lt;=512,&lt;=512).</span>
+<span class="sd">        use_channel_colors:</span>
+<span class="sd">            Try to embed per-channel display colors when safe; otherwise omitted.</span>
+<span class="sd">        parquet_*:</span>
+<span class="sd">            Options for Parquet export (column name, compression, file metadata).</span>
+<span class="sd">        vortex_*:</span>
+<span class="sd">            Options for Vortex export (column name, file metadata).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Any</span>
+<span class="sd">            - &quot;numpy&quot;: np.ndarray (T, C, Z, Y, X)</span>
+<span class="sd">            - &quot;dict&quot;:  dict</span>
+<span class="sd">            - &quot;scalar&quot;: pa.StructScalar</span>
+<span class="sd">            - &quot;ome-tiff&quot;: output path (str)</span>
+<span class="sd">            - &quot;ome-zarr&quot;: output path (str)</span>
+<span class="sd">            - &quot;parquet&quot;: output path (str)</span>
+<span class="sd">            - &quot;vortex&quot;: output path (str)</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError:</span>
+<span class="sd">            Unknown &#39;how&#39; or missing required params.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+
+        <span class="c1"># existing modes</span>
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;numpy&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">to_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="n">strict</span><span class="p">,</span> <span class="n">clamp</span><span class="o">=</span><span class="n">clamp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;scalar&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
+
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">how</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
+
+        <span class="c1"># OME-TIFF via BioIO</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;ome-tiff&quot;</span><span class="p">,</span> <span class="s2">&quot;ometiff&quot;</span><span class="p">,</span> <span class="s2">&quot;tiff&quot;</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;export(how=&#39;ome-tiff&#39;) requires &#39;out&#39; path.&quot;</span><span class="p">)</span>
+            <span class="n">to_ome_tiff</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">out</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">clamp</span><span class="o">=</span><span class="n">clamp</span><span class="p">,</span>
+                <span class="n">dim_order</span><span class="o">=</span><span class="n">dim_order</span><span class="p">,</span>
+                <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+                <span class="n">compression_level</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">compression_level</span><span class="p">),</span>
+                <span class="n">tile</span><span class="o">=</span><span class="n">tile</span><span class="p">,</span>
+                <span class="n">use_channel_colors</span><span class="o">=</span><span class="n">use_channel_colors</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">out</span>
+
+        <span class="c1"># OME-Zarr via BioIO</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;ome-zarr&quot;</span><span class="p">,</span> <span class="s2">&quot;omezarr&quot;</span><span class="p">,</span> <span class="s2">&quot;zarr&quot;</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;export(how=&#39;ome-zarr&#39;) requires &#39;out&#39; path.&quot;</span><span class="p">)</span>
+            <span class="n">to_ome_zarr</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">out</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">clamp</span><span class="o">=</span><span class="n">clamp</span><span class="p">,</span>
+                <span class="n">dim_order</span><span class="o">=</span><span class="n">dim_order</span><span class="p">,</span>
+                <span class="n">chunks</span><span class="o">=</span><span class="n">chunks</span><span class="p">,</span>
+                <span class="n">compressor</span><span class="o">=</span><span class="n">zarr_compressor</span><span class="p">,</span>
+                <span class="n">compressor_level</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">zarr_level</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">out</span>
+
+        <span class="c1"># Parquet (single row, single struct column)</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;ome-parquet&quot;</span><span class="p">,</span> <span class="s2">&quot;omeparquet&quot;</span><span class="p">,</span> <span class="s2">&quot;parquet&quot;</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;export(how=&#39;parquet&#39;) requires &#39;out&#39; path.&quot;</span><span class="p">)</span>
+            <span class="n">to_ome_parquet</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">parquet_column_name</span><span class="p">,</span>
+                <span class="n">compression</span><span class="o">=</span><span class="n">parquet_compression</span><span class="p">,</span>  <span class="c1"># default &#39;zstd&#39;</span>
+                <span class="n">file_metadata</span><span class="o">=</span><span class="n">parquet_metadata</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">out</span>
+
+        <span class="c1"># Vortex (single row, single struct column)</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;ome-vortex&quot;</span><span class="p">,</span> <span class="s2">&quot;omevortex&quot;</span><span class="p">,</span> <span class="s2">&quot;vortex&quot;</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;export(how=&#39;vortex&#39;) requires &#39;out&#39; path.&quot;</span><span class="p">)</span>
+            <span class="n">to_ome_vortex</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">vortex_column_name</span><span class="p">,</span>
+                <span class="n">file_metadata</span><span class="o">=</span><span class="n">vortex_metadata</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">out</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown export method: </span><span class="si">{</span><span class="n">how</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OMEArrow.info">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Describe the OME-Arrow data structure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict with keys:</span>
+<span class="sd">                - shape: (T, C, Z, Y, X)</span>
+<span class="sd">                - type: classification string</span>
+<span class="sd">                - summary: human-readable text</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">describe_ome_arrow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OMEArrow.view">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.view">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">view</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">how</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;matplotlib&quot;</span><span class="p">,</span>
+        <span class="n">tcz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">autoscale</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">vmin</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">vmax</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+        <span class="n">show</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">c</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">downsample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">opacity</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="s2">&quot;sigmoid&quot;</span><span class="p">,</span>
+        <span class="n">clim</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">show_axes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">scaling_values</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">Figure</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="s2">&quot;pyvista.Plotter&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Render an OME-Arrow record using Matplotlib or PyVista.</span>
+
+<span class="sd">        This convenience method supports two rendering backends:</span>
+
+<span class="sd">        - ``how=&quot;matplotlib&quot;`` renders a single ``(t, c, z)`` plane as a 2D</span>
+<span class="sd">          image.</span>
+<span class="sd">        - ``how=&quot;pyvista&quot;`` creates an interactive 3D PyVista visualization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            how: Rendering backend. One of ``&quot;matplotlib&quot;`` or ``&quot;pyvista&quot;``.</span>
+<span class="sd">            tcz: ``(t, c, z)`` indices used for plane display.</span>
+<span class="sd">            autoscale: Infer Matplotlib display limits from image range when</span>
+<span class="sd">                ``vmin``/``vmax`` are not provided.</span>
+<span class="sd">            vmin: Lower display limit for Matplotlib intensity scaling.</span>
+<span class="sd">            vmax: Upper display limit for Matplotlib intensity scaling.</span>
+<span class="sd">            cmap: Matplotlib colormap name for single-channel display.</span>
+<span class="sd">            show: Whether to display the plot immediately.</span>
+<span class="sd">            c: Channel index override for PyVista. If ``None``, uses</span>
+<span class="sd">                ``tcz[1]``.</span>
+<span class="sd">            downsample: Integer downsampling factor for PyVista views.</span>
+<span class="sd">                Higher values render faster for large volumes but reduce</span>
+<span class="sd">                spatial resolution.</span>
+<span class="sd">            opacity: Opacity for PyVista. Either a float in ``[0, 1]`` or</span>
+<span class="sd">                ``&quot;sigmoid&quot;``.</span>
+<span class="sd">            clim: Contrast limits ``(low, high)`` for PyVista rendering.</span>
+<span class="sd">            show_axes: Whether to display axes in the PyVista scene.</span>
+<span class="sd">            scaling_values: Physical scale multipliers ``(x, y, z)`` used by</span>
+<span class="sd">                PyVista. If ``None``, uses OME metadata-derived scaling.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes,</span>
+<span class="sd">            matplotlib.image.AxesImage] | pyvista.Plotter:</span>
+<span class="sd">            For ``how=&quot;matplotlib&quot;``, returns the tuple emitted by</span>
+<span class="sd">            :func:`ome_arrow.view.view_matplotlib` as ``(figure, axes, image)``.</span>
+<span class="sd">            For ``how=&quot;pyvista&quot;``, returns a :class:`pyvista.Plotter`.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If a requested plane is not found or the render mode</span>
+<span class="sd">                is unsupported.</span>
+<span class="sd">            TypeError: If parameter types are invalid.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            - The ``how=&quot;pyvista&quot;`` mode normally outputs an interactive</span>
+<span class="sd">              visualization, but attempts to embed a static PNG snapshot for</span>
+<span class="sd">              non-interactive renderers (for example, static docs builds,</span>
+<span class="sd">              nbconvert HTML/PDF exports, rendered/read-only notebook views</span>
+<span class="sd">              such as GitHub notebook previews, and CI log viewers).</span>
+<span class="sd">            - When ``show=False`` and ``how=&quot;pyvista&quot;``, the returned</span>
+<span class="sd">              :class:`pyvista.Plotter` can be shown later.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">how</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;matplotlib&quot;</span><span class="p">,</span> <span class="s2">&quot;pyvista&quot;</span><span class="p">}:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unsupported view mode: </span><span class="si">{</span><span class="n">how</span><span class="si">!r}</span><span class="s2">. Use &#39;matplotlib&#39; or &#39;pyvista&#39;.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;matplotlib&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">view_matplotlib</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">tcz</span><span class="o">=</span><span class="n">tcz</span><span class="p">,</span>
+                <span class="n">autoscale</span><span class="o">=</span><span class="n">autoscale</span><span class="p">,</span>
+                <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span>
+                <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span>
+                <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
+                <span class="n">show</span><span class="o">=</span><span class="n">show</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;pyvista&quot;</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+
+            <span class="kn">from</span><span class="w"> </span><span class="nn">IPython.display</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTML</span><span class="p">,</span> <span class="n">display</span>
+
+            <span class="n">c_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tcz</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">c</span><span class="p">)</span>
+            <span class="n">plotter</span> <span class="o">=</span> <span class="n">view_pyvista</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">c</span><span class="o">=</span><span class="n">c_idx</span><span class="p">,</span>
+                <span class="n">downsample</span><span class="o">=</span><span class="n">downsample</span><span class="p">,</span>
+                <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
+                <span class="n">clim</span><span class="o">=</span><span class="n">clim</span><span class="p">,</span>
+                <span class="n">show_axes</span><span class="o">=</span><span class="n">show_axes</span><span class="p">,</span>
+                <span class="n">scaling_values</span><span class="o">=</span><span class="n">scaling_values</span><span class="p">,</span>
+                <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="c1"># 1) show the interactive widget for live work</span>
+            <span class="k">if</span> <span class="n">show</span><span class="p">:</span>
+                <span class="n">plotter</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="c1"># 2) capture a PNG and embed it in a collapsed details block</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">plotter</span><span class="o">.</span><span class="n">screenshot</span><span class="p">(</span><span class="n">return_img</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># ndarray</span>
+                <span class="k">if</span> <span class="n">img</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">buf</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+                    <span class="c1"># use matplotlib-free writer: PyVista returns RGB(A) uint8</span>
+                    <span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                        <span class="n">Image</span> <span class="k">as</span> <span class="n">PILImage</span><span class="p">,</span>
+                    <span class="p">)</span>  <span class="c1"># pillow is a light dep most envs have</span>
+
+                    <span class="n">PILImage</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">img</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;PNG&quot;</span><span class="p">)</span>
+                    <span class="n">b64</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">buf</span><span class="o">.</span><span class="n">getvalue</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;ascii&quot;</span><span class="p">)</span>
+                    <span class="n">display</span><span class="p">(</span>
+                        <span class="n">HTML</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                        &lt;details&gt;</span>
+<span class="s2">                        &lt;summary&gt;Static snapshot (for non-interactive view)&lt;/summary&gt;</span>
+<span class="s2">                        &lt;img src=&quot;data:image/png;base64,</span><span class="si">{</span><span class="n">b64</span><span class="si">}</span><span class="s2">&quot; /&gt;</span>
+<span class="s2">                        &lt;/details&gt;</span>
+<span class="s2">                        &quot;&quot;&quot;</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: could not save PyVista snapshot: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">plotter</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Unsupported view mode: </span><span class="si">{</span><span class="n">how</span><span class="si">!r}</span><span class="s2">. Use &#39;matplotlib&#39; or &#39;pyvista&#39;.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OMEArrow.tensor_view">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.tensor_view">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tensor_view</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">scene</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">t</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">z</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">c</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">roi</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">roi3d</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">roi_nd</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">roi_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;2d&quot;</span><span class="p">,</span> <span class="s2">&quot;2d_timelapse&quot;</span><span class="p">,</span> <span class="s2">&quot;3d&quot;</span><span class="p">,</span> <span class="s2">&quot;4d&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">tile</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">layout</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">chunk_policy</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span> <span class="s2">&quot;combine&quot;</span><span class="p">,</span> <span class="s2">&quot;keep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+        <span class="n">channel_policy</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;first&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorView</span> <span class="o">|</span> <span class="n">LazyTensorView</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a TensorView of the pixel data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            scene: Scene index (only 0 is supported for single-image records).</span>
+<span class="sd">            t: Time index selection (int, slice, or sequence). Default: all.</span>
+<span class="sd">            z: Z index selection (int, slice, or sequence). Default: all.</span>
+<span class="sd">            c: Channel index selection (int, slice, or sequence). Default: all.</span>
+<span class="sd">            roi: Spatial crop (x, y, w, h) in pixels.</span>
+<span class="sd">            roi3d: Spatial + depth crop (x, y, z, w, h, d) in pixels/planes.</span>
+<span class="sd">                This is a convenience alias for ``roi=(x, y, w, h)`` and</span>
+<span class="sd">                ``z=slice(z, z + d)``.</span>
+<span class="sd">            roi_nd: General ROI tuple with min/max bounds.</span>
+<span class="sd">            roi_type: ROI interpretation mode for ``roi_nd``. Supported values:</span>
+<span class="sd">                ``&quot;2d&quot;``, ``&quot;2d_timelapse&quot;``, ``&quot;3d&quot;``, and ``&quot;4d&quot;``.</span>
+<span class="sd">            tile: Tile index (tile_y, tile_x) based on chunk grid.</span>
+<span class="sd">            layout: Desired layout string using `TZCYX` letters where</span>
+<span class="sd">                T=time, Z=depth, C=channel, Y=row axis, X=column axis.</span>
+<span class="sd">                `TZCHW` aliases are also accepted for compatibility.</span>
+<span class="sd">            dtype: Output dtype override.</span>
+<span class="sd">            chunk_policy: Handling for ``pyarrow.ChunkedArray`` inputs.</span>
+<span class="sd">            channel_policy: Behavior when dropping `C` from layout while</span>
+<span class="sd">                multiple channels are selected. &quot;error&quot; raises (default).</span>
+<span class="sd">                &quot;first&quot; keeps the first channel.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TensorView | LazyTensorView: Tensor view over selected pixels.</span>
+<span class="sd">            In lazy mode, this returns a deferred ``LazyTensorView`` that</span>
+<span class="sd">            resolves on first execution call (for example ``to_numpy()``)</span>
+<span class="sd">            without forcing ``self`` to materialize unless deferred</span>
+<span class="sd">            ``slice_lazy`` operations are queued.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If an unsupported scene is requested.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">scene</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only scene=0 is supported for single-image records.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">LazyTensorView</span><span class="p">(</span>
+                <span class="n">loader</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_source</span><span class="p">,</span>
+                <span class="n">resolver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolve_lazy_tensor_view</span><span class="p">,</span>
+                <span class="n">t</span><span class="o">=</span><span class="n">t</span><span class="p">,</span>
+                <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+                <span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span>
+                <span class="n">roi</span><span class="o">=</span><span class="n">roi</span><span class="p">,</span>
+                <span class="n">roi3d</span><span class="o">=</span><span class="n">roi3d</span><span class="p">,</span>
+                <span class="n">roi_nd</span><span class="o">=</span><span class="n">roi_nd</span><span class="p">,</span>
+                <span class="n">roi_type</span><span class="o">=</span><span class="n">roi_type</span><span class="p">,</span>
+                <span class="n">tile</span><span class="o">=</span><span class="n">tile</span><span class="p">,</span>
+                <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">chunk_policy</span><span class="o">=</span><span class="n">chunk_policy</span><span class="p">,</span>
+                <span class="n">channel_policy</span><span class="o">=</span><span class="n">channel_policy</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># TensorView uses an internal canonical axis basis (TZCHW) for shape/stride</span>
+        <span class="c1"># math, then applies the requested layout permutation for output.</span>
+        <span class="c1"># Public layout examples prefer TZCYX (Y/X), with H/W accepted as aliases.</span>
+        <span class="k">return</span> <span class="n">TensorView</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">t</span><span class="o">=</span><span class="n">t</span><span class="p">,</span>
+            <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+            <span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span>
+            <span class="n">roi</span><span class="o">=</span><span class="n">roi</span><span class="p">,</span>
+            <span class="n">roi3d</span><span class="o">=</span><span class="n">roi3d</span><span class="p">,</span>
+            <span class="n">roi_nd</span><span class="o">=</span><span class="n">roi_nd</span><span class="p">,</span>
+            <span class="n">roi_type</span><span class="o">=</span><span class="n">roi_type</span><span class="p">,</span>
+            <span class="n">tile</span><span class="o">=</span><span class="n">tile</span><span class="p">,</span>
+            <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="n">chunk_policy</span><span class="o">=</span><span class="n">chunk_policy</span><span class="p">,</span>
+            <span class="n">channel_policy</span><span class="o">=</span><span class="n">channel_policy</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OMEArrow.slice">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.slice">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">slice</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">x_min</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">x_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">y_min</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">y_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">t_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">c_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">fill_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OMEArrow</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a cropped copy of an OME-Arrow record.</span>
+
+<span class="sd">        Crops spatially to [y_min:y_max, x_min:x_max] (half-open) and, if provided,</span>
+<span class="sd">        filters/reindexes T/C/Z to the given index sets.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x_min, x_max, y_min, y_max : int</span>
+<span class="sd">            Half-open crop bounds in pixels (0-based).</span>
+<span class="sd">        t_indices, c_indices, z_indices : Iterable[int] | None</span>
+<span class="sd">            Optional explicit indices to keep for T, C, Z. If None, keep all.</span>
+<span class="sd">            Selected indices are reindexed to 0..len-1 in the output.</span>
+<span class="sd">        fill_missing : bool</span>
+<span class="sd">            If True, any missing (t,c,z) planes in the selection are zero-filled.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        OMEArrow object</span>
+<span class="sd">            New OME-Arrow record with updated sizes and planes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">OMEArrow</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">slice_ome_arrow</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">x_min</span><span class="o">=</span><span class="n">x_min</span><span class="p">,</span>
+                <span class="n">x_max</span><span class="o">=</span><span class="n">x_max</span><span class="p">,</span>
+                <span class="n">y_min</span><span class="o">=</span><span class="n">y_min</span><span class="p">,</span>
+                <span class="n">y_max</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span>
+                <span class="n">t_indices</span><span class="o">=</span><span class="n">t_indices</span><span class="p">,</span>
+                <span class="n">c_indices</span><span class="o">=</span><span class="n">c_indices</span><span class="p">,</span>
+                <span class="n">z_indices</span><span class="o">=</span><span class="n">z_indices</span><span class="p">,</span>
+                <span class="n">fill_missing</span><span class="o">=</span><span class="n">fill_missing</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OMEArrow.slice_lazy">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.core.OMEArrow.slice_lazy">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">slice_lazy</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">x_min</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">x_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">y_min</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">y_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">t_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">c_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">fill_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OMEArrow</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a lazily planned slice, collected on first execution.</span>
+
+<span class="sd">        For lazy sources created with ``OMEArrow.scan(...)``, this queues a</span>
+<span class="sd">        deferred slice operation and returns a new lazy OMEArrow plan produced</span>
+<span class="sd">        from ``OMEArrow.scan(...)``.</span>
+<span class="sd">        For already materialized sources, this falls back to eager ``slice()``.</span>
+<span class="sd">        This method does not mutate ``self``.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            ``slice_lazy`` always returns a new plan object. Internally, the</span>
+<span class="sd">            returned plan gets a fresh ``_lazy_slices`` list</span>
+<span class="sd">            (``[*self._lazy_slices, new_slice]``), so chained plans do not</span>
+<span class="sd">            share mutable slice state with the original ``OMEArrow``.</span>
+<span class="sd">            A common footgun is:</span>
+<span class="sd">            ``oa.slice_lazy(...).collect()`` followed by ``oa.tensor_view(...)``.</span>
+<span class="sd">            Those calls can load/materialize the same source twice because</span>
+<span class="sd">            ``oa`` remains the original plan. For a single-load workflow, keep</span>
+<span class="sd">            working from the value returned by ``slice_lazy`` / ``collect``.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x_min: Inclusive minimum X index for the crop.</span>
+<span class="sd">            x_max: Exclusive maximum X index for the crop.</span>
+<span class="sd">            y_min: Inclusive minimum Y index for the crop.</span>
+<span class="sd">            y_max: Exclusive maximum Y index for the crop.</span>
+<span class="sd">            t_indices: Optional time indices to retain.</span>
+<span class="sd">            c_indices: Optional channel indices to retain.</span>
+<span class="sd">            z_indices: Optional depth indices to retain.</span>
+<span class="sd">            fill_missing: Whether to zero-fill missing `(t, c, z)` planes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            OMEArrow: Lazy plan when source is lazy; eager slice result otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span>
+                <span class="n">x_min</span><span class="o">=</span><span class="n">x_min</span><span class="p">,</span>
+                <span class="n">x_max</span><span class="o">=</span><span class="n">x_max</span><span class="p">,</span>
+                <span class="n">y_min</span><span class="o">=</span><span class="n">y_min</span><span class="p">,</span>
+                <span class="n">y_max</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span>
+                <span class="n">t_indices</span><span class="o">=</span><span class="n">t_indices</span><span class="p">,</span>
+                <span class="n">c_indices</span><span class="o">=</span><span class="n">c_indices</span><span class="p">,</span>
+                <span class="n">z_indices</span><span class="o">=</span><span class="n">z_indices</span><span class="p">,</span>
+                <span class="n">fill_missing</span><span class="o">=</span><span class="n">fill_missing</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">lazy_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span>
+        <span class="n">planned</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span>
+            <span class="n">lazy_source</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">tcz</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tcz</span><span class="p">,</span>
+            <span class="n">column_name</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">column_name</span><span class="p">,</span>
+            <span class="n">row_index</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">row_index</span><span class="p">,</span>
+            <span class="n">image_type</span><span class="o">=</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">image_type</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">planned</span><span class="o">.</span><span class="n">_lazy_slices</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">,</span>
+            <span class="n">_LazySliceSpec</span><span class="p">(</span>
+                <span class="n">x_min</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">x_min</span><span class="p">),</span>
+                <span class="n">x_max</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">x_max</span><span class="p">),</span>
+                <span class="n">y_min</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">y_min</span><span class="p">),</span>
+                <span class="n">y_max</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">y_max</span><span class="p">),</span>
+                <span class="n">t_indices</span><span class="o">=</span><span class="p">(</span>
+                    <span class="kc">None</span> <span class="k">if</span> <span class="n">t_indices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">t_indices</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">c_indices</span><span class="o">=</span><span class="p">(</span>
+                    <span class="kc">None</span> <span class="k">if</span> <span class="n">c_indices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">c_indices</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">z_indices</span><span class="o">=</span><span class="p">(</span>
+                    <span class="kc">None</span> <span class="k">if</span> <span class="n">z_indices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">z_indices</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">fill_missing</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">fill_missing</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">planned</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repr_html_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Auto-render a plane as inline PNG in Jupyter.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+            <span class="n">view_matplotlib</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">tcz</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tcz</span><span class="p">,</span>
+                <span class="n">autoscale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+                <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="c1"># return blank string to avoid showing class representation below image</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">()[</span><span class="s2">&quot;summary&quot;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Fallback to a tiny text status if rendering fails.</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;pre&gt;OMEArrowKit: render failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&lt;/pre&gt;&quot;</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Way Science Community.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__center">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

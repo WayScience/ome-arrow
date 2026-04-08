@@ -138,6 +138,13 @@
   </a>
 </li>
 
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
+  </a>
+</li>
+
   </ul>
 </nav></div>
       
@@ -235,6 +242,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="dlpack.html">
     Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
   </a>
 </li>
 
@@ -414,6 +428,47 @@ Please also reference an example notebook: <a class="reference external" href="h
 </ul>
 <p>See full docs: <a class="reference internal" href="dlpack.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">docs/src/dlpack.md</span></code></span></a></p>
 </section>
+<section id="tensor-ingest-pytorch-jax">
+<h2>Tensor ingest (PyTorch/JAX)<a class="headerlink" href="#tensor-ingest-pytorch-jax" title="Link to this heading">#</a></h2>
+<p>You can ingest torch or JAX arrays directly with <code class="docutils literal notranslate"><span class="pre">OMEArrow(...)</span></code>.
+You can also use explicit helper functions from <code class="docutils literal notranslate"><span class="pre">ome_arrow.ingest</span></code>.</p>
+<p>Why this is useful:</p>
+<ul class="simple">
+<li><p>It reduces compute overhead by removing conversion code boilerplate in separate model/data pipelines that already use torch or JAX tensors (i.e., it provides a direct port of OME-arrow into popular deep learning libraries).</p></li>
+<li><p>However, this is more about clean interoperability than dramatic end-to-end speedups (although we expect fewer handoffs to result in speedups). Specifically:</p></li>
+<li><p>It makes it easier for a user to update dimension ordering input in the same place without requiring separate functionality (see argument <code class="docutils literal notranslate"><span class="pre">dim_order</span></code>).</p></li>
+<li><p>This smooths handoffs and reduces mistakes when moving between tensor layouts and OME-Arrow records. For example, CPU torch tensors often expose a NumPy view without an extra copy.</p></li>
+<li><p>Ingest still materializes OME-Arrow planes/chunks.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrow</span>
+
+<span class="c1"># Direct constructor support:</span>
+<span class="c1"># inferred defaults are rank-based:</span>
+<span class="c1"># 2D -&gt; &quot;YX&quot;, 3D -&gt; &quot;ZYX&quot;, 4D -&gt; &quot;TCYX&quot;, 5D -&gt; &quot;TCZYX&quot;</span>
+<span class="n">oa_torch</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">torch_tensor</span><span class="p">)</span>
+<span class="n">oa_jax</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">jax_array</span><span class="p">)</span>
+
+<span class="c1"># Optional: override dim order when shape is ambiguous</span>
+<span class="n">oa_zyx</span> <span class="o">=</span> <span class="n">OMEArrow</span><span class="p">(</span><span class="n">torch_volume</span><span class="p">,</span> <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;ZYX&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.ingest</span><span class="w"> </span><span class="kn">import</span> <span class="n">from_torch_array</span><span class="p">,</span> <span class="n">from_jax_array</span>
+
+<span class="n">scalar_torch</span> <span class="o">=</span> <span class="n">from_torch_array</span><span class="p">(</span><span class="n">torch_tensor</span><span class="p">,</span> <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;TCYX&quot;</span><span class="p">)</span>
+<span class="n">scalar_jax</span> <span class="o">=</span> <span class="n">from_jax_array</span><span class="p">(</span><span class="n">jax_array</span><span class="p">,</span> <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;TCYX&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Notes:</p>
+<ul class="simple">
+<li><p>Torch/JAX support is optional.</p></li>
+<li><p>Install extras as needed:
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;ome-arrow[dlpack-torch]&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;ome-arrow[dlpack-jax]&quot;</span></code>.</p></li>
+<li><p>Torch tensors are detached and converted on CPU for ingest.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dim_order</span></code> is accepted only for NumPy/torch/JAX array inputs.</p></li>
+<li><p>Ingest now passes flattened NumPy pixel buffers directly to Arrow.</p></li>
+<li><p>This avoids materializing Python <code class="docutils literal notranslate"><span class="pre">list</span></code> payloads per plane/chunk.</p></li>
+</ul>
+</section>
 <section id="benchmarking-lazy-reads">
 <h2>Benchmarking lazy reads<a class="headerlink" href="#benchmarking-lazy-reads" title="Link to this heading">#</a></h2>
 <p>Use the lightweight benchmark utility in <code class="docutils literal notranslate"><span class="pre">benchmarks/</span></code> to compare lazy tensor
@@ -456,10 +511,51 @@ unless you have repeated false positives.</p></li>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="python-api.html">Python API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-src.ome_arrow.meta">ome_arrow.meta</a></li>
-<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-src.ome_arrow.tensor">ome_arrow.tensor</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="python-api.html#src.ome_arrow.tensor.LazyTensorView"><code class="docutils literal notranslate"><span class="pre">LazyTensorView</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="python-api.html#src.ome_arrow.tensor.TensorView"><code class="docutils literal notranslate"><span class="pre">TensorView</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow">ome_arrow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.core">ome_arrow.core</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.core.OMEArrow"><code class="docutils literal notranslate"><span class="pre">OMEArrow</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.ingest">ome_arrow.ingest</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_jax_array"><code class="docutils literal notranslate"><span class="pre">from_jax_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_numpy"><code class="docutils literal notranslate"><span class="pre">from_numpy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_ome_parquet"><code class="docutils literal notranslate"><span class="pre">from_ome_parquet()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_ome_vortex"><code class="docutils literal notranslate"><span class="pre">from_ome_vortex()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_ome_zarr"><code class="docutils literal notranslate"><span class="pre">from_ome_zarr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_stack_pattern_path"><code class="docutils literal notranslate"><span class="pre">from_stack_pattern_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_tiff"><code class="docutils literal notranslate"><span class="pre">from_tiff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.from_torch_array"><code class="docutils literal notranslate"><span class="pre">from_torch_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.open_lazy_plane_source"><code class="docutils literal notranslate"><span class="pre">open_lazy_plane_source()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.ingest.to_ome_arrow"><code class="docutils literal notranslate"><span class="pre">to_ome_arrow()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.export">ome_arrow.export</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.export.plane_from_chunks"><code class="docutils literal notranslate"><span class="pre">plane_from_chunks()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.export.to_numpy"><code class="docutils literal notranslate"><span class="pre">to_numpy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.export.to_ome_parquet"><code class="docutils literal notranslate"><span class="pre">to_ome_parquet()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.export.to_ome_tiff"><code class="docutils literal notranslate"><span class="pre">to_ome_tiff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.export.to_ome_vortex"><code class="docutils literal notranslate"><span class="pre">to_ome_vortex()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.export.to_ome_zarr"><code class="docutils literal notranslate"><span class="pre">to_ome_zarr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.meta">ome_arrow.meta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.tensor">ome_arrow.tensor</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.tensor.LazyTensorView"><code class="docutils literal notranslate"><span class="pre">LazyTensorView</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.tensor.TensorView"><code class="docutils literal notranslate"><span class="pre">TensorView</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.transform">ome_arrow.transform</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.transform.slice_ome_arrow"><code class="docutils literal notranslate"><span class="pre">slice_ome_arrow()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.utils">ome_arrow.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.utils.describe_ome_arrow"><code class="docutils literal notranslate"><span class="pre">describe_ome_arrow()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.utils.verify_ome_arrow"><code class="docutils literal notranslate"><span class="pre">verify_ome_arrow()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.view">ome_arrow.view</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.view.view_matplotlib"><code class="docutils literal notranslate"><span class="pre">view_matplotlib()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.view.view_pyvista"><code class="docutils literal notranslate"><span class="pre">view_pyvista()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -475,6 +571,10 @@ unless you have repeated false positives.</p></li>
 <li class="toctree-l3"><a class="reference internal" href="dlpack.html#recalibrating-ci-baseline-json">Recalibrating <code class="docutils literal notranslate"><span class="pre">ci-baseline.json</span></code></a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples/learning_to_fly_with_ome-arrow.html">Learning to fly with OME-Arrow</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/learning_to_fly_with_ome-arrow.html#dlpack-tensor-export-advanced">DLPack tensor export (advanced)</a></li>
 </ul>
 </li>
 </ul>
