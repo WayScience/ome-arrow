@@ -42,6 +42,53 @@ flat = torch.utils.dlpack.from_dlpack(capsule)
 tensor = flat.reshape(view.shape)
 ```
 
+You can also ingest torch tensors directly:
+
+```python
+from ome_arrow import OMEArrow
+import torch
+
+# 2D tensor interpreted as YX by default.
+torch_tensor = torch.randint(0, 256, (128, 128), dtype=torch.uint16)
+oa = OMEArrow(torch_tensor)
+
+# 3D tensors are inferred as ZYX by default.
+# Use dim_order when your tensor is arranged differently (for example CYX).
+torch_volume = torch.randint(0, 256, (16, 128, 128), dtype=torch.uint16)
+oa_cyx = OMEArrow(torch_volume, dim_order="CYX")
+```
+
+Use `dim_order` when the inferred axis order does not match your tensor layout.
+`dim_order` is only supported for array/tensor ingest paths.
+
+To persist with this interpreted axis mapping, export the resulting OME-Arrow
+record (for example to parquet):
+
+```python
+from ome_arrow import OMEArrow
+import torch
+
+torch_volume = torch.randint(0, 256, (16, 128, 128), dtype=torch.uint16)
+oa = OMEArrow(torch_volume, dim_order="ZYX")
+oa.export(how="parquet", out="volume.ome.parquet")
+```
+
+OME-Arrow stores pixels in canonical OME-style fields (`size_t`, `size_c`,
+`size_z`, `size_y`, `size_x`) rather than preserving a free-form input label
+string. The interpreted mapping is preserved through those axis sizes and can
+be read back with `tensor_view(...)` layouts.
+
+"Batch" dimension note:
+
+- There is no separate `B` axis in the OME-Arrow schema.
+- For model batches, map batch to `T` during ingest.
+- Examples:
+  - `B,C,Y,X` -> use `dim_order="TCYX"`
+  - `B,C,Z,Y,X` -> use `dim_order="TCZYX"`
+  - `B,Y,X,C` -> use `dim_order="TYXC"`
+- If `T` is already meaningful in your data, represent batch as table rows
+  (one OME-Arrow record per batch item) instead of overloading another image axis.
+
 ## Lazy scan-style slicing
 
 ```python
@@ -74,6 +121,22 @@ import jax.numpy as jnp
 capsule = view.to_dlpack(mode="arrow", device="cpu")
 flat = jnp.from_dlpack(capsule)
 arr = flat.reshape(view.shape)
+```
+
+You can also ingest JAX arrays directly:
+
+```python
+from ome_arrow import OMEArrow
+import jax.numpy as jnp
+
+# 2D array interpreted as YX by default.
+jax_array = jnp.arange(128 * 128, dtype=jnp.uint16).reshape(128, 128)
+oa = OMEArrow(jax_array)
+
+# 3D arrays are inferred as ZYX by default.
+# Use dim_order when your array is arranged differently (for example CYX).
+jax_volume = jnp.arange(16 * 128 * 128, dtype=jnp.uint16).reshape(16, 128, 128)
+oa_cyx = OMEArrow(jax_volume, dim_order="CYX")
 ```
 
 ## Iteration examples

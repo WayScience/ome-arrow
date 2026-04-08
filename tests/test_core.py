@@ -395,6 +395,101 @@ def test_parquet_roundtrip_preserves_image_type(tmp_path: pathlib.Path) -> None:
     assert reloaded.data.as_py()["image_type"] == "label"
 
 
+def _backend_symbols(backend: str) -> dict[str, object]:
+    """Return backend-specific tensor constructors and converters."""
+    if backend == "torch":
+        torch = pytest.importorskip("torch")
+        return {
+            "array_from_1d": lambda n, shape: (
+                torch.arange(n).reshape(*shape).to(dtype=torch.uint16)
+            ),
+            "to_numpy": lambda x: x.numpy(),
+            "from_array": ingest.from_torch_array,
+        }
+
+    jnp = pytest.importorskip("jax.numpy")
+    return {
+        "array_from_1d": lambda n, shape: jnp.arange(n, dtype=jnp.uint16).reshape(
+            *shape
+        ),
+        "to_numpy": np.asarray,
+        "from_array": ingest.from_jax_array,
+    }
+
+
+@pytest.mark.parametrize("backend", ["torch", "jax"])
+def test_constructor_accepts_array_backend(backend: str) -> None:
+    """Accept backend arrays directly in OMEArrow constructor."""
+    symbols = _backend_symbols(backend)
+    arr = symbols["array_from_1d"](2 * 3 * 4, (2, 3, 4))
+    expected = symbols["to_numpy"](arr)
+
+    oa = OMEArrow(arr)
+    exported = oa.export(how="numpy")
+
+    assert exported.shape == (1, 1, 2, 3, 4)
+    np.testing.assert_array_equal(exported[0, 0], expected)
+
+
+@pytest.mark.parametrize("backend", ["torch", "jax"])
+def test_from_array_explicit_dim_order_backend(backend: str) -> None:
+    """Support explicit dim_order with backend-specific from_* helpers."""
+    symbols = _backend_symbols(backend)
+    arr = symbols["array_from_1d"](2 * 3 * 4 * 5, (2, 3, 4, 5))
+    expected = symbols["to_numpy"](arr)
+    scalar = symbols["from_array"](arr, dim_order="TCYX")
+
+    oa = OMEArrow(scalar)
+    exported = oa.export(how="numpy")
+
+    assert exported.shape == (2, 3, 1, 4, 5)
+    np.testing.assert_array_equal(exported[:, :, 0], expected)
+
+
+@pytest.mark.parametrize("backend", ["torch", "jax"])
+def test_constructor_dim_order_override_backend(backend: str) -> None:
+    """Allow explicit constructor dim_order for ambiguous backend array ranks."""
+    symbols = _backend_symbols(backend)
+    arr = symbols["array_from_1d"](3 * 4 * 5, (3, 4, 5))
+    expected = symbols["to_numpy"](arr)
+
+    oa = OMEArrow(arr, dim_order="ZYX")
+    exported = oa.export(how="numpy")
+
+    assert exported.shape == (1, 1, 3, 4, 5)
+    np.testing.assert_array_equal(exported[0, 0], expected)
+
+
+def test_constructor_dim_order_rejects_non_array_input() -> None:
+    """Reject dim_order for non-array sources to avoid silent no-op configs."""
+    with pytest.raises(ValueError, match="dim_order is supported only"):
+        OMEArrow("tests/data/JUMP-BR00117006/BR00117006.ome.parquet", dim_order="ZYX")
+
+
+def test_constructor_second_positional_arg_still_binds_tcz() -> None:
+    """Preserve positional ABI: second positional argument is tcz, not dim_order."""
+    arr = np.arange(12, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    oa = OMEArrow(arr, (0, 0, 1))
+    assert oa.tcz == (0, 0, 1)
+
+
+def test_view_rejects_unsupported_mode() -> None:
+    """Unsupported view modes should raise a clear ValueError."""
+    arr = np.arange(12, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    oa = OMEArrow(arr)
+
+    with pytest.raises(ValueError, match="Unsupported view mode"):
+        oa.view(how="foo")
+
+
+def test_view_rejects_unsupported_mode_before_lazy_materialization() -> None:
+    """Validate render mode before touching lazy source materialization."""
+    oa = OMEArrow.scan("tests/data/does-not-exist.ome.parquet")
+
+    with pytest.raises(ValueError, match="Unsupported view mode"):
+        oa.view(how="foo")
+
+
 def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     """Ensure custom Vortex column names are preserved on round-trip."""
     pytest.importorskip(

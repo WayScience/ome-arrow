@@ -120,6 +120,49 @@ Advanced options:
 
 See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
+## Tensor ingest (PyTorch/JAX)
+
+You can ingest torch or JAX arrays directly with `OMEArrow(...)`.
+You can also use explicit helper functions from `ome_arrow.ingest`.
+
+Why this is useful:
+
+- It reduces compute overhead by removing conversion code boilerplate in separate model/data pipelines that already use torch or JAX tensors (i.e., it provides a direct port of OME-arrow into popular deep learning libraries).
+- However, this is more about clean interoperability than dramatic end-to-end speedups (although we expect fewer handoffs to result in speedups). Specifically:
+- It makes it easier for a user to update dimension ordering input in the same place without requiring separate functionality (see argument `dim_order`).
+- This smooths handoffs and reduces mistakes when moving between tensor layouts and OME-Arrow records. For example, CPU torch tensors often expose a NumPy view without an extra copy.
+- Ingest still materializes OME-Arrow planes/chunks.
+
+```python
+from ome_arrow import OMEArrow
+
+# Direct constructor support:
+# inferred defaults are rank-based:
+# 2D -> "YX", 3D -> "ZYX", 4D -> "TCYX", 5D -> "TCZYX"
+oa_torch = OMEArrow(torch_tensor)
+oa_jax = OMEArrow(jax_array)
+
+# Optional: override dim order when shape is ambiguous
+oa_zyx = OMEArrow(torch_volume, dim_order="ZYX")
+```
+
+```python
+from ome_arrow.ingest import from_torch_array, from_jax_array
+
+scalar_torch = from_torch_array(torch_tensor, dim_order="TCYX")
+scalar_jax = from_jax_array(jax_array, dim_order="TCYX")
+```
+
+Notes:
+
+- Torch/JAX support is optional.
+- Install extras as needed:
+  `pip install "ome-arrow[dlpack-torch]"` or `pip install "ome-arrow[dlpack-jax]"`.
+- Torch tensors are detached and converted on CPU for ingest.
+- `dim_order` is accepted only for NumPy/torch/JAX array inputs.
+- Ingest now passes flattened NumPy pixel buffers directly to Arrow.
+- This avoids materializing Python `list` payloads per plane/chunk.
+
 ## Benchmarking lazy reads
 
 Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor

@@ -29,12 +29,16 @@ from ome_arrow.export import (
     to_ome_zarr,
 )
 from ome_arrow.ingest import (
+    _is_jax_array,
+    _is_torch_array,
+    from_jax_array,
     from_numpy,
     from_ome_parquet,
     from_ome_vortex,
     from_ome_zarr,
     from_stack_pattern_path,
     from_tiff,
+    from_torch_array,
     open_lazy_plane_source,
 )
 from ome_arrow.meta import OME_ARROW_STRUCT
@@ -93,6 +97,8 @@ class OMEArrow:
         self,
         data: str | dict | pa.StructScalar | "np.ndarray",
         tcz: Tuple[int, int, int] = (0, 0, 0),
+        *,
+        dim_order: str | None = None,
         column_name: str = "ome_arrow",
         row_index: int = 0,
         image_type: str | None = None,
@@ -107,11 +113,32 @@ class OMEArrow:
         - a path/URL to a Vortex file (.vortex)
         - a NumPy ndarray (2D-5D; interpreted
             with from_numpy defaults)
+        - a torch.Tensor (2D-5D; inferred dim order by rank unless provided via
+            `dim_order`)
+        - a jax.Array (2D-5D; inferred dim order by rank unless provided via
+            `dim_order`)
         - a dict already matching the OME-Arrow schema
         - a pa.StructScalar already typed to OME_ARROW_STRUCT
         - optionally override/set image_type metadata on ingest
         - optionally defer source-file ingestion with lazy=True
+
+        Args:
+            data: Input source or record payload.
+            dim_order: Axis labels used only for array/tensor ingest
+                (NumPy, torch, JAX). Invalid or unrecognized combinations
+                raise an error instead of being silently ignored.
         """
+
+        # `dim_order` applies only when the constructor input itself is a raw
+        # NumPy/torch/JAX array object (not string/file-path sources).
+        # Rejecting incompatible combinations avoids silently ignoring user intent.
+        if dim_order is not None and not (
+            isinstance(data, np.ndarray) or _is_torch_array(data) or _is_jax_array(data)
+        ):
+            raise ValueError(
+                "dim_order is supported only for numpy.ndarray, torch.Tensor, "
+                "or jax.Array inputs."
+            )
 
         # set the tcz for viewing
         self.tcz = tcz
@@ -161,15 +188,35 @@ class OMEArrow:
             # Uses from_numpy defaults: dim_order="TCZYX", clamp_to_uint16=True, etc.
             # If the array is YX/ZYX/CYX/etc.,
             # from_numpy will expand/reorder accordingly.
-            self.data = from_numpy(data, image_type=image_type)
+            self.data = from_numpy(
+                data,
+                dim_order="TCZYX" if dim_order is None else dim_order,
+                image_type=image_type,
+            )
 
-        # --- 4) Already-typed Arrow scalar ---------------------------------------
+        # --- 4) Torch tensor ------------------------------------------------------
+        elif _is_torch_array(data):
+            self.data = from_torch_array(
+                data,
+                dim_order=dim_order,
+                image_type=image_type,
+            )
+
+        # --- 5) JAX array --------------------------------------------------------
+        elif _is_jax_array(data):
+            self.data = from_jax_array(
+                data,
+                dim_order=dim_order,
+                image_type=image_type,
+            )
+
+        # --- 6) Already-typed Arrow scalar ---------------------------------------
         elif isinstance(data, pa.StructScalar):
             self.data = data
             if image_type is not None:
                 self.data = self._wrap_with_image_type(self.data, image_type)
 
-        # --- 5) Plain dict matching the schema -----------------------------------
+        # --- 7) Plain dict matching the schema -----------------------------------
         elif isinstance(data, dict):
             record = {f.name: data.get(f.name) for f in OME_ARROW_STRUCT}
             self.data = pa.scalar(record, type=OME_ARROW_STRUCT)
@@ -178,8 +225,10 @@ class OMEArrow:
 
         # --- otherwise ------------------------------------------------------------
         else:
+            data_type = f"{type(data).__module__}.{type(data).__qualname__}"
             raise TypeError(
-                "input data must be str, dict, pa.StructScalar, or numpy.ndarray"
+                "input data must be str, dict, pa.StructScalar, numpy.ndarray, "
+                f"torch.Tensor, or jax.Array; got {data_type}"
             )
 
     @classmethod
@@ -605,80 +654,62 @@ class OMEArrow:
         clim: tuple[float, float] | None = None,
         show_axes: bool = True,
         scaling_values: tuple[float, float, float] | None = None,
-    ) -> matplotlib.figure.Figure | "pyvista.Plotter":
-        """
-        Render an OME-Arrow record using Matplotlib or PyVista.
+    ) -> tuple[matplotlib.figure.Figure, Any, Any] | "pyvista.Plotter":
+        """Render an OME-Arrow record using Matplotlib or PyVista.
 
         This convenience method supports two rendering backends:
 
-        * ``how="matplotlib"`` — renders a single (t, c, z) plane as a 2D image.
-        Returns a Matplotlib :class:`~matplotlib.figure.Figure` (or whatever
-        :func:`view_matplotlib` returns) and optionally displays it with
-        ``plt.show()`` when ``show=True``.
-
-        * ``how="pyvista"`` — creates an interactive 3D PyVista visualization in
-        Jupyter. When ``show=True``, displays the widget. Independently, a static
-        PNG snapshot is embedded in the notebook (inside a collapsed
-        ``<details>`` block) for non-interactive renderers (e.g., GitHub).
+        - ``how="matplotlib"`` renders a single ``(t, c, z)`` plane as a 2D
+          image.
+        - ``how="pyvista"`` creates an interactive 3D PyVista visualization.
 
         Args:
-        how: Rendering backend. One of ``"matplotlib"`` or ``"pyvista"``.
-        tcz: The (t, c, z) indices of the plane to display when using Matplotlib.
-            Defaults to ``(0, 0, 0)``.
-        autoscale: If ``True`` and ``vmin``/``vmax`` are not provided, infer
-            display limits from the image data range (Matplotlib path only).
-        vmin: Lower display limit for intensity scaling (Matplotlib path only).
-        vmax: Upper display limit for intensity scaling (Matplotlib path only).
-        cmap: Matplotlib colormap name for single-channel display (Matplotlib only).
-        show: Whether to display the plot immediately. For Matplotlib, calls
-            ``plt.show()``. For PyVista, calls ``plotter.show()``.
-        c: Channel index override for the PyVista view. If ``None``, uses
-            ``tcz[1]`` (the ``c`` from ``tcz``).
-        downsample: Integer downsampling factor for the PyVista volume or slices.
-            Must be ``>= 1``.
-        opacity: Opacity specification for PyVista. Either a float in ``[0, 1]``
-            or the string ``"sigmoid"`` (backend interprets as a preset transfer
-            function).
-        clim: Contrast limits (``(low, high)``) for PyVista rendering.
-        show_axes: If ``True``, display axes in the PyVista scene.
-        scaling_values: Physical scale multipliers for the (x, y, z) axes used by
-            PyVista, typically to express anisotropy. If ``None``, uses metadata
-            scaling from the OME-Arrow record (pixels_meta.physical_size_x/y/z).
-            These scaling values will default to 1µm if metadata is missing in
-            source image metadata.
+            how: Rendering backend. One of ``"matplotlib"`` or ``"pyvista"``.
+            tcz: ``(t, c, z)`` indices used for plane display.
+            autoscale: Infer Matplotlib display limits from image range when
+                ``vmin``/``vmax`` are not provided.
+            vmin: Lower display limit for Matplotlib intensity scaling.
+            vmax: Upper display limit for Matplotlib intensity scaling.
+            cmap: Matplotlib colormap name for single-channel display.
+            show: Whether to display the plot immediately.
+            c: Channel index override for PyVista. If ``None``, uses
+                ``tcz[1]``.
+            downsample: Integer downsampling factor for PyVista views.
+                Higher values render faster for large volumes but reduce
+                spatial resolution.
+            opacity: Opacity for PyVista. Either a float in ``[0, 1]`` or
+                ``"sigmoid"``.
+            clim: Contrast limits ``(low, high)`` for PyVista rendering.
+            show_axes: Whether to display axes in the PyVista scene.
+            scaling_values: Physical scale multipliers ``(x, y, z)`` used by
+                PyVista. If ``None``, uses OME metadata-derived scaling.
 
         Returns:
-        matplotlib.figure.Figure | pyvista.Plotter:
-            * If ``how="matplotlib"``, returns the figure created by
-            :func:`view_matplotlib` (often a :class:`~matplotlib.figure.Figure`).
-            * If ``how="pyvista"``, returns the created :class:`pyvista.Plotter`.
+            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes,
+            matplotlib.image.AxesImage] | pyvista.Plotter:
+            For ``how="matplotlib"``, returns the tuple emitted by
+            :func:`ome_arrow.view.view_matplotlib` as ``(figure, axes, image)``.
+            For ``how="pyvista"``, returns a :class:`pyvista.Plotter`.
 
         Raises:
-        ValueError: If a requested plane (``t,c,z``) is not found or if pixel
-            array dimensions are inconsistent (propagated from
-            :func:`view_matplotlib`).
-        TypeError: If parameter types are invalid (e.g., negative ``downsample``).
+            ValueError: If a requested plane is not found or the render mode
+                is unsupported.
+            TypeError: If parameter types are invalid.
 
         Notes:
-        * The PyVista path embeds a static PNG snapshot via Pillow (``PIL``). If
-            Pillow is unavailable, the method logs a warning and skips the snapshot,
-            but the interactive viewer is still returned.
-        * When ``show=False`` and ``how="pyvista"``, no interactive window is
-            opened, but the returned :class:`pyvista.Plotter` can be shown later.
-
-        Examples:
-        Display a single plane with Matplotlib:
-
-        >>> fig = obj.view(how="matplotlib", tcz=(0, 1, 5), cmap="magma")
-
-        Create an interactive PyVista scene in a Jupyter notebook:
-
-        >>> plotter = obj.view(how="pyvista", c=0, downsample=2, show=True)
-
-        Configure PyVista contrast limits and keep axes hidden:
-
-        >>> plotter = obj.view(how="pyvista", clim=(100, 2000), show_axes=False)
+            - The ``how="pyvista"`` mode normally outputs an interactive
+              visualization, but attempts to embed a static PNG snapshot for
+              non-interactive renderers (for example, static docs builds,
+              nbconvert HTML/PDF exports, rendered/read-only notebook views
+              such as GitHub notebook previews, and CI log viewers).
+            - When ``show=False`` and ``how="pyvista"``, the returned
+              :class:`pyvista.Plotter` can be shown later.
         """
+        if how not in {"matplotlib", "pyvista"}:
+            raise ValueError(
+                f"Unsupported view mode: {how!r}. Use 'matplotlib' or 'pyvista'."
+            )
+
         self._ensure_materialized()
 
         if how == "matplotlib":
@@ -740,6 +771,10 @@ class OMEArrow:
                 print(f"Warning: could not save PyVista snapshot: {e}")
 
             return plotter
+
+        raise ValueError(
+            f"Unsupported view mode: {how!r}. Use 'matplotlib' or 'pyvista'."
+        )
 
     def tensor_view(
         self,
