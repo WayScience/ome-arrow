@@ -459,7 +459,7 @@ def _build_chunks_from_planes(
                                 "shape_z": sz,
                                 "shape_y": sy,
                                 "shape_x": sx,
-                                "pixels": slab.reshape(-1).tolist(),
+                                "pixels": slab.reshape(-1),
                             }
                         )
     return chunks
@@ -563,7 +563,14 @@ def to_ome_arrow(
                 ch["illumination"] = str(ch["illumination"])
 
     if planes is None:
-        planes = [{"z": 0, "t": 0, "c": 0, "pixels": [0] * (size_x * size_y)}]
+        planes = [
+            {
+                "z": 0,
+                "t": 0,
+                "c": 0,
+                "pixels": np.zeros(size_x * size_y, dtype=np.uint16),
+            }
+        ]
 
     if chunks is None and build_chunks:
         chunks = _build_chunks_from_planes(
@@ -676,7 +683,10 @@ def from_numpy(
         image_id: Optional stable image identifier.
         name: Optional human label.
         image_type: Open-ended image kind (e.g., "image", "label").
-        channel_names: Names for channels; defaults to C0..C{n-1}.
+        channel_names: Optional channel names. Defaults to ``None``. When
+            ``None`` (or length does not match channel count), names are
+            auto-generated as ``C0..C{n-1}`` (for example, 3 channels become
+            ``C0``, ``C1``, ``C2``).
         acquisition_datetime: Defaults to now (UTC) if None.
         clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
         chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
@@ -774,9 +784,7 @@ def from_numpy(
         for c in range(size_c):
             for z in range(size_z):
                 plane = tczyx[t, c, z]
-                planes.append(
-                    {"z": z, "t": t, "c": c, "pixels": plane.ravel().tolist()}
-                )
+                planes.append({"z": z, "t": t, "c": c, "pixels": plane.reshape(-1)})
 
     # Meta dimension_order: mirror your other ingests
     meta_dim_order = "XYCT" if size_z == 1 else "XYZCT"
@@ -806,6 +814,258 @@ def from_numpy(
         chunk_order=chunk_order,
         build_chunks=build_chunks,
         masks=None,
+    )
+
+
+def _is_torch_array(data: Any) -> bool:
+    """Return True when ``data`` looks like a torch tensor."""
+    module = getattr(type(data), "__module__", "")
+    return module == "torch" or module.startswith("torch.")
+
+
+def _is_jax_array(data: Any) -> bool:
+    """Return True when ``data`` looks like a JAX array."""
+    module = getattr(type(data), "__module__", "")
+    return module.startswith("jax.") or module.startswith("jaxlib.")
+
+
+def _infer_dim_order_for_tensor_rank(ndim: int) -> str:
+    """Infer a practical default dim order for tensor backends."""
+    if ndim == 2:
+        return "YX"
+    if ndim == 3:
+        return "ZYX"
+    if ndim == 4:
+        return "TCYX"
+    if ndim == 5:
+        return "TCZYX"
+    raise ValueError(
+        "Unable to infer dim_order for tensor rank "
+        f"{ndim}. Provide dim_order explicitly."
+    )
+
+
+def _from_array_via_numpy(
+    np_arr: np.ndarray,
+    *,
+    dim_order: str | None,
+    image_id: Optional[str],
+    name: Optional[str],
+    image_type: Optional[str],
+    channel_names: Optional[Sequence[str]],
+    acquisition_datetime: Optional[datetime],
+    clamp_to_uint16: bool,
+    chunk_shape: Optional[Tuple[int, int, int]],
+    chunk_order: str,
+    build_chunks: bool,
+    physical_size_x: float,
+    physical_size_y: float,
+    physical_size_z: float,
+    physical_size_unit: str,
+    dtype_meta: Optional[str],
+) -> pa.StructScalar:
+    """Shared array->NumPy->OME-Arrow conversion path."""
+    resolved_dim_order = (
+        _infer_dim_order_for_tensor_rank(np_arr.ndim)
+        if dim_order is None
+        else dim_order
+    )
+    return from_numpy(
+        np_arr,
+        dim_order=resolved_dim_order,
+        image_id=image_id,
+        name=name,
+        image_type=image_type,
+        channel_names=channel_names,
+        acquisition_datetime=acquisition_datetime,
+        clamp_to_uint16=clamp_to_uint16,
+        chunk_shape=chunk_shape,
+        chunk_order=chunk_order,
+        build_chunks=build_chunks,
+        physical_size_x=physical_size_x,
+        physical_size_y=physical_size_y,
+        physical_size_z=physical_size_z,
+        physical_size_unit=physical_size_unit,
+        dtype_meta=dtype_meta,
+    )
+
+
+def from_torch_array(
+    arr: Any,
+    *,
+    dim_order: str | None = None,
+    image_id: Optional[str] = None,
+    name: Optional[str] = None,
+    image_type: Optional[str] = None,
+    channel_names: Optional[Sequence[str]] = None,
+    acquisition_datetime: Optional[datetime] = None,
+    clamp_to_uint16: bool = True,
+    chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
+    chunk_order: str = "ZYX",
+    build_chunks: bool = True,
+    # meta
+    physical_size_x: float = 1.0,
+    physical_size_y: float = 1.0,
+    physical_size_z: float = 1.0,
+    physical_size_unit: str = "µm",
+    dtype_meta: Optional[str] = None,
+) -> pa.StructScalar:
+    """Build an OME-Arrow StructScalar from a torch tensor.
+
+    This is useful when your pipeline already works with ``torch.Tensor``
+    objects (for example model inputs/outputs) and you want a direct path into
+    the canonical OME-Arrow struct without manually converting and reshaping in
+    user code.
+
+    Args:
+        arr: ``torch.Tensor`` image data.
+        dim_order: Axis labels for ``arr``. If None, infer from rank:
+            2D->"YX", 3D->"ZYX", 4D->"TCYX", 5D->"TCZYX".
+        image_id: Optional stable image identifier.
+        name: Optional human label.
+        image_type: Open-ended image kind (e.g., "image", "label").
+        channel_names: Optional channel names. Defaults to ``None``. When
+            ``None`` (or length does not match channel count), names are
+            auto-generated as ``C0..C{n-1}`` (for example, 3 channels become
+            ``C0``, ``C1``, ``C2``).
+        acquisition_datetime: Defaults to now (UTC) if None.
+        clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
+        chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
+        chunk_order: Flattening order for chunk pixels (default "ZYX").
+        build_chunks: If True, build chunked pixels from planes.
+        physical_size_x: Spatial pixel size (µm) for X.
+        physical_size_y: Spatial pixel size (µm) for Y.
+        physical_size_z: Spatial pixel size (µm) for Z when present.
+        physical_size_unit: Unit string for spatial axes (default "µm").
+        dtype_meta: Pixel dtype string to place in metadata.
+
+    Returns:
+        pa.StructScalar: Typed OME-Arrow record.
+    """
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError(
+            "Torch is not installed. Install extras: "
+            "pip install 'ome-arrow[dlpack-torch]'."
+        ) from exc
+
+    if not isinstance(arr, torch.Tensor):
+        raise TypeError("from_torch_array expects a torch.Tensor.")
+
+    tensor = arr.detach()
+    if tensor.layout != torch.strided:
+        tensor = tensor.to_dense()
+    if getattr(tensor, "is_conj", lambda: False)():
+        tensor = tensor.resolve_conj()
+    if getattr(tensor, "is_neg", lambda: False)():
+        tensor = tensor.resolve_neg()
+    if tensor.device.type != "cpu":
+        # OME-Arrow ingest currently serializes from host memory.
+        tensor = tensor.to(device="cpu")
+
+    # For CPU strided tensors this is typically a zero-copy NumPy view.
+    np_arr = tensor.numpy()
+    return _from_array_via_numpy(
+        np_arr,
+        dim_order=dim_order,
+        image_id=image_id,
+        name=name,
+        image_type=image_type,
+        channel_names=channel_names,
+        acquisition_datetime=acquisition_datetime,
+        clamp_to_uint16=clamp_to_uint16,
+        chunk_shape=chunk_shape,
+        chunk_order=chunk_order,
+        build_chunks=build_chunks,
+        physical_size_x=physical_size_x,
+        physical_size_y=physical_size_y,
+        physical_size_z=physical_size_z,
+        physical_size_unit=physical_size_unit,
+        dtype_meta=dtype_meta,
+    )
+
+
+def from_jax_array(
+    arr: Any,
+    *,
+    dim_order: str | None = None,
+    image_id: Optional[str] = None,
+    name: Optional[str] = None,
+    image_type: Optional[str] = None,
+    channel_names: Optional[Sequence[str]] = None,
+    acquisition_datetime: Optional[datetime] = None,
+    clamp_to_uint16: bool = True,
+    chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
+    chunk_order: str = "ZYX",
+    build_chunks: bool = True,
+    # meta
+    physical_size_x: float = 1.0,
+    physical_size_y: float = 1.0,
+    physical_size_z: float = 1.0,
+    physical_size_unit: str = "µm",
+    dtype_meta: Optional[str] = None,
+) -> pa.StructScalar:
+    """Build an OME-Arrow StructScalar from a JAX array.
+
+    This is useful when your pipeline already works with ``jax.Array`` objects
+    and you want a direct path into the canonical OME-Arrow struct without
+    manual conversion boilerplate in user code.
+
+    Args:
+        arr: ``jax.Array`` image data.
+        dim_order: Axis labels for ``arr``. If None, infer from rank:
+            2D->"YX", 3D->"ZYX", 4D->"TCYX", 5D->"TCZYX".
+        image_id: Optional stable image identifier.
+        name: Optional human label.
+        image_type: Open-ended image kind (e.g., "image", "label").
+        channel_names: Optional channel names. Defaults to ``None``. When
+            ``None`` (or length does not match channel count), names are
+            auto-generated as ``C0..C{n-1}`` (for example, 3 channels become
+            ``C0``, ``C1``, ``C2``).
+        acquisition_datetime: Defaults to now (UTC) if None.
+        clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
+        chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
+        chunk_order: Flattening order for chunk pixels (default "ZYX").
+        build_chunks: If True, build chunked pixels from planes.
+        physical_size_x: Spatial pixel size (µm) for X.
+        physical_size_y: Spatial pixel size (µm) for Y.
+        physical_size_z: Spatial pixel size (µm) for Z when present.
+        physical_size_unit: Unit string for spatial axes (default "µm").
+        dtype_meta: Pixel dtype string to place in metadata.
+
+    Returns:
+        pa.StructScalar: Typed OME-Arrow record.
+    """
+    try:
+        import jax
+    except ImportError as exc:
+        raise RuntimeError(
+            "JAX is not installed. Install extras: pip install 'ome-arrow[dlpack-jax]'."
+        ) from exc
+
+    if not isinstance(arr, jax.Array):
+        raise TypeError("from_jax_array expects a jax.Array.")
+
+    # Materializes a host NumPy view/copy as needed before Arrow serialization.
+    np_arr = np.asarray(arr)
+    return _from_array_via_numpy(
+        np_arr,
+        dim_order=dim_order,
+        image_id=image_id,
+        name=name,
+        image_type=image_type,
+        channel_names=channel_names,
+        acquisition_datetime=acquisition_datetime,
+        clamp_to_uint16=clamp_to_uint16,
+        chunk_shape=chunk_shape,
+        chunk_order=chunk_order,
+        build_chunks=build_chunks,
+        physical_size_x=physical_size_x,
+        physical_size_y=physical_size_y,
+        physical_size_z=physical_size_z,
+        physical_size_unit=physical_size_unit,
+        dtype_meta=dtype_meta,
     )
 
 
@@ -889,9 +1149,7 @@ def from_tiff(
                 plane = arr[t, c, z]
                 if clamp_to_uint16 and plane.dtype != np.uint16:
                     plane = np.clip(plane, 0, 65535).astype(np.uint16)
-                planes.append(
-                    {"z": z, "t": t, "c": c, "pixels": plane.ravel().tolist()}
-                )
+                planes.append({"z": z, "t": t, "c": c, "pixels": plane.reshape(-1)})
 
     dim_order = "XYCT" if size_z == 1 else "XYZCT"
 
@@ -1118,7 +1376,12 @@ def from_stack_pattern_path(
                 if fpath is None:
                     # missing plane: zero-fill
                     planes.append(
-                        {"z": z, "t": t, "c": c, "pixels": [0] * (size_x * size_y)}
+                        {
+                            "z": z,
+                            "t": t,
+                            "c": c,
+                            "pixels": np.zeros(size_x * size_y, dtype=np.uint16),
+                        }
                     )
                     continue
 
@@ -1138,9 +1401,7 @@ def from_stack_pattern_path(
                             f" {arr.shape} vs {(size_y, size_x)}"
                         )
                     arr = _ensure_u16(arr)
-                    planes.append(
-                        {"z": z, "t": t, "c": c, "pixels": arr.ravel().tolist()}
-                    )
+                    planes.append({"z": z, "t": t, "c": c, "pixels": arr.reshape(-1)})
                 else:
                     # Treat as TCZYX; extract dims
                     Y, X = arr.shape[-2], arr.shape[-1]
@@ -1156,7 +1417,7 @@ def from_stack_pattern_path(
                     if Tn == 1 and Cn == 1 and Zn == 1:
                         plane2d = _ensure_u16(arr.reshape(Y, X))
                         planes.append(
-                            {"z": z, "t": t, "c": c, "pixels": plane2d.ravel().tolist()}
+                            {"z": z, "t": t, "c": c, "pixels": plane2d.reshape(-1)}
                         )
                     # Case B: multi-Z only (expand across Z)
                     elif Tn == 1 and Cn == 1 and Zn > 1:
@@ -1171,7 +1432,7 @@ def from_stack_pattern_path(
                                     "z": z_idx,
                                     "t": t,
                                     "c": c,
-                                    "pixels": plane2d.ravel().tolist(),
+                                    "pixels": plane2d.reshape(-1),
                                 }
                             )
                         # bump global size_z if we exceeded it
@@ -1323,9 +1584,7 @@ def from_ome_zarr(
                 plane = arr[t, c, z]
                 if clamp_to_uint16 and plane.dtype != np.uint16:
                     plane = np.clip(plane, 0, 65535).astype(np.uint16)
-                planes.append(
-                    {"z": z, "t": t, "c": c, "pixels": plane.ravel().tolist()}
-                )
+                planes.append({"z": z, "t": t, "c": c, "pixels": plane.reshape(-1)})
 
     dim_order = "XYCT" if size_z == 1 else "XYZCT"
 
