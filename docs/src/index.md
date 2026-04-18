@@ -14,5 +14,6 @@ maxdepth: 3
 ---
 python-api
 dlpack
+why-ome-arrow
 examples/learning_to_fly_with_ome-arrow
 ```
