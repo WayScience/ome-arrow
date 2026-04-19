@@ -123,7 +123,7 @@ align(left,
   grid(
     // add one more column at the start for the left-side image
     rows: (auto, auto),
-    columns: (200pt, title_column_size, univ_logo_column_size),
+    columns: (270pt, title_column_size, univ_logo_column_size),
     column-gutter: 5pt,
     row-gutter: 30pt,
 
@@ -137,13 +137,16 @@ align(left,
     ),
 
     // main title
-    text(font: "Vollkorn", weight: 500, size: title_font_size, fill: rgb("#2F7F73"))[#title],
+    grid.cell(
+      text(font: "Vollkorn", weight: 500, size: title_font_size, fill: rgb("#2F7F73"))[#title],
+      align: left,
+    ),
 
     // university logo on the far right
     grid.cell(
-      pad(top: 0pt,
+      pad( top: -10pt, pad(left: -60pt,
         image(univ_logo, width: univ_logo_scale),
-      ),
+      )),
       rowspan: 3,
       align: right,
     ),

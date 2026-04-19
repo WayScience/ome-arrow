@@ -31,17 +31,17 @@ uv run poe poster-render
 
 ```shell
 # append text to qr codes
-magick images/cytodataframe-qr.png -gravity South -background transparent -splice 0x15 -pointsize 40 -font Arial -weight Bold -annotate 0x15 'Scan for GitHub!' images/sga-qr-text.png
+magick images/ome-arrow-qr.png -gravity South -background transparent -splice 0x15 -pointsize 40 -font Arial -weight Bold -annotate 0x15 'Scan for GitHub!' images/ome-arrow-qr-text.png
 
 # create a transparent spacer
 magick -size 100x460 xc:transparent images/spacer.png
 
-magick images/sga-qr-text.png -resize x460 images/sga-qr-text.png
+magick images/ome-arrow-qr-text.png -resize x460 images/ome-arrow-qr-text.png
 magick images/bssw-logo-w-background.png -resize x460 images/bssw-logo-w-background.png
 magick images/sustainable-horizons-institute-logo.png -resize x460 images/sustainable-horizons-institute-logo.png
 magick images/cu-anschutz-short.png -resize x460 images/cu-anschutz-short.png
 # combine the images together as one using the spacer for separation
-magick -background none images/sga-qr-text.png images/spacer.png images/bssw-logo-w-background.png images/spacer.png images/sustainable-horizons-institute-logo.png images/spacer.png images/cu-anschutz-short.png +append images/header-combined-images.png
+magick -background none images/ome-arrow-qr-text.png images/spacer.png images/bssw-logo-w-background.png images/spacer.png images/sustainable-horizons-institute-logo.png images/spacer.png images/cu-anschutz-short.png +append images/header-combined-images.png
 
 # convert the poster pdf to png and jpg with 150 dpi and a white background
 magick -antialias -density 300 -background white -flatten poster.pdf poster.png
