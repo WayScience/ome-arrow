@@ -130,7 +130,7 @@ align(left,
     // left-side image cell
     grid.cell(
       pad(top: -18pt,
-        image("images/ome_arrow_logo.png", width: 190pt),
+        image("images/ome-arrow-logo.png", width: 270pt),
       ),
       rowspan: 3,
       align: left,
