@@ -3,7 +3,7 @@ title: "OME-Arrow: Unifying Images, Metadata, and Features in an Interoperable D
 format:
   poster-typst:
     size: "48x32"
-    poster-authors: "Dave Bunten¹, Jenna Tomkinson¹, Michael Lippincott¹, Cameron Mattson¹, Gregory P. Way¹"
+    poster-authors: "Dave Bunten¹, Jenna Tomkinson¹, Michael Lippincott¹, Cameron Mattson¹, Julia B. Curd¹, Gregory P. Way¹"
     departments: "¹Department of Biomedical Informatics, University of Colorado Anschutz Medical Campus"
     institution-logo: "./images/header-combined-images.png"
     footer-text: "Open, interoperable, and queryable microscopy images"
@@ -15,27 +15,84 @@ output-file: "ome-arrow-2026-poster.pdf"
 
 ## Why OME-Arrow?
 
-![_Microscopy workflows often reference images from metadata tables rather than storing images, metadata, and measurements in one interoperable structure. OME-Arrow brings those pieces back together._](images/ome_arrow_references_to_files.png){width=100% fig-align="center"}
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
+```
 
-Modern bioimaging workflows increasingly combine **images**, **metadata**, and
-**derived measurements** across many tools and platforms.
-When those components are split across incompatible formats, analysis becomes
-harder to query, harder to reproduce, and harder to scale.
-**OME-Arrow** applies **Open Microscopy Environment (OME)** conventions through
-**Apache Arrow** so imaging data can participate directly in modern analytical
-workflows.
+Modern bioimaging workflows depend on connecting **images**, **metadata**, and
+**derived measurements**.
+When these are split across disconnected files and systems, analysis is harder
+to join, reproduce, and scale.
+**OME-Arrow** provides a linked, queryable data model for these components in
+code-first and SQL-first analytical workflows.
 
 ## An interoperable image data model
 
-![_OME-Arrow represents images as Arrow-compatible nested structures alongside metadata and features, enabling one consistent data model across analytical environments._](images/ome_arrow_schema.png){width=100% fig-align="center"}
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
+```
 
 By representing image content as **Arrow-compatible structures** alongside
 metadata and features, OME-Arrow enables:
 
-- **Programmatic access** across Python and other Arrow-compatible tools
-- **Relational workflows** using SQL engines, DuckDB, and Parquet pipelines
-- **Consistent storage** for pixels, metadata, and derived features
+- **Explicit relationships** between pixels, metadata, and derived features
+- **Direct joins and filtering** in SQL and DataFrame workflows
+- **Cross-language interoperability** through Arrow-native representations
 - **Standards alignment** with the broader open bioimaging ecosystem
+
+## How OME-Zarr integrates
+
+OME-Zarr is excellent for cloud-native image storage and visualization-oriented
+distribution.
+OME-Arrow is complementary, not a replacement.
+It is designed for cases where images must be queried together with tabular
+metadata and measurements in one analytical system.
+In many projects, both are useful and intentionally used together:
+
+- **OME-Zarr / OME-TIFF** for image exchange and ecosystem compatibility
+- **OME-Arrow / Parquet / Arrow-native tables** for joins, filtering, and
+  analytics at scale
+- **Lance** appears to be a promising OME-Arrow table backend for large-image
+  random access in tabular workflows
+
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
+```
+
+## Benchmark signal (preliminary)
+
+Current benchmark results suggest operation-dependent tradeoffs rather than one
+universal winner.
+Directory-per-image OME-Zarr can perform strongly for sparse random image
+access patterns.
+Arrow-table-native layouts can provide practical advantages for table-centric
+join/filter workloads and broader analytical interoperability.
+Lance shows competitive random-access behavior in OME-Arrow-oriented tests,
+making it a strong candidate for large image-linked table repositories.
+
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
+```
 
 ## Supported workflows
 
@@ -43,67 +100,41 @@ OME-Arrow supports practical data movement across common microscopy formats and
 downstream analysis environments:
 
 - **Ingest** from TIFF, OME-Zarr, and NumPy arrays
-- **Export** to OME-Parquet, OME-Zarr, and OME-TIFF
+- **Export** to OME-Parquet, OME-Zarr, OME-TIFF, Vortex, and Lance-compatible
+  table workflows
+- **Standalone/local analysis** with scripts, SQL engines, and DuckDB
 - **Lazy scan-style access** for large datasets
 - **Tensor pathways** for machine learning and zero-copy style workflows
 - **Visualization** through `napari-ome-arrow`
 - **Feature-centric workflows** through `CytoDataFrame`
 
-## Using OME-Arrow in Python
-
-### Install
-
-```bash
-# install OME-Arrow from PyPI
-pip install ome-arrow
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
 ```
 
-### Ingest an image and inspect it
+## Quick technical demonstration
 
 ```python
 from ome_arrow import OMEArrow
 
-# Ingest a TIFF image into an OME-Arrow object.
-oa_image = OMEArrow(data="your_image.tif")
-
-# Access the Arrow-compatible image record.
-oa_image.data
-
-# Summarize metadata and dimensions.
-oa_image.info()
+oa = OMEArrow("image.ome.zarr")                # ingest common formats
+oa.export(how="ome-parquet", out="image.parquet")
+lazy = OMEArrow.scan("image.parquet").slice_lazy(0, 512, 0, 512).collect()
 ```
 
-![](images/cdf_with_images_default.png)
-
-### Export to interoperable formats
-
-```python
-# Export one image to OME-Parquet.
-oa_image.export(how="ome-parquet", out="your_image.ome.parquet")
-
-# The same object can also be exported to OME-Zarr or OME-TIFF.
-oa_image.export(how="ome-zarr", out="your_image.ome.zarr")
-oa_image.export(how="ome-tiff", out="your_image.ome.tiff")
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
 ```
-
-![](images/cdf_with_images_outlines.png)
-
-### Work lazily with large data
-
-```python
-from ome_arrow import OMEArrow
-
-# Build a deferred plan from OME-Parquet.
-oa = OMEArrow.scan("your_image.ome.parquet")
-
-# Queue lazy spatial slicing, then collect.
-cropped = oa.slice_lazy(0, 512, 0, 512).slice_lazy(64, 256, 64, 256).collect()
-
-# Create a tensor view for machine learning workflows.
-arr = cropped.tensor_view(t=0, z=0, layout="CYX").to_numpy()
-```
-
-![](images/cdf_with_images_outlines_colored.png)
 
 ## Integration with the ecosystem
 
@@ -112,28 +143,52 @@ tools rather than replacing them.
 
 - **`napari-ome-arrow`** enables interactive visualization of OME-Arrow and
   OME-Parquet data in napari.
-- **`CytoDataFrame`** brings OME-Parquet image and feature data into
-  DataFrame-centered notebook workflows.
+- **`CytoDataFrame`** is the practical analysis layer that brings image-linked
+  OME-Parquet data into DataFrame-centered notebook workflows for image-based
+  profiling.
 - **`coSMicQC`** can operate on feature-rich datasets that are paired with image
   context through Cytomining ecosystem tools.
+- **`iceberg-bioimage`** helps connect existing formats and is defining an
+  Iceberg-oriented warehouse specification for how Cytomining tools bring
+  images, features, and metadata together with versioning and schema evolution.
+- **Lance** appears to be a suitable tabular option for large-image access
+  within table-native workflows, with competitive random-access behavior in
+  preliminary OME-Arrow benchmarks.
 
-### Read OME-Parquet created for feature workflows
-
-```python
-from ome_arrow import OMEArrow
-
-# Read one image from a multi-image OME-Parquet table.
-oa_image = OMEArrow(
-    data="BR00117006.ome.parquet",
-    column_name="Image_FileName_OrigDNA_OMEArrow_LABL",
-    row_index=2,
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
 )
-
-# Display with a standard visualization backend.
-oa_image.view(how="matplotlib")
 ```
 
-![](images/cdf_with_images_outlines_scaled.png)
+## In practice: ALSF pediatric cancer workflows
+
+This framework is being used with **Alex's Lemonade Stand Foundation (ALSF)**
+data to support integrated image-based profiling.
+Instead of keeping raw images, extracted features, and experimental metadata in
+disconnected stores, OME-Arrow enables a linked analytical representation that
+can be queried and validated as one system.
+
+- **Faster hypothesis iteration:** join cellular phenotypes to treatment and
+  sample context without custom file stitching.
+- **Improved reproducibility:** preserve explicit data relationships across
+  preprocessing, QC, and downstream modeling.
+- **Scalable operations:** run the same model from local notebooks to larger
+  repository/warehouse settings.
+- **Cytomining alignment:** OME-Arrow + CytoDataFrame + coSMicQC provide a
+  coherent path from image ingest through feature analysis and quality control.
+
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
+```
 
 ## Why this matters
 
@@ -143,6 +198,21 @@ measurements that scientists actually analyze.
 This makes it easier to move between image storage, tabular analytics,
 interactive visualization, and machine learning without inventing a new data
 model for each tool.
+In image-based profiling contexts, this supports end-to-end analysis where raw
+images, extracted features, and experimental context remain connected from local
+workflows to large data repositories.
+For skeptical users, the key point is practical: OME-Arrow does not ask teams
+to abandon OME-Zarr or OME-TIFF; it provides the missing analytical layer that
+makes those assets easier to query, relate, and operationalize at scale.
+
+```{=typst}
+#block(
+  fill: rgb("#000000"),
+  width: 100%,
+  height: 140pt,
+  radius: 6pt,
+)
+```
 
 ## Acknowledgements
 

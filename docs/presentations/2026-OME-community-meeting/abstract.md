@@ -2,16 +2,18 @@
 
 ## Authors
 
-Dave Bunten, Jenna Tomkinson, Michael Lippincott, Cameron Mattson, Gregory P. Way
+Dave Bunten, Jenna Tomkinson, Michael Lippincott, Cameron Mattson, Julia B. Curd, and Gregory P. Way
 
 ## Title
 
-OME-Arrow: Unifying Images, Metadata, and Features in an Interoperable Data Model
+OME-Arrow: Unifying Images, Metadata, and Features in an Interoperable Data Model for High-Content Imaging
 
 ## Abstract
 
-Modern bioimaging workflows increasingly combine images, metadata, and derived measurements across many tools and platforms. Enabling these components to work together seamlessly is key to interoperable and scalable analysis.
+Modern bioimaging workflows combine images, metadata, and derived measurements across many tools, but these components are often stored in incompatible formats and disconnected systems. This fragmentation makes it difficult to join data, reproduce analyses, and scale from small experiments to large, multi-sample studies.
 
-OME-Arrow is a project that applies Open Microscopy Environment (OME) conventions through Apache Arrow to integrate imaging data with modern analytical workflows. By representing images as Arrow-compatible structures alongside metadata and features, OME-Arrow enables programmatic and relational access using a consistent data model across languages while supporting familiar tools such as SQL engines, DuckDB, and Parquet-based pipelines.
+OME-Arrow is a data model and toolkit for working with bioimaging data in modern analytical environments, where data are processed in code, queried with SQL, and analyzed across tools such as Python and R. It brings images, metadata, and derived measurements into a single structure organized as linked tables, rather than leaving them split across separate files and systems. This allows imaging data to be directly joined, filtered, and analyzed using familiar operations, enabling image-derived measurements, metadata, and experimental context to be queried together in a single system. In contrast to existing workflows, where these relationships must be manually reconstructed across files and tools, OME-Arrow makes them explicit and queryable.
 
-The library supports ingestion from TIFF, OME-Zarr, and NumPy, with export to OME-Parquet, OME-Zarr, and OME-TIFF, along with lazy scan-style access for large datasets and tensor pathways for machine learning. OME-Arrow also integrates with napari-ome-arrow for visualization and CytoDataFrame for scalable feature-centric workflows, offering a modular, standards-aligned approach that complements the broader open bioimaging ecosystem.
+OME-Arrow builds on Open Microscopy Environment (OME) conventions and represents data using Apache Arrow, a columnar in-memory data format designed for fast analytics and efficient data sharing across programming languages. It supports ingestion from formats such as TIFF, OME-Zarr, and NumPy, and export to Arrow-native formats (e.g., Parquet, Lance, Vortex) as well as OME-TIFF and OME-Zarr. Data can be processed directly in standalone workflows using these formats, enabling local analysis, scripting, and integration with tools such as SQL engines and DuckDB. For larger-scale use cases, the same data can be organized into an Apache Iceberg-style table structure, which supports dataset versioning, schema evolution, and concurrent access across systems. These two modes use the same underlying data model, allowing workflows to scale from local analysis to warehouse environments without restructuring data. The library also provides lazy scan-style access for large datasets, supports tensor-based pathways for machine learning, and integrates with napari-ome-arrow for advanced visualization and CytoDataFrame for feature-centric analysis within Jupyter notebook environments.
+
+These capabilities enable end-to-end image-based profiling workflows where raw images, extracted features, and experimental metadata can be analyzed together without intermediate data reshaping. In applied settings such as pediatric cancer research, this allows researchers to more efficiently connect cellular phenotypes to experimental conditions, improving the speed and reproducibility of data processing, visualization, and downstream analysis. This approach is being applied to pediatric cancer datasets through work with Alex’s Lemonade Stand Foundation, where integrated analysis of imaging and profiling data supports ongoing efforts to explore relationships between cellular phenotypes and experimental context.

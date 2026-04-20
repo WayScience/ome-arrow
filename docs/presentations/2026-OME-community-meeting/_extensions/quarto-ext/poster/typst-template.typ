@@ -12,7 +12,7 @@
   footer_color: "Hex Color Code",
   keywords: (),
   num_columns: "4",
-  univ_logo_scale: "160",
+  univ_logo_scale: "140",
   univ_logo_column_size: "10",
   title_column_size: "33",
   title_font_size: "48",
@@ -123,14 +123,14 @@ align(left,
   grid(
     // add one more column at the start for the left-side image
     rows: (auto, auto),
-    columns: (270pt, title_column_size, univ_logo_column_size),
+    columns: (290pt, title_column_size, univ_logo_column_size),
     column-gutter: 5pt,
     row-gutter: 30pt,
 
     // left-side image cell
     grid.cell(
       pad(top: -18pt,
-        image("images/ome-arrow-logo.png", width: 270pt),
+        image("images/ome-arrow-logo.png", width: 290pt),
       ),
       rowspan: 3,
       align: left,
@@ -144,7 +144,7 @@ align(left,
 
     // university logo on the far right
     grid.cell(
-      pad( top: -10pt, pad(left: -60pt,
+      pad( right: 80pt, pad(left: -150pt,
         image(univ_logo, width: univ_logo_scale),
       )),
       rowspan: 3,
