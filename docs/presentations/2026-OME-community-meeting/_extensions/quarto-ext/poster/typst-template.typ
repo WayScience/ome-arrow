@@ -15,14 +15,14 @@
   univ_logo_scale: "140",
   univ_logo_column_size: "10",
   title_column_size: "33",
-  title_font_size: "48",
-  authors_font_size: "36",
+  title_font_size: "42",
+  authors_font_size: "32",
   footer_url_font_size: "40",
   footer_text_font_size: "40",
   body
 ) = {
   // initialize template display formatting
-  set text(font: "Lato", size: 30pt)
+  set text(font: "Lato", size: 26pt)
   let sizes = size.split("x")
   let width = int(sizes.at(0)) * 1in
   let height = int(sizes.at(1)) * 1in
@@ -79,7 +79,7 @@
     let deepest = if levels != () { levels.last() } else { 1 }
 
     // defines how sub-headers display
-    set text(24pt, weight: 400)
+    set text(25pt, weight: 400)
 
     // sub-header level 0
     if it.level == 0 [
@@ -95,20 +95,20 @@
     ] else if it.level == 1 [
       #v(10pt, weak: true)
       #set align(left)
-      #set text({ 40pt }, weight: 600, font: "Vollkorn", fill: rgb("#2F7F73"))
-      #v(50pt, weak: true)
+      #set text({ 44pt }, weight: 600, font: "Vollkorn", fill: rgb("#2A6F63"))
+      #v(45pt, weak: true)
       #if it.numbering != none {
         numbering("I.", deepest)
         h(7pt, weak: true)
       }
       #it.body
-      #v(30pt, weak: true)
+      #v(25pt, weak: true)
       #line(length: 100%, stroke: rgb(200, 200, 200))
-      #v(30pt, weak: true)
+      #v(25pt, weak: true)
 
     // all other headers
     ] else [
-      #set text({ 36pt }, weight: 600, font: "Vollkorn", fill: rgb("#4D9B8A"), style: "italic")
+      #set text({ 36pt }, weight: 600, font: "Vollkorn", fill: rgb("#3E877A"), style: "italic")
       #if it.level == 2 {
         numbering("⧈  a)", deepest)
         [ ]
@@ -123,14 +123,14 @@ align(left,
   grid(
     // add one more column at the start for the left-side image
     rows: (auto, auto),
-    columns: (290pt, title_column_size, univ_logo_column_size),
-    column-gutter: 5pt,
+    columns: (210pt, title_column_size, univ_logo_column_size),
+    column-gutter: 25pt,
     row-gutter: 30pt,
 
     // left-side image cell
     grid.cell(
       pad(top: -18pt,
-        image("images/ome-arrow-logo.png", width: 290pt),
+        image("images/ome-arrow-logo.png", width: 210pt),
       ),
       rowspan: 3,
       align: left,
@@ -138,24 +138,32 @@ align(left,
 
     // main title
     grid.cell(
-      text(font: "Vollkorn", weight: 500, size: title_font_size, fill: rgb("#2F7F73"))[#title],
+      [
+        #set par(linebreaks: "simple")
+        #text(
+          font: ("Vollkorn", "Apple Symbols", "Zapf Dingbats", "Arial Unicode MS"),
+          weight: 500,
+          size: title_font_size,
+          fill: rgb("#2A6F63"),
+        )[#title]
+      ],
       align: left,
     ),
 
     // university logo on the far right
     grid.cell(
-      pad( right: 80pt, pad(left: -150pt,
-        image(univ_logo, width: univ_logo_scale),
+      pad(top: 2pt, pad( left: 20pt,
+        image(univ_logo, width: 130%),
       )),
       rowspan: 3,
       align: right,
     ),
 
     // author display
-    pad(top: 5pt, text(size: 38pt, authors)),
+    pad(top: 5pt, text(size: 28pt, authors)),
 
     // department and notes display
-    pad(top: 5pt, text(size: 30pt, emph(departments)))
+    pad(top: 5pt, text(size: 26pt, emph(departments)))
     )
   )
 
@@ -171,6 +179,12 @@ align(left,
     linebreaks: "optimized"
   )
 
+  // Style inline code spans from markdown backticks.
+  show raw.where(block: false): set text(weight: 700, fill: rgb("#1E4F8C"))
+
+  // Style hyperlinks with a yellow/orange tone by default.
+  show link: set text(fill: rgb("#A85A00"))
+
   // Configure figures.
   show figure: it => block({
     // Display a backdrop rectangle.
@@ -180,8 +194,13 @@ align(left,
     if it.has("caption") {
       set align(left)
       v(if it.has("gap") { it.gap } else { 24pt }, weak: true)
-      set text(weight: "bold")
-      it.caption
+      let fig_levels = counter(figure).at(here())
+      let fig_num = if fig_levels != () { fig_levels.last() } else { 1 }
+      [
+        #text(weight: "bold")[Figure #fig_num:]
+        #h(6pt)
+        #text(weight: "regular")[#it.caption.body]
+      ]
     }
 
   })
