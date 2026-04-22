@@ -43,13 +43,13 @@ from ome_arrow import OMEArrow
 oa = OMEArrow("image.ome.zarr")
 
 # Export to Parquet directly
-oa.export(how="ome-parquet", out="image.parquet") 
+oa.export(how="ome-parquet", out="image.parquet")
 
 # Create and collect a "lazy" crop of an image
-lazy = OMEArrow.scan("image.parquet").slice_lazy(0, 512, 0, 512).collect() 
+lazy = OMEArrow.scan("image.parquet").slice_lazy(0, 512, 0, 512).collect()
 
-# vizualize the image using pyvista for jupyter-friendly views
-oa.view(how="pyvista) 
+# visualize the image with pyvista for jupyter-friendly views
+oa.view(how="pyvista)
 ```
 
 ## Full Cytomining integration
