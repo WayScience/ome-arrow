@@ -139,6 +139,7 @@ align(left,
     // main title
     grid.cell(
       [
+        #show "➶": it => text(weight: 800, fill: rgb("#000000"))[#it]
         #set par(linebreaks: "simple")
         #text(
           font: ("Vollkorn", "Apple Symbols", "Zapf Dingbats", "Arial Unicode MS"),

@@ -1,6 +1,6 @@
 ---
 title: |
-  **OME-Arrow** ↦ Unifying Images, Metadata, and Features in an Interoperable Data Model for High-Content Imaging
+  **OME-Arrow** ➶ Unifying Images, Metadata, and Morphology in an Interoperable Data Model for High-Content Imaging
 format:
   poster-typst:
     size: "48x32"
@@ -61,9 +61,9 @@ oa.view(how="pyvista)
 ![OME-Zarr is strong for cloud-native image storage and distribution. OME-Arrow is complementary (not a replacement) when images must be queried with tabular metadata and measurements. One integration pattern uses [`iceberg-bioimage`](https://github.com/WayScience/iceberg-bioimage) as a warehouse/control-plane layer and [`duckdb_zarr`](https://github.com/photometric/duckdb-zarr) for analytical access to OME-Zarr-backed data. Here, **OME-Zarr / OME-TIFF** remain exchange formats, while **OME-Arrow / Parquet / Arrow-native tables** support joins and analytics, with **Lance** as a random-access table option.](images/icebeg-bioimage-ome-zarr-integration.png)
 
 
-## In practice: ALSF pediatric cancer workflows
+## ALSF pediatric cancer research
 
-![This framework is being used with **Alex's Lemonade Stand Foundation (ALSF)** data to support integrated image-based profiling. Instead of keeping raw images, extracted features, and experimental metadata in disconnected stores, OME-Arrow enables one linked representation that can be queried, audited, and reused across teams: **end-to-end context retention** (image pixels, per-cell features, and perturbation metadata stay connected), **faster biological iteration** (rank and compare candidate phenotypes across treatments and sample backgrounds without manual file stitching), **more reproducible pipelines** (explicit links between image records and derived tables reduce ambiguity during QC and re-runs), **operational scalability** (the same workflows run from local notebooks to larger repository and warehouse settings), and **Cytomining interoperability** (OME-Arrow + CytoDataFrame + coSMicQC + pycytominer + buscar provide a coherent path from ingest to profiling, QC, and hit prioritization). Practical ALSF outcome: teams can more quickly connect cellular morphology changes to experimental conditions in pediatric cancer studies.](images/example-umap.png)
+![This work supports the **Pediatric Cancer Cell Morphology Atlas (PCCMA)** project, which will study pediatric cancer cell lines together with drug screens to accelerate discoveries that cure disease. The figure shows a `CytoDataFrame`-centered quality-control workflow using `coSMicQC` and Cytomining tooling on image-linked profiling data; in PCCMA analyses, this workflow helps identify and remove outliers for improved downstream analysis quality. We are using OME-Arrow-related work through the Cytomining ecosystem to help build the Atlas (for current implementation context, see [pediatric_cancer_atlas_profiling](https://github.com/WayScience/pediatric_cancer_atlas_profiling)).](images/pccma-cytodataframe-cosmicqc-result-example.png)
 
 ## Acknowledgements
 
@@ -71,10 +71,10 @@ We thank those who have inspired, contributed, or helped support OME-Arrow and
 the broader open bioimaging ecosystem:
 
 - Open source science from the [__Open Microscopy Environment__](https://github.com/ome)
+- The  [__napari community__](https://napari.org/) for open, collaborative development around interactive bioimage analysis
 - The communities behind [__Apache Arrow__](https://arrow.apache.org/),
-  [__Apache Iceberg__](https://iceberg.apache.org/),
-  [__napari__](https://napari.org/), and Cytomining ecosystem projects
-- Special thanks to the [__napari community__](https://napari.org/) for open,
-  collaborative development around interactive bioimage analysis
+  [__Apache Iceberg__](https://iceberg.apache.org/), and Cytomining ecosystem projects
+- The [__ALSF Childhood Cancer Data Lab__](https://www.ccdatalab.org/) for
+  pediatric cancer data science leadership and partnership
 - Members of the [__Way Lab__](https://www.waysciencelab.com/) at the University of Colorado Anschutz Medical Campus
 - [__Department of Biomedical Informatics__](https://medschool.cuanschutz.edu/dbmi) within the School of Medicine at the University of Colorado Anschutz Medical Campus

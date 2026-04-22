@@ -6,7 +6,7 @@ Dave Bunten, Jenna Tomkinson, Michael Lippincott, Cameron Mattson, Julia B. Curd
 
 ## Title
 
-OME-Arrow: Unifying Images, Metadata, and Features in an Interoperable Data Model for High-Content Imaging
+OME-Arrow: Unifying Images, Metadata, and Morphology in an Interoperable Data Model for High-Content Imaging
 
 ## Abstract
 
