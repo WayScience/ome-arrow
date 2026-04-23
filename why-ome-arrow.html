@@ -6,7 +6,9 @@
 
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Search - ome_arrow  documentation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Why OME Arrow? &#8212; ome_arrow  documentation</title>
   
   
   
@@ -41,12 +43,11 @@
     <script src="_static/documentation_options.js?v=5929fcd5"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'search';</script>
-  <script src="_static/searchtools.js"></script>
-  <script src="_static/language_data.js"></script>
-  <script src="searchindex.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'why-ome-arrow';</script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Presentations" href="presentations.html" />
+    <link rel="prev" title="Exporting OME-Arrow pixel data via DLPack" href="dlpack.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -68,7 +69,7 @@
   <dialog id="pst-search-dialog">
     
 <form class="bd-search d-flex align-items-center"
-      action="#"
+      action="search.html"
       method="get">
   <i class="fa-solid fa-magnifying-glass"></i>
   <input type="search"
@@ -139,8 +140,8 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="why-ome-arrow.html">
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
     Why OME Arrow?
   </a>
 </li>
@@ -228,10 +229,8 @@
       
       
       
-        
-      
       <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -260,8 +259,8 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="why-ome-arrow.html">
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
     Why OME Arrow?
   </a>
 </li>
@@ -318,6 +317,15 @@
     
   </div>
   
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
       <div class="sidebar-primary-item">
@@ -338,45 +346,98 @@
           <div class="bd-content">
             <div class="bd-article-container">
               
-              <div class="bd-header-article d-print-none"></div>
-              
-              
-  <div class="bd-search-container">
-    <h1>Search</h1>
-    <noscript>
-      <div class="admonition error">
-        <p class="admonition-title">Error</p>
-        <p>Please activate JavaScript to enable the search functionality.</p>
-      </div>
-    </noscript>
-    
-<form class="bd-search d-flex align-items-center"
-      action="#"
-      method="get">
-  <i class="fa-solid fa-magnifying-glass"></i>
-  <input type="search"
-         class="form-control"
-         name="q"
-         placeholder="Search the docs ..."
-         aria-label="Search the docs ..."
-         autocomplete="off"
-         autocorrect="off"
-         autocapitalize="off"
-         spellcheck="false"/>
-  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-    <div id="search-results"></div>
-  </div>
-  <script>
-    // Activate the search field on page load
-    let searchInput = document.querySelector("form.bd-search input");
-    if (searchInput) {
-        searchInput.focus();
-        searchInput.select();
-        console.log("[PST]: Set focus on search field.");
-    }
-  </script>
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
 
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Why OME Arrow?</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="why-ome-arrow">
+<h1>Why OME Arrow?<a class="headerlink" href="#why-ome-arrow" title="Link to this heading">#</a></h1>
+<p>OME Arrow is a table-oriented representation for OME-aligned image data built on Apache Arrow and commonly persisted as Parquet.
+It complements, rather than replaces, Open Microscopy Environment (OME)-Zarr and OME-TIFF.
+OME-Zarr and OME-TIFF are core image formats for storage, exchange, and visualization, while OME Arrow focuses on query-centric analytics where image payloads and tabular data need to be handled together.
+Open Microscopy Environment (OME)-Zarr is already a strong default for many bioimaging workflows.
+It provides cloud-oriented, multiscale image storage and standardized metadata through the Next-Generation File Formats (NGFF) / OME-Zarr specification.
+OME Arrow is also cloud-oriented, especially for object-store-backed, table-native analytics workflows in Arrow/Parquet ecosystems.</p>
+<p>This page explains why OME Arrow still matters.</p>
+<section id="where-current-ome-formats-are-strong">
+<h2>Where current OME formats are strong<a class="headerlink" href="#where-current-ome-formats-are-strong" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://ome-model.readthedocs.io/en/stable/ome-tiff/index.html">OME-TIFF</a>:
+mature image + OME-XML (Extensible Markup Language) metadata packaging in TIFF (Tagged Image File Format)-based files.</p></li>
+<li><p><a class="reference external" href="https://ngff.openmicroscopy.org/0.5/">OME-Zarr (NGFF)</a>:
+standardized Zarr hierarchy, multiscales, labels, and HCS (high-content screening) plate/well metadata.</p></li>
+</ul>
+<p>These formats are excellent for image representation and interoperability.</p>
+</section>
+<section id="gap-ome-arrow-is-designed-to-address">
+<h2>Gap OME Arrow is designed to address<a class="headerlink" href="#gap-ome-arrow-is-designed-to-address" title="Link to this heading">#</a></h2>
+<p>In analysis-heavy workflows, image pixels often need to be handled together with tabular data (for example per-cell features, QC (quality control) metrics, and joins across many images).
+OME-Zarr and OME-TIFF define image data structures well, but they are not table formats.
+The <a class="reference external" href="https://zarr-specs.readthedocs.io/en/latest/v3/core/index.html">Zarr core specification</a> is centered on typed N-dimensional arrays and groups rather than a canonical table model.
+The <a class="reference external" href="https://ngff.openmicroscopy.org/0.5/">OME-Zarr specification (v0.5)</a> adds strong guidance for image and metadata layout, but does not define a single cross-project table specification.
+In practice, teams often introduce project-level table conventions inside Zarr hierarchies (for example, <a class="reference external" href="https://anndata.readthedocs.io/en/stable/fileformat-prose.html">Annotated Data (AnnData) in Zarr</a>), which can produce surprising or inconsistent data structures across tools.</p>
+<p>OME Arrow uses <a class="reference external" href="https://arrow.apache.org/overview/">Apache Arrow</a> primitives to represent image payloads as typed, queryable values inside table-like data systems (including Parquet).
+This makes image-linked analytics easier in SQL (Structured Query Language) / DataFrame-style pipelines.</p>
+</section>
+<section id="ome-arrow-vs-ome-zarr">
+<h2>OME Arrow vs OME-Zarr<a class="headerlink" href="#ome-arrow-vs-ome-zarr" title="Link to this heading">#</a></h2>
+<p>OME Arrow is not a universal replacement for OME-Zarr.</p>
+<ul class="simple">
+<li><p>Use OME-Zarr when your primary need is standards-based multiscale image storage and ecosystem compatibility for image-first tools.</p></li>
+<li><p>Use OME Arrow when your primary need is tighter integration between image data and tabular analytics workflows.</p></li>
+<li><p>Use both when needed: OME-Zarr for distribution/visualization paths and OME Arrow for query-centric pipelines.</p></li>
+</ul>
+</section>
+<section id="preliminary-benchmark-signal">
+<h2>Preliminary benchmark signal<a class="headerlink" href="#preliminary-benchmark-signal" title="Link to this heading">#</a></h2>
+<p>Preliminary results in <a class="reference external" href="https://github.com/WayScience/ome-arrow-benchmarks">ome-arrow-benchmarks</a> show that outcomes are highly workload- and layout-dependent.
+In the repository’s synthetic wide-table plus image-column runs, Arrow-table-native backends can reduce full-table read time and storage size relative to some alternatives, while write performance varies by backend.
+In the OME-Arrow-only benchmark that compares against directory-per-image OME-Zarr and TIFF layouts, full write/read timings and random-read timings diverge in different directions depending on operation type.
+In that same OME-Arrow-only setup, Lance showed random-read timing similar to OME-Zarr (about 0.020 seconds vs about 0.019 seconds average), suggesting Lance can be a practical OME-Arrow-based option for large image repositories when table-native workflows are desired.
+The same preliminary run also showed a larger Lance on-disk footprint than OME-Zarr, so this should be treated as an access-pattern tradeoff rather than a universal storage recommendation.
+This interpretation is consistent with the Lance paper’s focus on random access in columnar storage (<a class="reference external" href="https://doi.org/10.48550/arXiv.2504.15247">Pace et al., 2025</a>).
+This impacts comparisons directly: these are not pure “format A vs format B” tests, because the benchmark also reflects table model choices, directory layout choices, and access pattern choices.
+For this reason, benchmark results should be treated as preliminary guidance for scenario fit, not universal rankings.</p>
+</section>
+<section id="why-this-matters-for-big-picture-data-repositories-in-image-based-profiling">
+<h2>Why this matters for big-picture data repositories in image-based profiling<a class="headerlink" href="#why-this-matters-for-big-picture-data-repositories-in-image-based-profiling" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://github.com/WayScience/iceberg-bioimage">iceberg-bioimage</a> is one concrete example: it positions <a class="reference external" href="https://iceberg.apache.org/">Apache Iceberg</a> as a control plane (cataloging, schemas, joins, snapshots), while Zarr and OME-TIFF remain data-plane formats.
+Its README also lists OME Arrow as an optional integration for Arrow-native tabular image payloads and lazy image access.</p>
+<p>That is the key fit: OME Arrow helps bridge bioimage formats and modern table engines without requiring every workflow to abandon OME-Zarr.</p>
+</section>
+</section>
+
+
+                </article>
+              
               
               
               
@@ -384,6 +445,24 @@
                 <footer class="prev-next-footer d-print-none">
                   
 <div class="prev-next-area">
+    <a class="left-prev"
+       href="dlpack.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Exporting OME-Arrow pixel data via DLPack</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="presentations.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Presentations</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
 </div>
                 </footer>
               
