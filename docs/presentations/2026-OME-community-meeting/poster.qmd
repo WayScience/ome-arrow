@@ -1,0 +1,80 @@
+---
+title: |
+  **OME-Arrow** ➶ Unifying Images, Metadata, and Morphology in an Interoperable Data Model for High-Content Imaging
+format:
+  poster-typst:
+    size: "48x32"
+    poster-authors: "Dave Bunten¹, Jenna Tomkinson¹, Michael Lippincott¹, Cameron Mattson¹, Julia B. Curd¹, Gregory P. Way¹"
+    departments: "¹Department of Biomedical Informatics, University of Colorado Anschutz Medical Campus"
+    institution-logo: "./images/header-combined-images.png"
+    footer-text: "Open, interoperable, and queryable microscopy images"
+    footer-url: "OME-Arrow"
+    footer-emails: "https://github.com/wayscience/ome-arrow"
+    footer-color: "CBE9E1"
+output-file: "ome-arrow-2026-poster.pdf"
+---
+
+## Why OME-Arrow?
+
+![Modern bioimaging workflows depend on connecting **images**, **metadata**, and
+**derived measurements**. When these are split across disconnected files and systems, analysis is harder
+to join, reproduce, and scale. **OME-Arrow** provides a linked, queryable data model for these components in
+code-first and SQL-first analytical workflows.](images/why-ome-arrow.png)
+
+## An interoperable image data model
+
+![By representing image content as **Arrow-compatible structures** alongside
+metadata and features, [OME-Arrow](https://github.com/WayScience/ome-arrow) enables: **Explicit relationships** between pixels, metadata, and derived features, **Direct joins and filtering** in SQL and DataFrame workflows, **Cross-language interoperability** through Arrow-native representations, **Standards alignment** with the broader open bioimaging ecosystem](images/what-is-ome-arrow.png)
+
+## Benchmarks for OME-Arrow
+
+![Current benchmark results suggest operation-dependent tradeoffs rather than one universal winner. In [ome-arrow-benchmarks](https://github.com/WayScience/ome-arrow-benchmarks), OME-Zarr can perform strongly for sparse random image access patterns, while Arrow-table-native layouts provide practical advantages for table-centric join/filter workloads and broader analytical interoperability. Lance shows competitive random-access behavior in OME-Arrow-oriented tests, making it a strong candidate for large image-linked table repositories.
+](images/ome-arrow-benchmarks.png)
+
+![In [CytoTable-benchmarks](https://github.com/cytomining/CytoTable-benchmarks), Parquet and other Arrow-compatible tabular workflows generally scale better and run faster at larger data volumes than Zarr- and AnnData-oriented table paths, supporting the use of Arrow-native tables for large-scale profiling analytics.](images/cytotable-parquet-benchmarks.png)
+
+## Quick technical demonstration
+
+```python
+# install with `pip install ome_arrow`
+from ome_arrow import OMEArrow
+
+# Create an OME-Arrow object from an OME-Zarr
+oa = OMEArrow("image.ome.zarr")
+
+# Export to Parquet directly
+oa.export(how="ome-parquet", out="image.parquet")
+
+# Create and collect a "lazy" crop of an image
+lazy = OMEArrow.scan("image.parquet").slice_lazy(0, 512, 0, 512).collect()
+
+# visualize the image with pyvista for jupyter-friendly views
+oa.view(how="pyvista)
+```
+
+## Full Cytomining integration
+
+![OME-Arrow complements Cytomining tools in a modular stack: OME-Arrow provides built-in visualization (`matplotlib`, `pyvista`) for direct inspection; [**`napari-ome-arrow`**](https://github.com/WayScience/napari-ome-arrow) adds interactive viewing for OME-Arrow/OME-Parquet data; [**`CytoDataFrame`**](https://github.com/cytomining/CytoDataFrame) supports DataFrame-centered analysis of image-linked features and metadata; [**`coSMicQC`**](https://github.com/cytomining/coSMicQC) provides quality control with image context; [**`buscar`**](https://github.com/WayScience/buscar) enables heterogeneity-aware single-cell compound ranking; and [**`pycytominer`**](https://github.com/cytomining/pycytominer) supports profiling and normalization workflows.](images/cytomining-integration.png)
+
+## OME-Zarr and iceberg-bioimage
+
+![OME-Zarr is strong for cloud-native image storage and distribution. OME-Arrow is complementary (not a replacement) when images must be queried with tabular metadata and measurements. One integration pattern uses [`iceberg-bioimage`](https://github.com/WayScience/iceberg-bioimage) as a warehouse/control-plane layer and [`duckdb_zarr`](https://github.com/photometric/duckdb-zarr) for analytical access to OME-Zarr-backed data. Here, **OME-Zarr / OME-TIFF** remain exchange formats, while **OME-Arrow / Parquet / Arrow-native tables** support joins and analytics, with **Lance** as a random-access table option.](images/icebeg-bioimage-ome-zarr-integration.png)
+
+
+## ALSF pediatric cancer research
+
+![This work supports the **Pediatric Cancer Cell Morphology Atlas (PCCMA)** project, which will study pediatric cancer cell lines together with drug screens to accelerate discoveries that cure disease. The figure shows a `CytoDataFrame`-centered quality-control workflow using `coSMicQC` and Cytomining tooling on image-linked profiling data; in PCCMA analyses, this workflow helps identify and remove outliers for improved downstream analysis quality. We are using OME-Arrow-related work through the Cytomining ecosystem to help build the Atlas (for current implementation context, see [pediatric_cancer_atlas_profiling](https://github.com/WayScience/pediatric_cancer_atlas_profiling)).](images/pccma-cytodataframe-cosmicqc-result-example.png)
+
+## Acknowledgements
+
+We thank those who have inspired, contributed, or helped support OME-Arrow and
+the broader open bioimaging ecosystem:
+
+- Open source science from the [__Open Microscopy Environment__](https://github.com/ome)
+- The  [__napari community__](https://napari.org/) for open, collaborative development around interactive bioimage analysis
+- The communities behind [__Apache Arrow__](https://arrow.apache.org/),
+  [__Apache Iceberg__](https://iceberg.apache.org/), and Cytomining ecosystem projects
+- The [__ALSF Childhood Cancer Data Lab__](https://www.ccdatalab.org/) for
+  pediatric cancer data science leadership and partnership
+- Members of the [__Way Lab__](https://www.waysciencelab.com/) at the University of Colorado Anschutz Medical Campus
+- [__Department of Biomedical Informatics__](https://medschool.cuanschutz.edu/dbmi) within the School of Medicine at the University of Colorado Anschutz Medical Campus

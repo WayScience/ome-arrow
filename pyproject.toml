@@ -151,3 +151,13 @@ pytest
 tasks.jupyter.shell = """
 jupyter lab
 """
+tasks.poster-preview.shell = """
+if command -v quarto >/dev/null 2>&1; then
+  quarto preview docs/presentations/2026-OME-community-meeting/poster.qmd --no-browser
+elif [ -x /Applications/quarto/bin/quarto ]; then
+  /Applications/quarto/bin/quarto preview docs/presentations/2026-OME-community-meeting/poster.qmd --no-browser
+else
+  echo "quarto not found. Install Quarto or add it to PATH."
+  exit 1
+fi
+"""

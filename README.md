@@ -1,4 +1,4 @@
-<img width="600" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/logo.png?raw=true">
+<img width="600" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/ome-arrow-with-text.png?raw=true">
 
 ![PyPI - Version](https://img.shields.io/pypi/v/ome-arrow)
 [![Build Status](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/wayscience/ome-arrow/actions/workflows/run-tests.yml?query=branch%3Amain)
@@ -198,6 +198,8 @@ Please see our [contributing documentation](https://github.com/wayscience/ome-ar
 OME Arrow is used or inspired by the following projects, check them out!
 
 - [`napari-ome-arrow`](https://github.com/WayScience/napari-ome-arrow): enables you to view OME Arrow and related images.
-- [`nViz`](https://github.com/WayScience/nViz): focuses on ingesting and visualizing various 3D image data.
 - [`CytoDataFrame`](https://github.com/cytomining/CytoDataFrame): provides a DataFrame-like experience for viewing feature and microscopy image data within Jupyter notebook interfaces and creating OME Parquet files.
 - [`coSMicQC`](https://github.com/cytomining/coSMicQC): performs quality control on microscopy feature datasets, visualized using CytoDataFrames.
+- [`pycytominer`](https://github.com/cytomining/pycytominer): supports feature profiling, normalization, and downstream analysis workflows for image-based profiling datasets.
+- [`iceberg-bioimage`](https://github.com/WayScience/iceberg-bioimage): defines warehouse-oriented patterns for connecting bioimage formats and analytical tables at scale.
+- [`CytoTable`](https://github.com/cytomining/CytoTable): converts image-based profiling outputs into analysis-ready tabular formats such as Parquet.
