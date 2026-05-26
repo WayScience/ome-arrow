@@ -9,7 +9,7 @@ repos:
     -   id: check-yaml
     -   id: detect-private-key
 -   repo: https://github.com/tox-dev/pyproject-fmt
-    rev: "v2.21.1"
+    rev: "v2.21.2"
     hooks:
     -   id: pyproject-fmt
 -   repo: https://github.com/citation-file-format/cffconvert
@@ -39,7 +39,7 @@ repos:
     -   id: yamllint
         exclude: pre-commit-config.yaml
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.15.12"
+    rev: "v0.15.14"
     hooks:
     -   id: ruff-format
     -   id: ruff-check
@@ -47,11 +47,6 @@ repos:
     rev: v1.7.12
     hooks:
     -   id: actionlint
--   repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
-    rev: v0.6.0
-    hooks:
-    -   id: pre-commit-update
-        args: ["--keep", "mdformat", "--keep", "pre-commit-update", "--keep", "cffconvert"]
 -   repo: https://github.com/jendrikseipp/vulture
     rev: 'v2.16'
     hooks:

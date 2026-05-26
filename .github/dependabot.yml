@@ -33,3 +33,16 @@ updates:
       uv:
         patterns:
           - "*"
+
+  # Perform checks and updates for pre-commit hooks.
+  # See here for more information:
+  # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#pre-commit
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      # Check for updates to pre-commit hooks every month
+      interval: "monthly"
+    groups:
+      pre-commit:
+        patterns:
+          - "*"
