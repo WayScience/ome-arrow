@@ -13,7 +13,7 @@ repos:
     hooks:
     -   id: pyproject-fmt
 -   repo: https://github.com/citation-file-format/cffconvert
-    rev: 5295f87c0e261da61a7b919fc754e3a77edd98a7
+    rev: b6045d78aac9e02b039703b030588d54d53262ac
     hooks:
     -   id: validate-cff
 -   repo: https://github.com/codespell-project/codespell
@@ -28,7 +28,7 @@ repos:
               .*\.ipynb
           )$
 -   repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.21
+    rev: 1.0.0
     hooks:
     -   id: mdformat
         additional_dependencies:
