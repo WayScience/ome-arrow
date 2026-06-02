@@ -73,14 +73,14 @@ notebooks = [
 ]
 
 [tool.setuptools]
-package-dir = { "" = "src" }
 packages.find.where = [ "src" ]
+package-dir = { "" = "src" }
 
 [tool.setuptools_scm]
-root = "."
+version_file = "src/ome_arrow/_version.py"
 version_scheme = "no-guess-dev"
 local_scheme = "no-local-version"
-version_file = "src/ome_arrow/_version.py"
+root = "."
 
 [tool.ruff]
 target-version = "py311"
@@ -129,15 +129,15 @@ lint.per-file-ignores."docs/src/examples/learning_to_fly_with_ome-arrow.py" = [ 
 # ignore typing rules for tests
 lint.per-file-ignores."tests/*" = [ "ANN201", "E501", "PLR0913", "PLR2004" ]
 
+[tool.vulture]
+paths = [ "src/ome_arrow", "tests" ]
+min_confidence = 90
+
 [tool.pytest]
 ini_options.pythonpath = [ "." ]
 
 [tool.jupytext]
 formats = "ipynb,py:light"
-
-[tool.vulture]
-min_confidence = 90
-paths = [ "src/ome_arrow", "tests" ]
 
 [tool.uv-dynamic-versioning]
 vcs = "git"
@@ -151,8 +151,7 @@ pytest
 tasks.jupyter.shell = """
 jupyter lab
 """
-tasks.poster-preview.shell = """
-if command -v quarto >/dev/null 2>&1; then
+tasks.poster-preview.shell = '''if command -v quarto >/dev/null 2>&1; then
   quarto preview docs/presentations/2026-OME-community-meeting/poster.qmd --no-browser
 elif [ -x /Applications/quarto/bin/quarto ]; then
   /Applications/quarto/bin/quarto preview docs/presentations/2026-OME-community-meeting/poster.qmd --no-browser
@@ -160,4 +159,4 @@ else
   echo "quarto not found. Install Quarto or add it to PATH."
   exit 1
 fi
-"""
+'''
