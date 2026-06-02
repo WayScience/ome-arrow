@@ -4768,7 +4768,7 @@ wheels = [
 
 [[package]]
 name = "vortex-data"
-version = "0.72.0"
+version = "0.73.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyarrow" },
@@ -4776,10 +4776,10 @@ dependencies = [
     { name = "typing-extensions" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9a/a4/6f7e97fb11508554426b3e097ab915e7d7f4a1bdc298c931e0a595c637a6/vortex_data-0.72.0-cp311-abi3-macosx_10_12_x86_64.whl", hash = "sha256:e07d17de3dd39cac59ec52964db1780d6c4e2dbd6c7ccd63f39ff87ecdfe7329", size = 36775486, upload-time = "2026-05-20T15:29:54.077Z" },
-    { url = "https://files.pythonhosted.org/packages/e6/3d/911dab3f53960817074feab94e3b55961ffb9dff216bf552746b0b9b2804/vortex_data-0.72.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:fbc8d27a6c30e276899a82ee694e95faad03c81439f4d772cb37ccc44d9dfd8f", size = 35088189, upload-time = "2026-05-20T15:29:57.411Z" },
-    { url = "https://files.pythonhosted.org/packages/bd/a8/e5258e7c902bf1e2fcf7a572cb9c6e5c0084ef153d1df7635d61c5d44f8c/vortex_data-0.72.0-cp311-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ff448b86f33b7fbaba46fbe64c0ae5f38ca739c3072797b526d0e8e1d1b39d43", size = 32519371, upload-time = "2026-05-20T15:30:00.652Z" },
-    { url = "https://files.pythonhosted.org/packages/3e/69/62025aa88d6c9292184cddbac534cfe8b9af4599ea971a0ed8d59d27612e/vortex_data-0.72.0-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f6618b8b60ef7f00105f5d1e3cda5613f803eb286fa0cd0a824dcceac8caf5bc", size = 34262926, upload-time = "2026-05-20T15:30:03.665Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/77/40a4e6e6d3b8682a242a98bc8fe315e7fcde14e0f3e8efba97a8843af511/vortex_data-0.73.0-cp311-abi3-macosx_10_12_x86_64.whl", hash = "sha256:c8b7f6d59b4288a0c5d35e522b939ed04458902c1e5e962eeaadf8784d332bea", size = 37434561, upload-time = "2026-05-27T16:40:51.185Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/05/65d0ce6e677bb7e51ec00e8cb69fea8334b105ee72a181ef871de2b1852a/vortex_data-0.73.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:bf5edff044452bf68d782286028615fb52d75b0a639063aebc8277565d6502f8", size = 35671662, upload-time = "2026-05-27T16:40:55.005Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/ee/57b2b36f54589ce081b72dceab0f25756fc4621b702fe596b9dc1a08d198/vortex_data-0.73.0-cp311-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:485a0ed110bda35730e3981bb0d1de0a93af82b37d1e630394c2350ad6c7fdf5", size = 33034023, upload-time = "2026-05-27T16:40:59.112Z" },
+    { url = "https://files.pythonhosted.org/packages/21/d0/25474b6e3f9fe3d363341add1ffb403c8a672e1d46a8bb49092b2e2c475b/vortex_data-0.73.0-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f17b2244aa6988fff6dc83cb1ff946d48a84fed30c12e4c5be72a3b193a3669e", size = 34869977, upload-time = "2026-05-27T16:41:02.945Z" },
 ]
 
 [[package]]
