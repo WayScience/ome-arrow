@@ -132,6 +132,17 @@ def choose_chunking(
     if min(st, sc, sz, sy, sx) <= 0:
         raise ValueError("shape values must be positive")
     dtype_obj = np.dtype(dtype)
+    try:
+        target_chunk_mb = float(target_chunk_mb)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "target_chunk_mb must be a positive number; cannot compare "
+            "target_chunk_mb to computed size_mb."
+        ) from exc
+    if target_chunk_mb <= 0:
+        raise ValueError(
+            "target_chunk_mb must be > 0 before computing chunk scale from size_mb."
+        )
 
     if layout == "auto":
         layout_by_pattern = {
@@ -421,6 +432,10 @@ def write_ome_arrow_dataset(
             index=i,
             choice=choice,
         )
+        if any(row["image_id"] == meta["image_id"] for row in image_rows):
+            raise ValueError(
+                f"Duplicate image_id in OME-Arrow dataset write: {meta['image_id']!r}"
+            )
         image_rows.append(meta)
         new_rows = list(
             _iter_chunk_rows(
@@ -451,6 +466,7 @@ def write_ome_arrow_dataset(
         row_group_size=int(chunk_rows_per_row_group),
     )
 
+    index_path = out_dir / "index.parquet"
     if build_physical_index:
         index_rows = [
             {
@@ -474,7 +490,9 @@ def write_ome_arrow_dataset(
         ]
         index_table = pa.Table.from_pylist(index_rows, schema=INDEX_TABLE_SCHEMA)
         index_table = index_table.replace_schema_metadata(metadata)
-        pq.write_table(index_table, out_dir / "index.parquet", compression=compression)
+        pq.write_table(index_table, index_path, compression=compression)
+    elif index_path.exists():
+        index_path.unlink()
 
     manifest = {
         "type": OME_ARROW_TAG_TYPE,

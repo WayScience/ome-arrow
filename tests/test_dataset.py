@@ -7,9 +7,13 @@ import pyarrow.parquet as pq
 import pytest
 
 from ome_arrow import (
+    AccessPattern,
+    ChunkChoice,
+    Layout,
     OMEArrow,
     OMEArrowDataset,
     choose_chunking,
+    from_numpy,
     write_ome_arrow_dataset,
 )
 
@@ -25,6 +29,24 @@ def test_choose_chunking_presets() -> None:
     assert choice.layout == "tile"
     assert choice.chunk_shape == (1, 1, 1, 256, 256)
     assert "fast_crop_2d" in choice.rationale
+
+
+def test_public_dataset_typing_exports() -> None:
+    """Expose dataset typing helpers from the package root."""
+    assert ChunkChoice is not None
+    assert Layout is not None
+    assert AccessPattern is not None
+
+
+def test_choose_chunking_rejects_nonpositive_target_chunk_mb() -> None:
+    """Fail before chunk scaling when target_chunk_mb is invalid."""
+    with pytest.raises(ValueError, match=r"target_chunk_mb.*size_mb"):
+        choose_chunking(
+            (1, 1, 4, 1024, 1024),
+            np.uint16,
+            access_pattern="fast_crop_2d",
+            target_chunk_mb=0,
+        )
 
 
 def test_write_dataset_preserves_dtype_and_reads_image(tmp_path: pathlib.Path) -> None:
@@ -47,6 +69,46 @@ def test_write_dataset_preserves_dtype_and_reads_image(tmp_path: pathlib.Path) -
     assert roundtrip.dtype == np.uint8
     np.testing.assert_array_equal(roundtrip, arr)
     assert pq.ParquetFile(out / "chunks.parquet").metadata.num_row_groups == 1
+
+
+def test_write_dataset_rejects_duplicate_image_ids(tmp_path: pathlib.Path) -> None:
+    """Reject duplicate image IDs before chunk rows can merge at read time."""
+    arr = np.arange(1 * 1 * 1 * 3 * 4, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    first = from_numpy(arr, image_id="duplicate", build_chunks=False)
+    second = from_numpy(arr + 1, image_id="duplicate", build_chunks=False)
+
+    with pytest.raises(ValueError, match="Duplicate image_id"):
+        write_ome_arrow_dataset([first, second], tmp_path / "duplicates")
+
+
+def test_write_dataset_removes_stale_index_when_index_disabled(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Avoid loading stale physical index metadata after rewriting a dataset."""
+    arr = np.arange(1 * 1 * 2 * 6 * 7, dtype=np.uint16).reshape(1, 1, 2, 6, 7)
+    out = tmp_path / "stale_index"
+
+    write_ome_arrow_dataset(
+        [arr],
+        out,
+        layout="tile",
+        chunk_shape=(1, 1, 1, 3, 4),
+        compression=None,
+        build_physical_index=True,
+    )
+    assert (out / "index.parquet").exists()
+
+    write_ome_arrow_dataset(
+        [arr],
+        out,
+        layout="tile",
+        chunk_shape=(1, 1, 1, 3, 4),
+        compression=None,
+        build_physical_index=False,
+    )
+
+    assert not (out / "index.parquet").exists()
+    assert OMEArrowDataset(out).index is None
 
 
 def test_write_dataset_can_normalize_pixel_dtype(tmp_path: pathlib.Path) -> None:

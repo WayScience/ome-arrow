@@ -102,12 +102,23 @@ def _parse_fixture_arg(raw: str) -> Fixture:
     else:
         path = raw
         name = Path(path).stem
+    fixture_path = Path(path)
+    _validate_tiff_fixture(fixture_path)
     return Fixture(
         name=name,
-        path=Path(path),
+        path=fixture_path,
         preferred_chunk_shape=(1, 1, 1, 256, 256),
         chunk_rows_per_row_group=1,
     )
+
+
+def _validate_tiff_fixture(path: Path) -> None:
+    """Validate that a benchmark fixture path targets a TIFF source image."""
+    if path.suffix.lower() not in {".tif", ".tiff"}:
+        raise ValueError(
+            "OME-IRIS-style benchmark fixtures must be TIFF files because "
+            f"_load_source uses _read_tiff_full; got {path!s}"
+        )
 
 
 def _dir_size(path: Path) -> int:
@@ -270,6 +281,7 @@ def _read_tiff_subvolume(
 
 def _load_source(path: Path) -> tuple[OMEArrow, np.ndarray, np.ndarray]:
     """Load source image arrays for normalized and raw dtype comparisons."""
+    _validate_tiff_fixture(path)
     oa = OMEArrow(str(path))
     normalized = oa.export(
         how="numpy",

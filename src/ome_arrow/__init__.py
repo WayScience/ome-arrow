@@ -5,6 +5,9 @@ Init file for ome_arrow package.
 from ome_arrow._version import version as ome_arrow_version
 from ome_arrow.core import OMEArrow
 from ome_arrow.dataset import (
+    AccessPattern,
+    ChunkChoice,
+    Layout,
     OMEArrowDataset,
     OMEArrowPixels,
     choose_chunking,

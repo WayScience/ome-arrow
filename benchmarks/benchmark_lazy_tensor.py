@@ -22,8 +22,7 @@ from typing import Callable
 
 import numpy as np
 
-from ome_arrow import OMEArrow
-from ome_arrow.dataset import OMEArrowDataset, write_ome_arrow_dataset
+from ome_arrow import OMEArrow, OMEArrowDataset, write_ome_arrow_dataset
 from ome_arrow.export import to_ome_parquet
 from ome_arrow.ingest import from_numpy
 
