@@ -124,10 +124,8 @@ See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
 `OMEArrow.export(how="ome-parquet")` writes the typed byte-buffer dataset layout.
 For explicit control over layout and chunks, use the dataset writer directly.
-By default, this stores image metadata separately from pixel chunks and writes
-one chunk per Parquet row group, so `read_plane()` and `read_region()` can jump
-through a physical index instead of materializing the older nested struct
-payload. You can change that row-group packing with `chunk_rows_per_row_group`.
+By default, this stores image metadata separately from pixel chunks and writes one chunk per Parquet row group, so `read_plane()` and `read_region()` can jump through a physical index instead of materializing the older nested struct payload.
+You can change that row-group packing with `chunk_rows_per_row_group`.
 
 ```python
 import numpy as np
