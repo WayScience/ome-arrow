@@ -4,6 +4,7 @@ import pathlib
 
 import numpy as np
 import pyarrow.parquet as pq
+import pytest
 
 from ome_arrow import (
     OMEArrow,
@@ -38,13 +39,36 @@ def test_write_dataset_preserves_dtype_and_reads_image(tmp_path: pathlib.Path) -
         compression=None,
     )
     dataset = OMEArrowDataset(out)
-    image_id = dataset.images["image_id"].to_pylist()[0]
-    roundtrip = dataset.pixels.read_image(image_id)
+    image_id = dataset.image_ids[0]
+    roundtrip = dataset.read_image()
 
     assert choice.layout == "image"
+    assert dataset.image_ids == [image_id]
     assert roundtrip.dtype == np.uint8
     np.testing.assert_array_equal(roundtrip, arr)
     assert pq.ParquetFile(out / "chunks.parquet").metadata.num_row_groups == 1
+
+
+def test_write_dataset_can_normalize_pixel_dtype(tmp_path: pathlib.Path) -> None:
+    """Explicitly widen stored pixels when callers ask for a target dtype."""
+    arr = np.array([[[[[0, 255], [256, 70000]]]]], dtype=np.uint32)
+    out = tmp_path / "typed_dataset_uint16"
+
+    write_ome_arrow_dataset(
+        [arr],
+        out,
+        layout="image",
+        compression=None,
+        pixel_dtype="uint16",
+    )
+    dataset = OMEArrowDataset(out)
+    roundtrip = dataset.read_image()
+
+    assert roundtrip.dtype == np.uint16
+    np.testing.assert_array_equal(
+        roundtrip,
+        np.array([[[[[0, 255], [256, 65535]]]]], dtype=np.uint16),
+    )
 
 
 def test_dataset_reads_plane_and_region_from_indexed_tiles(
@@ -62,11 +86,9 @@ def test_dataset_reads_plane_and_region_from_indexed_tiles(
         compression="zstd",
     )
     dataset = OMEArrowDataset(out)
-    image_id = dataset.images["image_id"].to_pylist()[0]
 
-    plane = dataset.pixels.read_plane(image_id, z=1)
-    region = dataset.pixels.read_region(
-        image_id,
+    plane = dataset.read_plane(z=1)
+    region = dataset.read_region(
         z=1,
         y=slice(2, 6),
         x=slice(3, 7),
@@ -91,10 +113,8 @@ def test_dataset_reads_from_packed_chunk_row_groups(tmp_path: pathlib.Path) -> N
         chunk_rows_per_row_group=4,
     )
     dataset = OMEArrowDataset(out)
-    image_id = dataset.images["image_id"].to_pylist()[0]
 
-    region = dataset.pixels.read_region(
-        image_id,
+    region = dataset.read_region(
         z=1,
         y=slice(2, 6),
         x=slice(3, 7),
@@ -112,8 +132,37 @@ def test_dataset_accepts_ome_arrow_records(tmp_path: pathlib.Path) -> None:
 
     write_ome_arrow_dataset([oa], out, layout="z-plane", compression=None)
     dataset = OMEArrowDataset(out)
-    image_id = dataset.images["image_id"].to_pylist()[0]
 
-    roundtrip = dataset.pixels.read_image(image_id)
+    roundtrip = dataset.read_image()
     assert roundtrip.dtype == np.uint16
     np.testing.assert_array_equal(roundtrip, arr)
+
+
+def test_dataset_read_torch_return_type(tmp_path: pathlib.Path) -> None:
+    """Read typed dataset pixels directly as torch tensors."""
+    torch = pytest.importorskip("torch")
+    arr = np.arange(1 * 1 * 1 * 3 * 4, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    out = tmp_path / "torch_return"
+
+    write_ome_arrow_dataset([arr], out, layout="image", compression=None)
+    dataset = OMEArrowDataset(out)
+
+    tensor = dataset.read_image(return_type="torch")
+    assert isinstance(tensor, torch.Tensor)
+    assert tensor.dtype == torch.uint16
+    np.testing.assert_array_equal(tensor.numpy(), arr)
+
+
+def test_dataset_read_jax_return_type(tmp_path: pathlib.Path) -> None:
+    """Read typed dataset pixels directly as JAX arrays."""
+    jnp = pytest.importorskip("jax.numpy")
+    arr = np.arange(1 * 1 * 1 * 3 * 4, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    out = tmp_path / "jax_return"
+
+    write_ome_arrow_dataset([arr], out, layout="image", compression=None)
+    dataset = OMEArrowDataset(out)
+
+    jax_arr = dataset.read_image(return_type="jax")
+    assert isinstance(jax_arr, jnp.ndarray)
+    assert jax_arr.dtype == jnp.uint16
+    np.testing.assert_array_equal(np.asarray(jax_arr), arr)

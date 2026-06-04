@@ -147,11 +147,22 @@ dataset = OMEArrowDataset("image.ome-arrow")
 image_id = dataset.images["image_id"].to_pylist()[0]
 plane = dataset.pixels.read_plane(image_id, t=0, c=0, z=0)
 crop = dataset.pixels.read_region(image_id, y=slice(128, 384), x=slice(128, 384))
+
+# Dataset-level shortcuts return NumPy by default and can return Torch/JAX
+# arrays when those packages are installed.
+plane_np = dataset.read_plane(t=0, c=0, z=0)
+plane_torch = dataset.read_plane(t=0, c=0, z=0, return_type="torch")
+plane_jax = dataset.read_plane(t=0, c=0, z=0, return_type="jax")
 ```
 
 Use `chunk_rows_per_row_group=1` for the fastest direct chunk reads. Use a
 larger value, such as `8`, to reduce row-group overhead for small chunks when
 storage size matters.
+
+The writer preserves source pixel dtype by default. To normalize stored pixel
+buffers explicitly, pass `pixel_dtype`, for example `pixel_dtype="uint16"`.
+Integer casts clamp by default; pass `clamp=False` to use NumPy casting
+behavior directly.
 
 ## Tensor ingest (PyTorch/JAX)
 
@@ -215,6 +226,24 @@ You can pass local real-data fixtures with `--fixture name=/path/to/image.tif`.
 The benchmark writes matched temporary OME-Zarr and typed OME-Arrow artifacts,
 then compares full-image, plane, crop, subvolume, timepoint, and channel reads
 where those axes are present.
+
+The OME-IRIS-style benchmark separates return/API paths:
+
+- `ome-zarr-tensor-numpy`: OME-Arrow `tensor_view(...).to_numpy()` over OME-Zarr.
+- `ome-zarr-bioio-numpy`: direct BioImage NumPy reads over OME-Zarr.
+- `ome-tiff-tensor-numpy`: OME-Arrow `tensor_view(...).to_numpy()` over TIFF.
+- `ome-tiff-bioio-numpy`: direct BioImage NumPy reads over TIFF.
+- `ome-arrow-src-numpy`: source-dtype typed OME-Arrow dataset NumPy reads.
+- `ome-arrow-u16-numpy`: typed OME-Arrow dataset NumPy reads normalized to
+  `uint16` for apples-to-apples comparisons with normalized paths.
+- `ome-tiff-tensor-torch` / `ome-tiff-tensor-jax`: OME-Arrow tensor-view
+  Torch/JAX returns over TIFF.
+- `ome-zarr-tensor-torch` / `ome-zarr-tensor-jax`: OME-Arrow tensor-view
+  Torch/JAX returns over OME-Zarr.
+- `ome-arrow-src-torch` / `ome-arrow-src-jax`: source-dtype typed OME-Arrow
+  dataset reads with `return_type="torch"` or `return_type="jax"`.
+- `ome-arrow-u16-torch` / `ome-arrow-u16-jax`: normalized `uint16` typed
+  OME-Arrow dataset reads with Torch/JAX returns.
 
 Notes:
 

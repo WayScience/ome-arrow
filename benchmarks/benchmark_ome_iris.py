@@ -9,15 +9,18 @@ and times public read APIs for 2D, 3D, 4D, and 5D-style access patterns.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import statistics
 import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
+from bioio import BioImage
+from bioio_ome_zarr import Reader as OMEZarrReader
 
 from ome_arrow import OMEArrow, OMEArrowDataset, write_ome_arrow_dataset
 
@@ -47,6 +50,19 @@ class Fixture:
     chunk_rows_per_row_group: int
 
 
+@dataclass(frozen=True)
+class ArrowArtifact:
+    """Typed OME-Arrow artifacts for one dtype mode."""
+
+    label: str
+    block_path: Path
+    image_path: Path
+    block: OMEArrowDataset
+    block_image_id: str
+    image: OMEArrowDataset
+    image_image_id: str
+
+
 def _default_fixtures() -> list[Fixture]:
     """Return local fixtures that cover 2D, 3D, 4D, and 5D patterns."""
     return [
@@ -71,8 +87,7 @@ def _default_fixtures() -> list[Fixture]:
         Fixture(
             name="5d-multichannel-time-volume",
             path=Path(
-                "tests/data/ome-artificial-5d-datasets/"
-                "multi-channel-4D-series.ome.tiff"
+                "tests/data/ome-artificial-5d-datasets/multi-channel-4D-series.ome.tiff"
             ),
             preferred_chunk_shape=(1, 1, 2, 128, 128),
             chunk_rows_per_row_group=8,
@@ -109,25 +124,28 @@ def _time_case(
     dataset: str,
     case: str,
     format_name: str,
-    fn: Callable[[], np.ndarray],
+    fn: Callable[[], Any],
     repeats: int,
     warmup: int,
     bytes_on_disk: int,
 ) -> BenchmarkResult:
     """Time one case and return summary stats."""
-    out: np.ndarray | None = None
+    out: Any | None = None
     for _ in range(warmup):
         out = fn()
+        _sync_result(out)
 
     times_ms: list[float] = []
     for _ in range(repeats):
         start = time.perf_counter()
         out = fn()
+        _sync_result(out)
         end = time.perf_counter()
         times_ms.append((end - start) * 1000.0)
 
     if out is None:
         raise RuntimeError(f"Case did not produce output: {dataset} {case}")
+    shape, dtype = _result_shape_dtype(out)
     return BenchmarkResult(
         dataset=dataset,
         case=case,
@@ -135,32 +153,144 @@ def _time_case(
         median_ms=statistics.median(times_ms),
         min_ms=min(times_ms),
         max_ms=max(times_ms),
-        shape=tuple(out.shape),
-        dtype=np.dtype(out.dtype).name,
+        shape=shape,
+        dtype=dtype,
         bytes_on_disk=int(bytes_on_disk),
     )
 
 
-def _load_source(path: Path) -> tuple[OMEArrow, np.ndarray]:
-    """Load a source image through the public OMEArrow API."""
+def _sync_result(out: Any) -> None:
+    """Synchronize lazy array backends for fair timing."""
+    block_until_ready = getattr(out, "block_until_ready", None)
+    if callable(block_until_ready):
+        block_until_ready()
+
+
+def _result_shape_dtype(out: Any) -> tuple[tuple[int, ...], str]:
+    """Return shape and dtype strings for NumPy, Torch, and JAX-like arrays."""
+    shape = tuple(int(v) for v in getattr(out, "shape", ()))
+    dtype = getattr(out, "dtype", None)
+    if dtype is None:
+        dtype_str = type(out).__name__
+    else:
+        try:
+            dtype_str = np.dtype(dtype).name
+        except TypeError:
+            dtype_str = str(dtype)
+    return shape, dtype_str
+
+
+def _torch_available() -> bool:
+    """Return whether torch is importable."""
+    return importlib.util.find_spec("torch") is not None
+
+
+def _jax_available() -> bool:
+    """Return whether JAX is importable."""
+    return importlib.util.find_spec("jax") is not None
+
+
+def _read_zarr_full(path: Path) -> np.ndarray:
+    """Read a Zarr image directly through BioImage as TCZYX NumPy."""
+    return np.asarray(BioImage(str(path), reader=OMEZarrReader).data)
+
+
+def _read_zarr_plane(path: Path, *, t: int, c: int, z: int) -> np.ndarray:
+    """Read one Zarr YX plane directly through BioImage."""
+    image = BioImage(str(path), reader=OMEZarrReader)
+    return np.asarray(image.get_image_data("YX", T=t, C=c, Z=z))
+
+
+def _read_zarr_crop(
+    path: Path,
+    *,
+    t: int,
+    c: int,
+    z: int,
+    y: slice,
+    x: slice,
+) -> np.ndarray:
+    """Read one Zarr YX crop directly through BioImage."""
+    return _read_zarr_plane(path, t=t, c=c, z=z)[y, x]
+
+
+def _read_zarr_subvolume(
+    path: Path,
+    *,
+    t: int,
+    c: int,
+    z: slice,
+    y: slice,
+    x: slice,
+) -> np.ndarray:
+    """Read one Zarr subvolume directly through BioImage as TCZYX NumPy."""
+    image = BioImage(str(path), reader=OMEZarrReader)
+    cropped = np.asarray(image.get_image_data("ZYX", T=t, C=c))[z, y, x]
+    return cropped.reshape(1, 1, z.stop - z.start, y.stop - y.start, x.stop - x.start)
+
+
+def _read_tiff_full(path: Path) -> np.ndarray:
+    """Read a TIFF image directly through BioImage as TCZYX NumPy."""
+    return np.asarray(BioImage(str(path)).data)
+
+
+def _read_tiff_plane(path: Path, *, t: int, c: int, z: int) -> np.ndarray:
+    """Read one TIFF YX plane directly through BioImage."""
+    image = BioImage(str(path))
+    return np.asarray(image.get_image_data("YX", T=t, C=c, Z=z))
+
+
+def _read_tiff_crop(
+    path: Path,
+    *,
+    t: int,
+    c: int,
+    z: int,
+    y: slice,
+    x: slice,
+) -> np.ndarray:
+    """Read one TIFF YX crop directly through BioImage."""
+    return _read_tiff_plane(path, t=t, c=c, z=z)[y, x]
+
+
+def _read_tiff_subvolume(
+    path: Path,
+    *,
+    t: int,
+    c: int,
+    z: slice,
+    y: slice,
+    x: slice,
+) -> np.ndarray:
+    """Read one TIFF subvolume directly through BioImage as TCZYX NumPy."""
+    image = BioImage(str(path))
+    cropped = np.asarray(image.get_image_data("ZYX", T=t, C=c))[z, y, x]
+    return cropped.reshape(1, 1, z.stop - z.start, y.stop - y.start, x.stop - x.start)
+
+
+def _load_source(path: Path) -> tuple[OMEArrow, np.ndarray, np.ndarray]:
+    """Load source image arrays for normalized and raw dtype comparisons."""
     oa = OMEArrow(str(path))
-    arr = oa.export(how="numpy", dtype=np.dtype(oa.data.as_py()["pixels_meta"]["type"]))
-    if not isinstance(arr, np.ndarray):
+    normalized = oa.export(
+        how="numpy",
+        dtype=np.dtype(oa.data.as_py()["pixels_meta"]["type"]),
+    )
+    if not isinstance(normalized, np.ndarray):
         raise TypeError("OMEArrow numpy export did not return an ndarray")
-    return oa, arr
+    raw = _read_tiff_full(path)
+    return oa, normalized, raw
 
 
 def _write_artifacts(
     fixture: Fixture,
     source: OMEArrow,
-    arr: np.ndarray,
+    normalized_arr: np.ndarray,
+    raw_arr: np.ndarray,
     workdir: Path,
-) -> tuple[Path, Path, Path, OMEArrowDataset, str, OMEArrowDataset, str]:
+) -> tuple[Path, list[ArrowArtifact]]:
     """Write matched OME-Zarr and typed OME-Arrow artifacts for one fixture."""
     zarr_path = workdir / f"{fixture.name}.ome.zarr"
-    typed_block_path = workdir / f"{fixture.name}.block.ome-arrow"
-    typed_image_path = workdir / f"{fixture.name}.image.ome-arrow"
-    dtype = np.dtype(arr.dtype)
+    dtype = np.dtype(normalized_arr.dtype)
 
     source.export(
         how="ome-zarr",
@@ -170,33 +300,45 @@ def _write_artifacts(
         zarr_compressor="zstd",
         zarr_level=3,
     )
-    write_ome_arrow_dataset(
-        [arr],
-        typed_block_path,
-        layout="block",
-        chunk_shape=fixture.preferred_chunk_shape,
-        compression="zstd",
-        chunk_rows_per_row_group=fixture.chunk_rows_per_row_group,
-    )
-    write_ome_arrow_dataset(
-        [arr],
-        typed_image_path,
-        layout="image",
-        compression="zstd",
-    )
-    typed_block = OMEArrowDataset(typed_block_path)
-    typed_image = OMEArrowDataset(typed_image_path)
-    block_image_id = typed_block.images["image_id"].to_pylist()[0]
-    image_image_id = typed_image.images["image_id"].to_pylist()[0]
-    return (
-        zarr_path,
-        typed_block_path,
-        typed_image_path,
-        typed_block,
-        str(block_image_id),
-        typed_image,
-        str(image_image_id),
-    )
+
+    artifacts: list[ArrowArtifact] = []
+    for label, arr, pixel_dtype in (
+        ("ome-arrow-src", raw_arr, None),
+        ("ome-arrow-u16", normalized_arr, "uint16"),
+    ):
+        typed_block_path = workdir / f"{fixture.name}.{label}.block.ome-arrow"
+        typed_image_path = workdir / f"{fixture.name}.{label}.image.ome-arrow"
+        write_ome_arrow_dataset(
+            [arr],
+            typed_block_path,
+            layout="block",
+            chunk_shape=fixture.preferred_chunk_shape,
+            compression="zstd",
+            chunk_rows_per_row_group=fixture.chunk_rows_per_row_group,
+            pixel_dtype=pixel_dtype,
+        )
+        write_ome_arrow_dataset(
+            [arr],
+            typed_image_path,
+            layout="image",
+            compression="zstd",
+            pixel_dtype=pixel_dtype,
+        )
+        typed_block = OMEArrowDataset(typed_block_path)
+        typed_image = OMEArrowDataset(typed_image_path)
+        artifacts.append(
+            ArrowArtifact(
+                label=label,
+                block_path=typed_block_path,
+                image_path=typed_image_path,
+                block=typed_block,
+                block_image_id=str(typed_block.image_ids[0]),
+                image=typed_image,
+                image_image_id=str(typed_image.image_ids[0]),
+            )
+        )
+
+    return zarr_path, artifacts
 
 
 def _center_crop(size_y: int, size_x: int) -> tuple[slice, slice]:
@@ -218,12 +360,7 @@ def _subvolume_slice(size_z: int) -> slice:
 def _cases_for_fixture(
     fixture: Fixture,
     zarr_path: Path,
-    typed_block_path: Path,
-    typed_image_path: Path,
-    typed_block: OMEArrowDataset,
-    block_image_id: str,
-    typed_image: OMEArrowDataset,
-    image_image_id: str,
+    arrow_artifacts: list[ArrowArtifact],
     arr: np.ndarray,
     *,
     repeats: int,
@@ -244,137 +381,487 @@ def _cases_for_fixture(
     z_sub = _subvolume_slice(sz)
 
     zarr_size = _dir_size(zarr_path)
-    typed_block_size = _dir_size(typed_block_path)
-    typed_image_size = _dir_size(typed_image_path)
+    tiff_size = _dir_size(fixture.path)
 
-    case_defs: list[tuple[str, str, Callable[[], np.ndarray], int]] = [
+    case_defs: list[tuple[str, str, Callable[[], Any], int]] = [
         (
             "full-image",
-            "ome-zarr",
-            lambda: OMEArrow.scan(str(zarr_path))
-            .tensor_view(layout="TCZYX")
-            .to_numpy(contiguous=True),
+            "ome-tiff-tensor-numpy",
+            lambda: (
+                OMEArrow.scan(str(fixture.path))
+                .tensor_view(layout="TCZYX")
+                .to_numpy(contiguous=True)
+            ),
+            tiff_size,
+        ),
+        (
+            "full-image",
+            "ome-tiff-bioio-numpy",
+            lambda: _read_tiff_full(fixture.path),
+            tiff_size,
+        ),
+        (
+            "full-image",
+            "ome-zarr-tensor-numpy",
+            lambda: (
+                OMEArrow.scan(str(zarr_path))
+                .tensor_view(layout="TCZYX")
+                .to_numpy(contiguous=True)
+            ),
             zarr_size,
         ),
         (
             "full-image",
-            "ome-arrow-image",
-            lambda: typed_image.pixels.read_image(image_image_id),
-            typed_image_size,
+            "ome-zarr-bioio-numpy",
+            lambda: _read_zarr_full(zarr_path),
+            zarr_size,
         ),
         (
             "plane",
-            "ome-zarr",
-            lambda: OMEArrow.scan(str(zarr_path))
-            .tensor_view(t=0, c=0, z=z_mid, layout="YX")
-            .to_numpy(contiguous=True),
+            "ome-tiff-tensor-numpy",
+            lambda: (
+                OMEArrow.scan(str(fixture.path))
+                .tensor_view(t=0, c=0, z=z_mid, layout="YX")
+                .to_numpy(contiguous=True)
+            ),
+            tiff_size,
+        ),
+        (
+            "plane",
+            "ome-tiff-bioio-numpy",
+            lambda: _read_tiff_plane(fixture.path, t=0, c=0, z=z_mid),
+            tiff_size,
+        ),
+        (
+            "plane",
+            "ome-zarr-tensor-numpy",
+            lambda: (
+                OMEArrow.scan(str(zarr_path))
+                .tensor_view(t=0, c=0, z=z_mid, layout="YX")
+                .to_numpy(contiguous=True)
+            ),
             zarr_size,
         ),
         (
             "plane",
-            "ome-arrow-block",
-            lambda: typed_block.pixels.read_plane(block_image_id, t=0, c=0, z=z_mid),
-            typed_block_size,
-        ),
-        (
-            "crop-2d",
-            "ome-zarr",
-            lambda: OMEArrow.scan(str(zarr_path))
-            .tensor_view(t=0, c=0, z=z_mid, roi=roi, layout="YX")
-            .to_numpy(contiguous=True),
+            "ome-zarr-bioio-numpy",
+            lambda: _read_zarr_plane(zarr_path, t=0, c=0, z=z_mid),
             zarr_size,
         ),
         (
             "crop-2d",
-            "ome-arrow-block",
-            lambda: typed_block.pixels.read_region(
-                block_image_id,
+            "ome-tiff-tensor-numpy",
+            lambda: (
+                OMEArrow.scan(str(fixture.path))
+                .tensor_view(t=0, c=0, z=z_mid, roi=roi, layout="YX")
+                .to_numpy(contiguous=True)
+            ),
+            tiff_size,
+        ),
+        (
+            "crop-2d",
+            "ome-tiff-bioio-numpy",
+            lambda: _read_tiff_crop(
+                fixture.path,
                 t=0,
                 c=0,
                 z=z_mid,
                 y=crop_y,
                 x=crop_x,
             ),
-            typed_block_size,
+            tiff_size,
+        ),
+        (
+            "crop-2d",
+            "ome-zarr-tensor-numpy",
+            lambda: (
+                OMEArrow.scan(str(zarr_path))
+                .tensor_view(t=0, c=0, z=z_mid, roi=roi, layout="YX")
+                .to_numpy(contiguous=True)
+            ),
+            zarr_size,
+        ),
+        (
+            "crop-2d",
+            "ome-zarr-bioio-numpy",
+            lambda: _read_zarr_crop(
+                zarr_path,
+                t=0,
+                c=0,
+                z=z_mid,
+                y=crop_y,
+                x=crop_x,
+            ),
+            zarr_size,
         ),
     ]
+
+    for artifact in arrow_artifacts:
+        block_size = _dir_size(artifact.block_path)
+        image_size = _dir_size(artifact.image_path)
+        case_defs.extend(
+            [
+                (
+                    "full-image",
+                    f"{artifact.label}-numpy",
+                    lambda artifact=artifact: artifact.image.read_image(
+                        artifact.image_image_id
+                    ),
+                    image_size,
+                ),
+                (
+                    "plane",
+                    f"{artifact.label}-numpy",
+                    lambda artifact=artifact: artifact.block.read_plane(
+                        artifact.block_image_id,
+                        t=0,
+                        c=0,
+                        z=z_mid,
+                    ),
+                    block_size,
+                ),
+                (
+                    "crop-2d",
+                    f"{artifact.label}-numpy",
+                    lambda artifact=artifact: artifact.block.read_region(
+                        artifact.block_image_id,
+                        t=0,
+                        c=0,
+                        z=z_mid,
+                        y=crop_y,
+                        x=crop_x,
+                    ),
+                    block_size,
+                ),
+            ]
+        )
+
+    if _torch_available():
+        case_defs.extend(
+            [
+                (
+                    "full-image",
+                    "ome-tiff-tensor-torch",
+                    lambda: (
+                        OMEArrow.scan(str(fixture.path))
+                        .tensor_view(layout="TCZYX")
+                        .to_torch(mode="numpy")
+                    ),
+                    tiff_size,
+                ),
+                (
+                    "full-image",
+                    "ome-zarr-tensor-torch",
+                    lambda: (
+                        OMEArrow.scan(str(zarr_path))
+                        .tensor_view(layout="TCZYX")
+                        .to_torch(mode="numpy")
+                    ),
+                    zarr_size,
+                ),
+                (
+                    "crop-2d",
+                    "ome-tiff-tensor-torch",
+                    lambda: (
+                        OMEArrow.scan(str(fixture.path))
+                        .tensor_view(t=0, c=0, z=z_mid, roi=roi, layout="YX")
+                        .to_torch(mode="numpy")
+                    ),
+                    tiff_size,
+                ),
+                (
+                    "crop-2d",
+                    "ome-zarr-tensor-torch",
+                    lambda: (
+                        OMEArrow.scan(str(zarr_path))
+                        .tensor_view(t=0, c=0, z=z_mid, roi=roi, layout="YX")
+                        .to_torch(mode="numpy")
+                    ),
+                    zarr_size,
+                ),
+            ]
+        )
+        for artifact in arrow_artifacts:
+            block_size = _dir_size(artifact.block_path)
+            image_size = _dir_size(artifact.image_path)
+            case_defs.extend(
+                [
+                    (
+                        "full-image",
+                        f"{artifact.label}-torch",
+                        lambda artifact=artifact: artifact.image.read_image(
+                            artifact.image_image_id,
+                            return_type="torch",
+                        ),
+                        image_size,
+                    ),
+                    (
+                        "crop-2d",
+                        f"{artifact.label}-torch",
+                        lambda artifact=artifact: artifact.block.read_region(
+                            artifact.block_image_id,
+                            t=0,
+                            c=0,
+                            z=z_mid,
+                            y=crop_y,
+                            x=crop_x,
+                            return_type="torch",
+                        ),
+                        block_size,
+                    ),
+                ]
+            )
+
+    if _jax_available():
+        case_defs.extend(
+            [
+                (
+                    "full-image",
+                    "ome-tiff-tensor-jax",
+                    lambda: (
+                        OMEArrow.scan(str(fixture.path))
+                        .tensor_view(layout="TCZYX")
+                        .to_jax(mode="numpy")
+                    ),
+                    tiff_size,
+                ),
+                (
+                    "full-image",
+                    "ome-zarr-tensor-jax",
+                    lambda: (
+                        OMEArrow.scan(str(zarr_path))
+                        .tensor_view(layout="TCZYX")
+                        .to_jax(mode="numpy")
+                    ),
+                    zarr_size,
+                ),
+                (
+                    "crop-2d",
+                    "ome-tiff-tensor-jax",
+                    lambda: (
+                        OMEArrow.scan(str(fixture.path))
+                        .tensor_view(t=0, c=0, z=z_mid, roi=roi, layout="YX")
+                        .to_jax(mode="numpy")
+                    ),
+                    tiff_size,
+                ),
+                (
+                    "crop-2d",
+                    "ome-zarr-tensor-jax",
+                    lambda: (
+                        OMEArrow.scan(str(zarr_path))
+                        .tensor_view(t=0, c=0, z=z_mid, roi=roi, layout="YX")
+                        .to_jax(mode="numpy")
+                    ),
+                    zarr_size,
+                ),
+            ]
+        )
+        for artifact in arrow_artifacts:
+            block_size = _dir_size(artifact.block_path)
+            image_size = _dir_size(artifact.image_path)
+            case_defs.extend(
+                [
+                    (
+                        "full-image",
+                        f"{artifact.label}-jax",
+                        lambda artifact=artifact: artifact.image.read_image(
+                            artifact.image_image_id,
+                            return_type="jax",
+                        ),
+                        image_size,
+                    ),
+                    (
+                        "crop-2d",
+                        f"{artifact.label}-jax",
+                        lambda artifact=artifact: artifact.block.read_region(
+                            artifact.block_image_id,
+                            t=0,
+                            c=0,
+                            z=z_mid,
+                            y=crop_y,
+                            x=crop_x,
+                            return_type="jax",
+                        ),
+                        block_size,
+                    ),
+                ]
+            )
 
     if sz > 1:
         case_defs.extend(
             [
                 (
                     "subvolume",
-                    "ome-zarr",
-                    lambda: OMEArrow.scan(str(zarr_path))
-                    .tensor_view(t=0, c=0, z=z_sub, roi=roi, layout="TCZYX")
-                    .to_numpy(contiguous=True),
-                    zarr_size,
+                    "ome-tiff-tensor-numpy",
+                    lambda: (
+                        OMEArrow.scan(str(fixture.path))
+                        .tensor_view(t=0, c=0, z=z_sub, roi=roi, layout="TCZYX")
+                        .to_numpy(contiguous=True)
+                    ),
+                    tiff_size,
                 ),
                 (
                     "subvolume",
-                    "ome-arrow-block",
-                    lambda: typed_block.pixels.read_region(
-                        block_image_id,
+                    "ome-tiff-bioio-numpy",
+                    lambda: _read_tiff_subvolume(
+                        fixture.path,
                         t=0,
                         c=0,
                         z=z_sub,
                         y=crop_y,
                         x=crop_x,
                     ),
-                    typed_block_size,
+                    tiff_size,
+                ),
+                (
+                    "subvolume",
+                    "ome-zarr-tensor-numpy",
+                    lambda: (
+                        OMEArrow.scan(str(zarr_path))
+                        .tensor_view(t=0, c=0, z=z_sub, roi=roi, layout="TCZYX")
+                        .to_numpy(contiguous=True)
+                    ),
+                    zarr_size,
+                ),
+                (
+                    "subvolume",
+                    "ome-zarr-bioio-numpy",
+                    lambda: _read_zarr_subvolume(
+                        zarr_path,
+                        t=0,
+                        c=0,
+                        z=z_sub,
+                        y=crop_y,
+                        x=crop_x,
+                    ),
+                    zarr_size,
                 ),
             ]
         )
+        for artifact in arrow_artifacts:
+            block_size = _dir_size(artifact.block_path)
+            case_defs.append(
+                (
+                    "subvolume",
+                    f"{artifact.label}-numpy",
+                    lambda artifact=artifact: artifact.block.read_region(
+                        artifact.block_image_id,
+                        t=0,
+                        c=0,
+                        z=z_sub,
+                        y=crop_y,
+                        x=crop_x,
+                    ),
+                    block_size,
+                )
+            )
 
     if st > 1:
         case_defs.extend(
             [
                 (
                     "timepoint-plane",
-                    "ome-zarr",
-                    lambda: OMEArrow.scan(str(zarr_path))
-                    .tensor_view(t=t_mid, c=0, z=z_mid, layout="YX")
-                    .to_numpy(contiguous=True),
+                    "ome-tiff-tensor-numpy",
+                    lambda: (
+                        OMEArrow.scan(str(fixture.path))
+                        .tensor_view(t=t_mid, c=0, z=z_mid, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
+                    tiff_size,
+                ),
+                (
+                    "timepoint-plane",
+                    "ome-tiff-bioio-numpy",
+                    lambda: _read_tiff_plane(fixture.path, t=t_mid, c=0, z=z_mid),
+                    tiff_size,
+                ),
+                (
+                    "timepoint-plane",
+                    "ome-zarr-tensor-numpy",
+                    lambda: (
+                        OMEArrow.scan(str(zarr_path))
+                        .tensor_view(t=t_mid, c=0, z=z_mid, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
                     zarr_size,
                 ),
                 (
                     "timepoint-plane",
-                    "ome-arrow-block",
-                    lambda: typed_block.pixels.read_plane(
-                        block_image_id,
+                    "ome-zarr-bioio-numpy",
+                    lambda: _read_zarr_plane(zarr_path, t=t_mid, c=0, z=z_mid),
+                    zarr_size,
+                ),
+            ]
+        )
+        for artifact in arrow_artifacts:
+            block_size = _dir_size(artifact.block_path)
+            case_defs.append(
+                (
+                    "timepoint-plane",
+                    f"{artifact.label}-numpy",
+                    lambda artifact=artifact: artifact.block.read_plane(
+                        artifact.block_image_id,
                         t=t_mid,
                         c=0,
                         z=z_mid,
                     ),
-                    typed_block_size,
-                ),
-            ]
-        )
+                    block_size,
+                )
+            )
 
     if sc > 1:
         case_defs.extend(
             [
                 (
                     "channel-plane",
-                    "ome-zarr",
-                    lambda: OMEArrow.scan(str(zarr_path))
-                    .tensor_view(t=0, c=c_mid, z=z_mid, layout="YX")
-                    .to_numpy(contiguous=True),
+                    "ome-tiff-tensor-numpy",
+                    lambda: (
+                        OMEArrow.scan(str(fixture.path))
+                        .tensor_view(t=0, c=c_mid, z=z_mid, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
+                    tiff_size,
+                ),
+                (
+                    "channel-plane",
+                    "ome-tiff-bioio-numpy",
+                    lambda: _read_tiff_plane(fixture.path, t=0, c=c_mid, z=z_mid),
+                    tiff_size,
+                ),
+                (
+                    "channel-plane",
+                    "ome-zarr-tensor-numpy",
+                    lambda: (
+                        OMEArrow.scan(str(zarr_path))
+                        .tensor_view(t=0, c=c_mid, z=z_mid, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
                     zarr_size,
                 ),
                 (
                     "channel-plane",
-                    "ome-arrow-block",
-                    lambda: typed_block.pixels.read_plane(
-                        block_image_id,
+                    "ome-zarr-bioio-numpy",
+                    lambda: _read_zarr_plane(zarr_path, t=0, c=c_mid, z=z_mid),
+                    zarr_size,
+                ),
+            ]
+        )
+        for artifact in arrow_artifacts:
+            block_size = _dir_size(artifact.block_path)
+            case_defs.append(
+                (
+                    "channel-plane",
+                    f"{artifact.label}-numpy",
+                    lambda artifact=artifact: artifact.block.read_plane(
+                        artifact.block_image_id,
                         t=0,
                         c=c_mid,
                         z=z_mid,
                     ),
-                    typed_block_size,
-                ),
-            ]
-        )
+                    block_size,
+                )
+            )
 
     results = []
     for case, format_name, fn, bytes_on_disk in case_defs:
@@ -397,13 +884,13 @@ def _print_results(results: list[BenchmarkResult]) -> None:
     print("")
     print("OME-IRIS-style benchmark (ms)")
     print(
-        f"{'dataset':24} {'case':18} {'format':16} {'median':>9} "
+        f"{'dataset':24} {'case':18} {'format':24} {'median':>9} "
         f"{'min':>9} {'max':>9} {'shape':>18} {'dtype':>8} {'MB':>8}"
     )
-    print("-" * 112)
+    print("-" * 120)
     for r in results:
         print(
-            f"{r.dataset:24} {r.case:18} {r.format:16} "
+            f"{r.dataset:24} {r.case:18} {r.format:24} "
             f"{r.median_ms:9.2f} {r.min_ms:9.2f} {r.max_ms:9.2f} "
             f"{r.shape!s:>18} {r.dtype:>8} {r.bytes_on_disk / 1_000_000:8.2f}"
         )
@@ -467,31 +954,19 @@ def main() -> None:
                 print(f"Skipping missing fixture: {fixture.name} -> {fixture.path}")
                 continue
             print(f"Preparing {fixture.name}: {fixture.path}")
-            source, arr = _load_source(fixture.path)
-            (
-                zarr_path,
-                typed_block_path,
-                typed_image_path,
-                typed_block,
-                block_image_id,
-                typed_image,
-                image_image_id,
-            ) = _write_artifacts(
+            source, arr, raw_arr = _load_source(fixture.path)
+            zarr_path, arrow_artifacts = _write_artifacts(
                 fixture,
                 source,
                 arr,
+                raw_arr,
                 workdir,
             )
             all_results.extend(
                 _cases_for_fixture(
                     fixture,
                     zarr_path,
-                    typed_block_path,
-                    typed_image_path,
-                    typed_block,
-                    block_image_id,
-                    typed_image,
-                    image_image_id,
+                    arrow_artifacts,
                     arr,
                     repeats=args.repeats,
                     warmup=args.warmup,

@@ -16,6 +16,7 @@ from ome_arrow.export import to_numpy
 from ome_arrow.meta import OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
 
 Layout = Literal["auto", "image", "tile", "volume", "z-plane", "block", "hybrid"]
+ArrayReturn = Literal["numpy", "torch", "jax"]
 AccessPattern = Literal[
     "balanced",
     "full_image",
@@ -242,6 +243,27 @@ def _as_tczyx_array(image: Any) -> tuple[np.ndarray, dict[str, Any]]:
     )
 
 
+def _cast_pixel_dtype(
+    arr: np.ndarray,
+    pixel_dtype: np.dtype | str | None,
+    *,
+    clamp: bool,
+) -> np.ndarray:
+    """Return ``arr`` in the requested pixel dtype, preserving dtype by default."""
+    if pixel_dtype is None:
+        return arr
+
+    dtype = np.dtype(pixel_dtype)
+    if arr.dtype == dtype:
+        return arr
+
+    out = arr
+    if clamp and np.issubdtype(dtype, np.integer):
+        info = np.iinfo(dtype)
+        out = np.clip(out, info.min, info.max)
+    return out.astype(dtype, copy=False)
+
+
 def _image_metadata(
     *,
     image: Any,
@@ -339,6 +361,8 @@ def write_ome_arrow_dataset(
     compression: str | None = "zstd",
     build_physical_index: bool = True,
     chunk_rows_per_row_group: int = 1,
+    pixel_dtype: np.dtype | str | None = None,
+    clamp: bool = True,
 ) -> ChunkChoice:
     """Write a metadata table and typed pixel chunk table.
 
@@ -356,6 +380,11 @@ def write_ome_arrow_dataset(
         chunk_rows_per_row_group: Number of chunk rows to pack into each row
             group. ``1`` gives fastest direct chunk reads. Larger values reduce
             Parquet row-group overhead and can improve storage for small chunks.
+        pixel_dtype: Optional output dtype for stored pixel buffers. ``None``
+            preserves the source dtype. Set to ``"uint16"`` to normalize inputs
+            to the legacy OME-Arrow pixel dtype.
+        clamp: Whether to clamp values to the output dtype range before casting
+            when ``pixel_dtype`` is set to an integer dtype.
 
     Returns:
         ChunkChoice: The choice used for the first image. All images currently
@@ -374,6 +403,7 @@ def write_ome_arrow_dataset(
     next_chunk_id = 0
     for i, image in enumerate(images):
         arr, record = _as_tczyx_array(image)
+        arr = _cast_pixel_dtype(arr, pixel_dtype, clamp=clamp)
         choice = choose_chunking(
             arr.shape,
             arr.dtype,
@@ -596,6 +626,11 @@ class OMEArrowDataset:
         self.index = pq.read_table(index_path) if index_path.exists() else None
         self.pixels = OMEArrowPixels(self)
 
+    @property
+    def image_ids(self) -> list[str]:
+        """Return image identifiers in this dataset."""
+        return [str(v) for v in self.images["image_id"].to_pylist()]
+
     def image_metadata(self, image_id: str) -> dict[str, Any]:
         """Return one image metadata row as a dictionary."""
         mask = pc.equal(self.images["image_id"], str(image_id))
@@ -603,6 +638,90 @@ class OMEArrowDataset:
         if not rows:
             raise KeyError(f"image_id not found: {image_id}")
         return rows[0]
+
+    def read_image(
+        self,
+        image_id: str | None = None,
+        *,
+        return_type: ArrayReturn = "numpy",
+    ) -> Any:
+        """Read one image as a dense ``TCZYX`` NumPy array.
+
+        Args:
+            image_id: Image identifier. When omitted, the first image is read.
+            return_type: Array backend to return: ``"numpy"``, ``"torch"``,
+                or ``"jax"``.
+
+        Returns:
+            Any: Dense TCZYX image in the requested array backend.
+        """
+        arr = self.pixels.read_image(self._resolve_image_id(image_id))
+        return _convert_return(arr, return_type)
+
+    def read_many(
+        self,
+        image_ids: Iterable[str],
+        *,
+        return_type: ArrayReturn = "numpy",
+    ) -> list[Any]:
+        """Read multiple images by identifier."""
+        arrays = self.pixels.read_many(image_ids)
+        return [_convert_return(arr, return_type) for arr in arrays]
+
+    def read_channel(
+        self,
+        image_id: str | None = None,
+        channel: int = 0,
+        *,
+        return_type: ArrayReturn = "numpy",
+    ) -> Any:
+        """Read one channel as a ``TZYX`` NumPy array."""
+        arr = self.pixels.read_channel(self._resolve_image_id(image_id), channel)
+        return _convert_return(arr, return_type)
+
+    def read_plane(
+        self,
+        image_id: str | None = None,
+        *,
+        t: int = 0,
+        c: int = 0,
+        z: int = 0,
+        return_type: ArrayReturn = "numpy",
+    ) -> Any:
+        """Read one ``YX`` plane."""
+        arr = self.pixels.read_plane(self._resolve_image_id(image_id), t=t, c=c, z=z)
+        return _convert_return(arr, return_type)
+
+    def read_region(
+        self,
+        image_id: str | None = None,
+        *,
+        y: slice,
+        x: slice,
+        t: int | slice | None = None,
+        c: int | slice | None = None,
+        z: int | slice | None = None,
+        return_type: ArrayReturn = "numpy",
+    ) -> Any:
+        """Read a spatial region as a dense ``TCZYX`` NumPy array."""
+        arr = self.pixels.read_region(
+            self._resolve_image_id(image_id),
+            y=y,
+            x=x,
+            t=t,
+            c=c,
+            z=z,
+        )
+        return _convert_return(arr, return_type)
+
+    def _resolve_image_id(self, image_id: str | None) -> str:
+        """Resolve an optional image ID to the first image when omitted."""
+        if image_id is not None:
+            return str(image_id)
+        image_ids = self.image_ids
+        if not image_ids:
+            raise ValueError("Dataset contains no image IDs.")
+        return image_ids[0]
 
     def _matching_chunks(
         self,
@@ -675,6 +794,25 @@ def _as_slice(value: int | slice | None) -> slice | None:
         return value
     i = int(value)
     return slice(i, i + 1)
+
+
+def _convert_return(arr: np.ndarray, return_type: ArrayReturn) -> Any:
+    """Convert a NumPy read result to the requested array backend."""
+    if return_type == "numpy":
+        return arr
+    if return_type == "torch":
+        try:
+            import torch
+        except ImportError as exc:
+            raise RuntimeError("Torch is not installed.") from exc
+        return torch.as_tensor(arr)
+    if return_type == "jax":
+        try:
+            import jax.numpy as jnp
+        except ImportError as exc:
+            raise RuntimeError("JAX is not installed.") from exc
+        return jnp.asarray(arr)
+    raise ValueError("return_type must be one of 'numpy', 'torch', or 'jax'")
 
 
 def _normalize_region(
