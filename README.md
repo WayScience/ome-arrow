@@ -120,6 +120,39 @@ Advanced options:
 
 See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
+## Typed chunk datasets
+
+For selective pixel reads, use the typed byte-buffer dataset writer. This stores
+image metadata separately from pixel chunks and writes one chunk per Parquet row
+group so `read_plane()` and `read_region()` can jump through a physical index
+instead of materializing the older nested struct payload.
+
+```python
+import numpy as np
+from ome_arrow import OMEArrowDataset, write_ome_arrow_dataset
+
+arr = np.zeros((1, 1, 1, 1024, 1024), dtype=np.uint16)  # TCZYX
+
+choice = write_ome_arrow_dataset(
+    [arr],
+    "image.ome-arrow",
+    layout="tile",
+    chunk_shape=(1, 1, 1, 512, 512),
+    compression="zstd",
+    chunk_rows_per_row_group=1,
+)
+print(choice.rationale)
+
+dataset = OMEArrowDataset("image.ome-arrow")
+image_id = dataset.images["image_id"].to_pylist()[0]
+plane = dataset.pixels.read_plane(image_id, t=0, c=0, z=0)
+crop = dataset.pixels.read_region(image_id, y=slice(128, 384), x=slice(128, 384))
+```
+
+Use `chunk_rows_per_row_group=1` for the fastest direct chunk reads. Use a
+larger value, such as `8`, to reduce row-group overhead for small chunks when
+storage size matters.
+
 ## Tensor ingest (PyTorch/JAX)
 
 You can ingest torch or JAX arrays directly with `OMEArrow(...)`.
@@ -171,6 +204,17 @@ read paths (TIFF source-backed, Parquet planes, Parquet chunks):
 ```bash
 uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
 ```
+
+For OME-IRIS-style 2D/3D/4D/5D access patterns, run:
+
+```bash
+uv run python benchmarks/benchmark_ome_iris.py --repeats 3 --warmup 1
+```
+
+You can pass local real-data fixtures with `--fixture name=/path/to/image.tif`.
+The benchmark writes matched temporary OME-Zarr and typed OME-Arrow artifacts,
+then compares full-image, plane, crop, subvolume, timepoint, and channel reads
+where those axes are present.
 
 Notes:
 

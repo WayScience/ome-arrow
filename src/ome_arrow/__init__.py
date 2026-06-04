@@ -4,6 +4,12 @@ Init file for ome_arrow package.
 
 from ome_arrow._version import version as ome_arrow_version
 from ome_arrow.core import OMEArrow
+from ome_arrow.dataset import (
+    OMEArrowDataset,
+    OMEArrowPixels,
+    choose_chunking,
+    write_ome_arrow_dataset,
+)
 from ome_arrow.export import (
     to_numpy,
     to_ome_parquet,
