@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Iterable, Literal, Sequence
 
@@ -406,6 +407,8 @@ def write_ome_arrow_dataset(
     if chunk_rows_per_row_group <= 0:
         raise ValueError("chunk_rows_per_row_group must be > 0")
     out_dir = Path(output_path)
+    if out_dir.exists() and out_dir.is_file():
+        out_dir.unlink()
     out_dir.mkdir(parents=True, exist_ok=True)
 
     image_rows: list[dict[str, Any]] = []
@@ -501,6 +504,7 @@ def write_ome_arrow_dataset(
         "image_count": len(image_rows),
         "chunk_count": len(chunk_rows),
         "choice": choices[0].__dict__,
+        "package_versions": _package_versions(),
     }
     (out_dir / "_ome_arrow_dataset.json").write_text(json.dumps(manifest, indent=2))
     return choices[0]
@@ -573,6 +577,45 @@ class OMEArrowPixels:
             y=y,
             x=x,
         )
+
+    def read_chunk_rows(
+        self,
+        image_id: str,
+        *,
+        y: slice | None = None,
+        x: slice | None = None,
+        t: int | slice | None = None,
+        c: int | slice | None = None,
+        z: int | slice | None = None,
+    ) -> pa.Table:
+        """Read selected raw chunk rows without decoding pixels to NumPy."""
+        meta = self._dataset.image_metadata(image_id)
+        bounds = (
+            int(meta["size_t"]),
+            int(meta["size_c"]),
+            int(meta["size_z"]),
+            int(meta["size_y"]),
+            int(meta["size_x"]),
+        )
+        ts, cs, zs, ys, xs = _normalize_region(
+            (_as_slice(t), _as_slice(c), _as_slice(z), y, x),
+            bounds,
+        )
+        chunks = self._dataset._matching_chunks(
+            str(image_id),
+            t=ts,
+            c=cs,
+            z=zs,
+            y=ys,
+            x=xs,
+        )
+        rows = [
+            self._dataset._read_chunk_row(self._dataset._chunks_file, row)
+            for row in chunks
+        ]
+        if not rows:
+            return pa.Table.from_pylist([], schema=CHUNK_TABLE_SCHEMA)
+        return pa.Table.from_pylist(rows, schema=CHUNK_TABLE_SCHEMA)
 
     def _read_region(
         self,
@@ -732,6 +775,26 @@ class OMEArrowDataset:
         )
         return _convert_return(arr, return_type)
 
+    def read_chunk_rows(
+        self,
+        image_id: str | None = None,
+        *,
+        y: slice | None = None,
+        x: slice | None = None,
+        t: int | slice | None = None,
+        c: int | slice | None = None,
+        z: int | slice | None = None,
+    ) -> pa.Table:
+        """Read selected raw chunk rows without pixel decoding."""
+        return self.pixels.read_chunk_rows(
+            self._resolve_image_id(image_id),
+            y=y,
+            x=x,
+            t=t,
+            c=c,
+            z=z,
+        )
+
     def _resolve_image_id(self, image_id: str | None) -> str:
         """Resolve an optional image ID to the first image when omitted."""
         if image_id is not None:
@@ -831,6 +894,18 @@ def _convert_return(arr: np.ndarray, return_type: ArrayReturn) -> Any:
             raise RuntimeError("JAX is not installed.") from exc
         return jnp.asarray(arr)
     raise ValueError("return_type must be one of 'numpy', 'torch', or 'jax'")
+
+
+def _package_versions() -> dict[str, str]:
+    """Return package versions useful for interpreting benchmark artifacts."""
+    packages = ("ome-arrow", "numpy", "pyarrow")
+    versions = {}
+    for package in packages:
+        try:
+            versions[package] = version(package)
+        except PackageNotFoundError:
+            versions[package] = "unknown"
+    return versions
 
 
 def _normalize_region(

@@ -506,6 +506,20 @@ def test_vortex_custom_column_name(tmp_path: pathlib.Path) -> None:
     assert reloaded.info() == oa.info()
 
 
+def test_ome_parquet_export_uses_typed_dataset_path(tmp_path: pathlib.Path) -> None:
+    """Notebook-style parquet export/reopen uses the typed dataset layout."""
+    arr = np.arange(1 * 1 * 2 * 6 * 7, dtype=np.uint16).reshape(1, 1, 2, 6, 7)
+    out = tmp_path / "example.ome.parquet"
+    oa = OMEArrow(arr)
+
+    exported = oa.export(how="ome-parquet", out=str(out))
+    reloaded = OMEArrow(exported)
+
+    assert (out / "_ome_arrow_dataset.json").exists()
+    assert reloaded.info() == oa.info()
+    np.testing.assert_array_equal(reloaded.export(how="numpy"), arr)
+
+
 def test_scan_collect_roundtrip() -> None:
     """Materialize a lazily scanned parquet source via collect()."""
     oa = OMEArrow.scan("tests/data/JUMP-BR00117006/BR00117006.ome.parquet")

@@ -1,5 +1,6 @@
 """Tests for typed chunk-buffer OME-Arrow datasets."""
 
+import json
 import pathlib
 
 import numpy as np
@@ -69,6 +70,18 @@ def test_write_dataset_preserves_dtype_and_reads_image(tmp_path: pathlib.Path) -
     assert roundtrip.dtype == np.uint8
     np.testing.assert_array_equal(roundtrip, arr)
     assert pq.ParquetFile(out / "chunks.parquet").metadata.num_row_groups == 1
+
+
+def test_write_dataset_replaces_existing_file_path(tmp_path: pathlib.Path) -> None:
+    """Replace an old single-file artifact with a typed dataset directory."""
+    arr = np.arange(1 * 1 * 1 * 3 * 4, dtype=np.uint16).reshape(1, 1, 1, 3, 4)
+    out = tmp_path / "image.ome.parquet"
+    out.write_text("old parquet placeholder")
+
+    write_ome_arrow_dataset([arr], out, layout="image", compression=None)
+
+    assert out.is_dir()
+    assert (out / "_ome_arrow_dataset.json").exists()
 
 
 def test_write_dataset_rejects_duplicate_image_ids(tmp_path: pathlib.Path) -> None:
@@ -159,6 +172,38 @@ def test_dataset_reads_plane_and_region_from_indexed_tiles(
     np.testing.assert_array_equal(plane, arr[0, 0, 1])
     np.testing.assert_array_equal(region, arr[:, :, 1:2, 2:6, 3:7])
     assert pq.ParquetFile(out / "chunks.parquet").metadata.num_row_groups == 8
+
+
+def test_dataset_reads_raw_chunk_rows_and_manifest_versions(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Read raw Arrow chunk rows without decoding pixels."""
+    arr = np.arange(1 * 1 * 2 * 6 * 7, dtype=np.uint16).reshape(1, 1, 2, 6, 7)
+    out = tmp_path / "raw_chunks"
+
+    write_ome_arrow_dataset(
+        [arr],
+        out,
+        layout="tile",
+        chunk_shape=(1, 1, 1, 3, 4),
+        compression=None,
+    )
+    dataset = OMEArrowDataset(out)
+
+    chunks = dataset.read_chunk_rows(
+        z=1,
+        y=slice(2, 6),
+        x=slice(3, 7),
+    )
+    manifest = json.loads((out / "_ome_arrow_dataset.json").read_text())
+
+    assert chunks.num_rows == 4
+    assert (
+        chunks.schema.field("pixel_bytes").type
+        == pq.read_table(out / "chunks.parquet").schema.field("pixel_bytes").type
+    )
+    assert "package_versions" in manifest
+    assert "pyarrow" in manifest["package_versions"]
 
 
 def test_dataset_reads_from_packed_chunk_row_groups(tmp_path: pathlib.Path) -> None:

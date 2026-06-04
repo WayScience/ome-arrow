@@ -179,6 +179,8 @@ def _sync_result(out: Any) -> None:
 
 def _result_shape_dtype(out: Any) -> tuple[tuple[int, ...], str]:
     """Return shape and dtype strings for NumPy, Torch, and JAX-like arrays."""
+    if hasattr(out, "num_rows") and hasattr(out, "num_columns"):
+        return (int(out.num_rows), int(out.num_columns)), "arrow-table"
     shape = tuple(int(v) for v in getattr(out, "shape", ()))
     dtype = getattr(out, "dtype", None)
     if dtype is None:
@@ -314,9 +316,10 @@ def _write_artifacts(
     )
 
     artifacts: list[ArrowArtifact] = []
-    for label, arr, pixel_dtype in (
-        ("ome-arrow-src", raw_arr, None),
-        ("ome-arrow-u16", normalized_arr, "uint16"),
+    for label, arr, pixel_dtype, compression in (
+        ("ome-arrow-src", raw_arr, None, "zstd"),
+        ("ome-arrow-u16", normalized_arr, "uint16", "zstd"),
+        ("ome-arrow-u16-raw", normalized_arr, "uint16", None),
     ):
         typed_block_path = workdir / f"{fixture.name}.{label}.block.ome-arrow"
         typed_image_path = workdir / f"{fixture.name}.{label}.image.ome-arrow"
@@ -325,7 +328,7 @@ def _write_artifacts(
             typed_block_path,
             layout="block",
             chunk_shape=fixture.preferred_chunk_shape,
-            compression="zstd",
+            compression=compression,
             chunk_rows_per_row_group=fixture.chunk_rows_per_row_group,
             pixel_dtype=pixel_dtype,
         )
@@ -333,7 +336,7 @@ def _write_artifacts(
             [arr],
             typed_image_path,
             layout="image",
-            compression="zstd",
+            compression=compression,
             pixel_dtype=pixel_dtype,
         )
         typed_block = OMEArrowDataset(typed_block_path)
@@ -522,6 +525,14 @@ def _cases_for_fixture(
                     image_size,
                 ),
                 (
+                    "full-image",
+                    f"{artifact.label}-chunks",
+                    lambda artifact=artifact: artifact.image.read_chunk_rows(
+                        artifact.image_image_id
+                    ),
+                    image_size,
+                ),
+                (
                     "plane",
                     f"{artifact.label}-numpy",
                     lambda artifact=artifact: artifact.block.read_plane(
@@ -533,9 +544,33 @@ def _cases_for_fixture(
                     block_size,
                 ),
                 (
+                    "plane",
+                    f"{artifact.label}-chunks",
+                    lambda artifact=artifact: artifact.block.read_chunk_rows(
+                        artifact.block_image_id,
+                        t=0,
+                        c=0,
+                        z=z_mid,
+                    ),
+                    block_size,
+                ),
+                (
                     "crop-2d",
                     f"{artifact.label}-numpy",
                     lambda artifact=artifact: artifact.block.read_region(
+                        artifact.block_image_id,
+                        t=0,
+                        c=0,
+                        z=z_mid,
+                        y=crop_y,
+                        x=crop_x,
+                    ),
+                    block_size,
+                ),
+                (
+                    "crop-2d",
+                    f"{artifact.label}-chunks",
+                    lambda artifact=artifact: artifact.block.read_chunk_rows(
                         artifact.block_image_id,
                         t=0,
                         c=0,
@@ -768,6 +803,21 @@ def _cases_for_fixture(
                     block_size,
                 )
             )
+            case_defs.append(
+                (
+                    "subvolume",
+                    f"{artifact.label}-chunks",
+                    lambda artifact=artifact: artifact.block.read_chunk_rows(
+                        artifact.block_image_id,
+                        t=0,
+                        c=0,
+                        z=z_sub,
+                        y=crop_y,
+                        x=crop_x,
+                    ),
+                    block_size,
+                )
+            )
 
     if st > 1:
         case_defs.extend(
@@ -821,6 +871,19 @@ def _cases_for_fixture(
                     block_size,
                 )
             )
+            case_defs.append(
+                (
+                    "timepoint-plane",
+                    f"{artifact.label}-chunks",
+                    lambda artifact=artifact: artifact.block.read_chunk_rows(
+                        artifact.block_image_id,
+                        t=t_mid,
+                        c=0,
+                        z=z_mid,
+                    ),
+                    block_size,
+                )
+            )
 
     if sc > 1:
         case_defs.extend(
@@ -866,6 +929,19 @@ def _cases_for_fixture(
                     "channel-plane",
                     f"{artifact.label}-numpy",
                     lambda artifact=artifact: artifact.block.read_plane(
+                        artifact.block_image_id,
+                        t=0,
+                        c=c_mid,
+                        z=z_mid,
+                    ),
+                    block_size,
+                )
+            )
+            case_defs.append(
+                (
+                    "channel-plane",
+                    f"{artifact.label}-chunks",
+                    lambda artifact=artifact: artifact.block.read_chunk_rows(
                         artifact.block_image_id,
                         t=0,
                         c=c_mid,

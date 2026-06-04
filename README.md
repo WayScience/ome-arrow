@@ -69,7 +69,7 @@ oa_image.view(how="matplotlib")
 # (great for ZYX 3D images; install extras: `pip install 'ome-arrow[viz]'`).
 oa_image.view(how="pyvista")
 
-# Export to OME-Parquet.
+# Export to OME-Parquet. This writes the typed chunk dataset layout.
 # We can also export OME-TIFF, OME-Zarr or NumPy arrays.
 oa_image.export(how="ome-parquet", out="your_image.ome.parquet")
 
@@ -122,11 +122,12 @@ See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
 ## Typed chunk datasets
 
-For selective pixel reads, use the typed byte-buffer dataset writer. By default,
-this stores image metadata separately from pixel chunks and writes one chunk per
-Parquet row group, so `read_plane()` and `read_region()` can jump through a
-physical index instead of materializing the older nested struct payload. You can
-change that row-group packing with `chunk_rows_per_row_group`.
+`OMEArrow.export(how="ome-parquet")` writes the typed byte-buffer dataset layout.
+For explicit control over layout and chunks, use the dataset writer directly.
+By default, this stores image metadata separately from pixel chunks and writes
+one chunk per Parquet row group, so `read_plane()` and `read_region()` can jump
+through a physical index instead of materializing the older nested struct
+payload. You can change that row-group packing with `chunk_rows_per_row_group`.
 
 ```python
 import numpy as np
@@ -237,6 +238,10 @@ The OME-IRIS-style benchmark separates return/API paths:
 - `ome-arrow-src-numpy`: source-dtype typed OME-Arrow dataset NumPy reads.
 - `ome-arrow-u16-numpy`: typed OME-Arrow dataset NumPy reads normalized to
   `uint16` for apples-to-apples comparisons with normalized paths.
+- `ome-arrow-u16-raw-numpy`: normalized `uint16` typed OME-Arrow reads with
+  uncompressed chunk bytes for local speed comparisons.
+- `ome-arrow-*-chunks`: Arrow-native raw chunk-row reads that return
+  `pixel_bytes` without decoding into NumPy.
 - `ome-tiff-tensor-torch` / `ome-tiff-tensor-jax`: OME-Arrow tensor-view
   Torch/JAX returns over TIFF.
 - `ome-zarr-tensor-torch` / `ome-zarr-tensor-jax`: OME-Arrow tensor-view
