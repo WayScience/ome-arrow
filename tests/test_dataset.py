@@ -220,14 +220,24 @@ def test_dataset_reads_from_packed_chunk_row_groups(tmp_path: pathlib.Path) -> N
         chunk_rows_per_row_group=4,
     )
     dataset = OMEArrowDataset(out)
+    dataset._read_chunk_row = (  # type: ignore[method-assign]
+        lambda _parquet_file, _row: pytest.fail("single chunk-row fallback used")
+    )
 
     region = dataset.read_region(
         z=1,
         y=slice(2, 6),
         x=slice(3, 7),
     )
+    chunks = dataset.read_chunk_rows(
+        z=1,
+        y=slice(2, 6),
+        x=slice(3, 7),
+    )
 
     np.testing.assert_array_equal(region, arr[:, :, 1:2, 2:6, 3:7])
+    assert chunks.num_rows == 4
+    assert all(chunks["pixel_bytes"].to_pylist())
     assert pq.ParquetFile(out / "chunks.parquet").metadata.num_row_groups == 2
 
 

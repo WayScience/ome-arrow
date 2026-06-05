@@ -609,10 +609,7 @@ class OMEArrowPixels:
             y=ys,
             x=xs,
         )
-        rows = [
-            self._dataset._read_chunk_row(self._dataset._chunks_file, row)
-            for row in chunks
-        ]
+        rows = self._dataset._read_chunk_rows(self._dataset._chunks_file, chunks)
         if not rows:
             return pa.Table.from_pylist([], schema=CHUNK_TABLE_SCHEMA)
         return pa.Table.from_pylist(rows, schema=CHUNK_TABLE_SCHEMA)
@@ -657,8 +654,7 @@ class OMEArrowPixels:
             x=xs,
         )
         parquet_file = self._dataset._chunks_file
-        for row in chunks:
-            chunk = self._dataset._read_chunk_row(parquet_file, row)
+        for chunk in self._dataset._read_chunk_rows(parquet_file, chunks):
             arr = np.frombuffer(chunk["pixel_bytes"], dtype=np.dtype(chunk["dtype"]))
             arr = arr.reshape(
                 (
@@ -685,6 +681,9 @@ class OMEArrowDataset:
         self._chunks_file = pq.ParquetFile(self.path / "chunks.parquet")
         index_path = self.path / "index.parquet"
         self.index = pq.read_table(index_path) if index_path.exists() else None
+        self._image_metadata_by_id = {
+            str(row["image_id"]): row for row in self.images.to_pylist()
+        }
         self.pixels = OMEArrowPixels(self)
 
     @property
@@ -694,11 +693,10 @@ class OMEArrowDataset:
 
     def image_metadata(self, image_id: str) -> dict[str, Any]:
         """Return one image metadata row as a dictionary."""
-        mask = pc.equal(self.images["image_id"], str(image_id))
-        rows = self.images.filter(mask).to_pylist()
-        if not rows:
-            raise KeyError(f"image_id not found: {image_id}")
-        return rows[0]
+        try:
+            return self._image_metadata_by_id[str(image_id)]
+        except KeyError as exc:
+            raise KeyError(f"image_id not found: {image_id}") from exc
 
     def read_image(
         self,
@@ -865,6 +863,36 @@ class OMEArrowDataset:
         if not chunk_rows:
             raise ValueError(f"Chunk not found: {row['chunk_id']}")
         return chunk_rows[0]
+
+    def _read_chunk_rows(
+        self,
+        parquet_file: pq.ParquetFile,
+        rows: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Read multiple chunk payload rows while batching row-group IO."""
+        if not rows:
+            return []
+        if all(
+            "row_group_id" in row and row["row_group_id"] is not None for row in rows
+        ):
+            row_group_ids = sorted({int(row["row_group_id"]) for row in rows})
+            table = parquet_file.read_row_groups(
+                row_group_ids,
+                columns=["chunk_id", "dtype", "pixel_bytes"],
+            )
+            payload_by_chunk_id = {
+                int(row["chunk_id"]): row for row in table.to_pylist()
+            }
+            out = []
+            for row in rows:
+                chunk_id = int(row["chunk_id"])
+                try:
+                    payload = payload_by_chunk_id[chunk_id]
+                except KeyError as exc:
+                    raise ValueError(f"Chunk not found: {chunk_id}") from exc
+                out.append({**row, **payload})
+            return out
+        return [self._read_chunk_row(parquet_file, row) for row in rows]
 
 
 def _as_slice(value: int | slice | None) -> slice | None:
