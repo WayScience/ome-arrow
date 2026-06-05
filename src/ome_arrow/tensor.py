@@ -958,6 +958,9 @@ class TensorView:
             )
 
         if self._struct_array is not None and self._has_chunks():
+            if _chunks_have_pixel_bytes(self._struct_array):
+                data_py = self._data_py_dict()
+                return plane_from_chunks(data_py, t=t, z=z, c=c, dtype=self._dtype)
             chunk_order = str(self._chunk_grid().get("chunk_order") or "ZYX").upper()
             return _plane_from_chunks_arrow(
                 self._struct_array,
@@ -1256,6 +1259,11 @@ class TensorView:
             raise ValueError("mode='arrow' requires Arrow-backed data.")
 
         if self._has_chunks():
+            if _chunks_have_pixel_bytes(struct_arr):
+                raise ValueError(
+                    "mode='arrow' does not support byte-backed inline chunks; "
+                    "use mode='numpy'."
+                )
             return _select_chunk_values(
                 struct_arr,
                 t=t_idx[0],
@@ -1511,7 +1519,7 @@ def _ensure_struct_array(
             UserWarning,
             stacklevel=3,
         )
-        return pa.array([data.as_py()], type=OME_ARROW_STRUCT)
+        return pa.array([data.as_py()], type=data.type)
     if isinstance(data, dict):
         warnings.warn(
             "mode='arrow' received a dict; converting to Arrow buffers, "
@@ -1596,6 +1604,15 @@ def _select_chunk_values(
 
     pixels_list = selected.field("pixels")[0]
     return pixels_list.values
+
+
+def _chunks_have_pixel_bytes(struct_arr: pa.StructArray) -> bool:
+    """Return True when chunk entries use pixel_bytes instead of pixels."""
+    try:
+        chunks_type = struct_arr.type.field("chunks").type.value_type
+    except KeyError:
+        return False
+    return "pixel_bytes" in {field.name for field in chunks_type}
 
 
 def _plane_from_chunks_arrow(

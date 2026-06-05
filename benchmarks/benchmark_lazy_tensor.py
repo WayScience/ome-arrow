@@ -78,7 +78,7 @@ def _time_case(
     )
 
 
-def _build_parquet_fixtures(workdir: Path) -> tuple[Path, Path, Path]:
+def _build_parquet_fixtures(workdir: Path) -> tuple[Path, Path, Path, Path]:
     """Create small planes/chunks parquet fixtures for local benchmarking."""
     arr = np.arange(1 * 2 * 3 * 256 * 256, dtype=np.uint16).reshape(1, 2, 3, 256, 256)
 
@@ -92,9 +92,16 @@ def _build_parquet_fixtures(workdir: Path) -> tuple[Path, Path, Path]:
 
     planes_path = workdir / "bench_planes.ome.parquet"
     chunks_path = workdir / "bench_chunks.ome.parquet"
+    inline_bytes_path = workdir / "bench_inline_bytes.ome.parquet"
     typed_dataset_path = workdir / "bench_typed_dataset"
     to_ome_parquet(planes_scalar, out_path=str(planes_path), column_name="ome_arrow")
     to_ome_parquet(chunks_scalar, out_path=str(chunks_path), column_name="ome_arrow")
+    to_ome_parquet(
+        chunks_scalar,
+        out_path=str(inline_bytes_path),
+        column_name="ome_arrow",
+        inline_chunk_encoding="bytes",
+    )
     write_ome_arrow_dataset(
         [arr],
         typed_dataset_path,
@@ -102,7 +109,7 @@ def _build_parquet_fixtures(workdir: Path) -> tuple[Path, Path, Path]:
         chunk_shape=(1, 1, 1, 64, 64),
         compression="zstd",
     )
-    return planes_path, chunks_path, typed_dataset_path
+    return planes_path, chunks_path, inline_bytes_path, typed_dataset_path
 
 
 def _print_results(results: list[BenchmarkResult]) -> None:
@@ -270,7 +277,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory(prefix="ome_arrow_lazy_bench_") as tmp:
         tmpdir = Path(tmp)
-        planes_path, chunks_path, typed_dataset_path = _build_parquet_fixtures(tmpdir)
+        planes_path, chunks_path, inline_bytes_path, typed_dataset_path = (
+            _build_parquet_fixtures(tmpdir)
+        )
         typed_dataset = OMEArrowDataset(typed_dataset_path)
         typed_image_id = typed_dataset.images["image_id"].to_pylist()[0]
 
@@ -303,6 +312,14 @@ def main() -> None:
                     "scan+parquet(chunks) -> tensor_view(YX)",
                     lambda: (
                         OMEArrow.scan(str(chunks_path))
+                        .tensor_view(t=0, z=1, c=1, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
+                ),
+                (
+                    "scan+parquet(inline-bytes) -> tensor_view(YX)",
+                    lambda: (
+                        OMEArrow.scan(str(inline_bytes_path))
                         .tensor_view(t=0, z=1, c=1, layout="YX")
                         .to_numpy(contiguous=True)
                     ),

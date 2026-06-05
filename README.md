@@ -120,6 +120,35 @@ Advanced options:
 
 See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
+## Inline byte-backed OME values
+
+The historical nested table stores pixel payloads as numeric lists inside
+`chunks[].pixels` and `planes[].pixels`. For faster one-row-per-image Parquet
+tables, write inline chunk bytes instead:
+
+```python
+from ome_arrow import from_numpy, to_ome_parquet
+
+record = from_numpy(arr, dim_order="TCZYX", chunk_encoding="bytes")
+to_ome_parquet(record, "image.ome.parquet", column_name="ome_arrow")
+```
+
+You can also convert an existing OME-Arrow record at write time:
+
+```python
+to_ome_parquet(
+    record,
+    "image.ome.parquet",
+    column_name="ome_arrow",
+    inline_chunk_encoding="bytes",
+)
+```
+
+This keeps the ergonomic inline OME value while storing chunk payloads as typed
+`pixel_bytes: large_binary`. Use it for moderate image-level tables and
+whole-image reads. For large 3D/5D selective reads, prefer the typed chunk
+dataset API below.
+
 ## Typed chunk datasets
 
 `OMEArrow.export(how="ome-parquet")` writes the typed byte-buffer dataset layout.

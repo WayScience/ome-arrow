@@ -8,7 +8,7 @@ import re
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple
 
 import bioio_ome_tiff
 import bioio_tifffile
@@ -18,7 +18,13 @@ import pyarrow.parquet as pq
 from bioio import BioImage
 from bioio_ome_zarr import Reader as OMEZarrReader
 
-from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
+from ome_arrow.meta import (
+    OME_ARROW_BYTE_STRUCT,
+    OME_ARROW_KNOWN_STRUCTS,
+    OME_ARROW_STRUCT,
+    OME_ARROW_TAG_TYPE,
+    OME_ARROW_TAG_VERSION,
+)
 
 
 def _ome_arrow_from_table(
@@ -64,11 +70,11 @@ def _ome_arrow_from_table(
         arr = table[column_name]
         if not pa.types.is_struct(arr.type):
             raise ValueError(f"Column '{column_name}' is not a Struct; got {arr.type}.")
-        if strict_schema and arr.type != OME_ARROW_STRUCT:
+        if strict_schema and arr.type not in OME_ARROW_KNOWN_STRUCTS:
             raise ValueError(
-                f"Column '{column_name}' schema != OME_ARROW_STRUCT.\n"
+                f"Column '{column_name}' schema is not a known OME-Arrow struct.\n"
                 f"Got:   {arr.type}\n"
-                f"Expect:{OME_ARROW_STRUCT}"
+                f"Expect:{OME_ARROW_STRUCT} or {OME_ARROW_BYTE_STRUCT}"
             )
         if not strict_schema and not _struct_matches_ome_fields(arr.type):
             raise ValueError(
@@ -80,7 +86,7 @@ def _ome_arrow_from_table(
         for name in table.column_names:
             arr = table[name]
             if pa.types.is_struct(arr.type):
-                if strict_schema and arr.type == OME_ARROW_STRUCT:
+                if strict_schema and arr.type in OME_ARROW_KNOWN_STRUCTS:
                     candidate_col = arr
                     autodetected_name = name
                     column_name = name
@@ -115,7 +121,7 @@ def _ome_arrow_from_table(
             struct_array = struct_array.combine_chunks()
 
     # 3) Construct a typed StructScalar (preserve zero-copy when possible).
-    if strict_schema or candidate_col.type == OME_ARROW_STRUCT:
+    if strict_schema or candidate_col.type in OME_ARROW_KNOWN_STRUCTS:
         scalar = struct_array[0]
     else:
         warnings.warn(
@@ -399,6 +405,7 @@ def _build_chunks_from_planes(
     size_x: int,
     chunk_shape: Optional[Tuple[int, int, int]],
     chunk_order: str = "ZYX",
+    chunk_encoding: Literal["list", "bytes"] = "list",
 ) -> List[Dict[str, Any]]:
     """Build chunked pixels from a list of flattened planes.
 
@@ -413,13 +420,16 @@ def _build_chunks_from_planes(
         chunk_order: Flattening order for chunk pixels (default "ZYX").
 
     Returns:
-        List[Dict[str, Any]]: Chunk list with pixels stored as flat lists.
+        List[Dict[str, Any]]: Chunk list with pixels stored as flat lists or
+            typed byte buffers.
 
     Raises:
         ValueError: If an unsupported chunk_order is requested.
     """
     if str(chunk_order).upper() != "ZYX":
         raise ValueError("Only chunk_order='ZYX' is supported for now.")
+    if chunk_encoding not in {"list", "bytes"}:
+        raise ValueError("chunk_encoding must be either 'list' or 'bytes'")
 
     cz, cy, cx = _normalize_chunk_shape(chunk_shape, size_z, size_y, size_x)
 
@@ -449,19 +459,27 @@ def _build_chunks_from_planes(
                             if plane is None:
                                 continue
                             slab[zi] = plane[y0 : y0 + sy, x0 : x0 + sx]
-                        chunks.append(
-                            {
-                                "t": t,
-                                "c": c,
-                                "z": z0,
-                                "y": y0,
-                                "x": x0,
-                                "shape_z": sz,
-                                "shape_y": sy,
-                                "shape_x": sx,
-                                "pixels": slab.reshape(-1),
-                            }
-                        )
+                        row = {
+                            "t": t,
+                            "c": c,
+                            "z": z0,
+                            "y": y0,
+                            "x": x0,
+                            "shape_z": sz,
+                            "shape_y": sy,
+                            "shape_x": sx,
+                        }
+                        if chunk_encoding == "bytes":
+                            slab = np.ascontiguousarray(slab)
+                            row.update(
+                                {
+                                    "dtype": np.dtype(slab.dtype).name,
+                                    "pixel_bytes": slab.tobytes(order="C"),
+                                }
+                            )
+                        else:
+                            row["pixels"] = slab.reshape(-1)
+                        chunks.append(row)
     return chunks
 
 
@@ -488,6 +506,7 @@ def to_ome_arrow(
     chunks: Optional[List[Dict[str, Any]]] = None,
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),  # (Z, Y, X)
     chunk_order: str = "ZYX",
+    chunk_encoding: Literal["list", "bytes"] = "list",
     build_chunks: bool = True,
     masks: Any = None,
 ) -> pa.StructScalar:
@@ -518,6 +537,8 @@ def to_ome_arrow(
             chunks are derived from planes using chunk_shape.
         chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
         chunk_order: Flattening order for chunk pixels (default "ZYX").
+        chunk_encoding: ``"list"`` stores historical numeric pixel lists.
+            ``"bytes"`` stores compact typed chunk byte buffers.
         build_chunks: If True, build chunked pixels from planes when chunks
             is None.
         masks: Optional placeholder for future annotations.
@@ -572,6 +593,11 @@ def to_ome_arrow(
             }
         ]
 
+    if chunk_encoding not in {"list", "bytes"}:
+        raise ValueError("chunk_encoding must be either 'list' or 'bytes'")
+    if chunks is not None and chunks and "pixel_bytes" in chunks[0]:
+        chunk_encoding = "bytes"
+
     if chunks is None and build_chunks:
         chunks = _build_chunks_from_planes(
             planes=planes,
@@ -582,7 +608,10 @@ def to_ome_arrow(
             size_x=size_x,
             chunk_shape=chunk_shape,
             chunk_order=chunk_order,
+            chunk_encoding=chunk_encoding,
         )
+    if chunk_encoding == "bytes" and chunks:
+        planes = []
 
     chunk_grid = None
     if chunks is not None:
@@ -651,7 +680,8 @@ def to_ome_arrow(
         "masks": masks,
     }
 
-    return pa.scalar(record, type=OME_ARROW_STRUCT)
+    schema = OME_ARROW_BYTE_STRUCT if chunk_encoding == "bytes" else OME_ARROW_STRUCT
+    return pa.scalar(record, type=schema)
 
 
 def from_numpy(
@@ -666,6 +696,7 @@ def from_numpy(
     clamp_to_uint16: bool = True,
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
     chunk_order: str = "ZYX",
+    chunk_encoding: Literal["list", "bytes"] = "list",
     build_chunks: bool = True,
     # meta
     physical_size_x: float = 1.0,
@@ -691,6 +722,8 @@ def from_numpy(
         clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
         chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
         chunk_order: Flattening order for chunk pixels (default "ZYX").
+        chunk_encoding: ``"list"`` stores historical numeric pixel lists.
+            ``"bytes"`` stores compact typed chunk byte buffers.
         build_chunks: If True, build chunked pixels from planes.
         physical_size_x: Spatial pixel size (µm) for X.
         physical_size_y: Spatial pixel size (µm) for Y.
@@ -812,6 +845,7 @@ def from_numpy(
         planes=planes,
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
+        chunk_encoding=chunk_encoding,
         build_chunks=build_chunks,
         masks=None,
     )
@@ -857,6 +891,7 @@ def _from_array_via_numpy(
     clamp_to_uint16: bool,
     chunk_shape: Optional[Tuple[int, int, int]],
     chunk_order: str,
+    chunk_encoding: Literal["list", "bytes"],
     build_chunks: bool,
     physical_size_x: float,
     physical_size_y: float,
@@ -881,6 +916,7 @@ def _from_array_via_numpy(
         clamp_to_uint16=clamp_to_uint16,
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
+        chunk_encoding=chunk_encoding,
         build_chunks=build_chunks,
         physical_size_x=physical_size_x,
         physical_size_y=physical_size_y,
@@ -902,6 +938,7 @@ def from_torch_array(
     clamp_to_uint16: bool = True,
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
     chunk_order: str = "ZYX",
+    chunk_encoding: Literal["list", "bytes"] = "list",
     build_chunks: bool = True,
     # meta
     physical_size_x: float = 1.0,
@@ -932,6 +969,8 @@ def from_torch_array(
         clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
         chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
         chunk_order: Flattening order for chunk pixels (default "ZYX").
+        chunk_encoding: ``"list"`` stores historical numeric pixel lists.
+            ``"bytes"`` stores compact typed chunk byte buffers.
         build_chunks: If True, build chunked pixels from planes.
         physical_size_x: Spatial pixel size (µm) for X.
         physical_size_y: Spatial pixel size (µm) for Y.
@@ -977,6 +1016,7 @@ def from_torch_array(
         clamp_to_uint16=clamp_to_uint16,
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
+        chunk_encoding=chunk_encoding,
         build_chunks=build_chunks,
         physical_size_x=physical_size_x,
         physical_size_y=physical_size_y,
@@ -998,6 +1038,7 @@ def from_jax_array(
     clamp_to_uint16: bool = True,
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
     chunk_order: str = "ZYX",
+    chunk_encoding: Literal["list", "bytes"] = "list",
     build_chunks: bool = True,
     # meta
     physical_size_x: float = 1.0,
@@ -1027,6 +1068,8 @@ def from_jax_array(
         clamp_to_uint16: If True, clamp/cast planes to uint16 before serialization.
         chunk_shape: Chunk shape as (Z, Y, X). Defaults to (1, 512, 512).
         chunk_order: Flattening order for chunk pixels (default "ZYX").
+        chunk_encoding: ``"list"`` stores historical numeric pixel lists.
+            ``"bytes"`` stores compact typed chunk byte buffers.
         build_chunks: If True, build chunked pixels from planes.
         physical_size_x: Spatial pixel size (µm) for X.
         physical_size_y: Spatial pixel size (µm) for Y.
@@ -1060,6 +1103,7 @@ def from_jax_array(
         clamp_to_uint16=clamp_to_uint16,
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
+        chunk_encoding=chunk_encoding,
         build_chunks=build_chunks,
         physical_size_x=physical_size_x,
         physical_size_y=physical_size_y,
