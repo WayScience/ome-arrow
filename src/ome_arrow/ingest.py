@@ -406,6 +406,8 @@ def _build_chunks_from_planes(
     chunk_shape: Optional[Tuple[int, int, int]],
     chunk_order: str = "ZYX",
     chunk_encoding: Literal["list", "bytes"] = "list",
+    chunk_compression: str | None = None,
+    chunk_compression_level: int | None = None,
 ) -> List[Dict[str, Any]]:
     """Build chunked pixels from a list of flattened planes.
 
@@ -418,6 +420,9 @@ def _build_chunks_from_planes(
         size_x: Total X size of the image.
         chunk_shape: Desired chunk shape as (Z, Y, X).
         chunk_order: Flattening order for chunk pixels (default "ZYX").
+        chunk_encoding: Pixel payload representation.
+        chunk_compression: Optional leaf-level compression for byte chunks.
+        chunk_compression_level: Optional codec compression level.
 
     Returns:
         List[Dict[str, Any]]: Chunk list with pixels stored as flat lists or
@@ -430,6 +435,7 @@ def _build_chunks_from_planes(
         raise ValueError("Only chunk_order='ZYX' is supported for now.")
     if chunk_encoding not in {"list", "bytes"}:
         raise ValueError("chunk_encoding must be either 'list' or 'bytes'")
+    chunk_compression = _normalize_chunk_compression(chunk_compression)
 
     cz, cy, cx = _normalize_chunk_shape(chunk_shape, size_z, size_y, size_x)
 
@@ -471,16 +477,70 @@ def _build_chunks_from_planes(
                         }
                         if chunk_encoding == "bytes":
                             slab = np.ascontiguousarray(slab)
+                            payload = slab.tobytes(order="C")
+                            stored_compression, payload = _encode_chunk_payload(
+                                payload,
+                                compression=chunk_compression,
+                                compression_level=chunk_compression_level,
+                            )
                             row.update(
                                 {
                                     "dtype": np.dtype(slab.dtype).name,
-                                    "pixel_bytes": slab.tobytes(order="C"),
+                                    "compression": stored_compression,
+                                    "pixel_bytes": payload,
                                 }
                             )
                         else:
                             row["pixels"] = slab.reshape(-1)
                         chunks.append(row)
     return chunks
+
+
+def _normalize_chunk_compression(compression: str | None) -> str | None:
+    """Normalize optional leaf-level chunk compression names."""
+    if compression is None:
+        return None
+    value = str(compression).strip().lower()
+    if value in {"", "none", "null", "false"}:
+        return None
+    if value in {"auto", "balanced", "fast", "small"}:
+        return value
+    try:
+        pa.Codec(value)
+    except Exception as exc:
+        raise ValueError(f"Unsupported chunk_compression: {compression!r}") from exc
+    return value
+
+
+def _encode_chunk_payload(
+    payload: bytes,
+    *,
+    compression: str | None,
+    compression_level: int | None,
+) -> tuple[str | None, bytes]:
+    """Compress a chunk payload when requested and worthwhile."""
+    if compression is None:
+        return None, payload
+
+    codec_name = compression
+    level = compression_level
+    if compression in {"auto", "balanced", "small"}:
+        codec_name = "zstd"
+        level = 1 if level is None else level
+    elif compression == "fast":
+        codec_name = "lz4"
+
+    codec = (
+        pa.Codec(codec_name)
+        if level is None
+        else pa.Codec(codec_name, compression_level=level)
+    )
+    compressed = bytes(codec.compress(payload))
+    if compression in {"auto", "balanced", "fast", "small"} and len(compressed) >= len(
+        payload
+    ):
+        return None, payload
+    return codec_name, compressed
 
 
 def to_ome_arrow(
@@ -507,6 +567,8 @@ def to_ome_arrow(
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),  # (Z, Y, X)
     chunk_order: str = "ZYX",
     chunk_encoding: Literal["list", "bytes"] = "list",
+    chunk_compression: str | None = None,
+    chunk_compression_level: int | None = None,
     build_chunks: bool = True,
     masks: Any = None,
 ) -> pa.StructScalar:
@@ -539,6 +601,9 @@ def to_ome_arrow(
         chunk_order: Flattening order for chunk pixels (default "ZYX").
         chunk_encoding: ``"list"`` stores historical numeric pixel lists.
             ``"bytes"`` stores compact typed chunk byte buffers.
+        chunk_compression: Optional leaf-level compression for byte chunks,
+            such as ``"zstd"`` or ``"lz4"``.
+        chunk_compression_level: Optional codec compression level.
         build_chunks: If True, build chunked pixels from planes when chunks
             is None.
         masks: Optional placeholder for future annotations.
@@ -609,6 +674,8 @@ def to_ome_arrow(
             chunk_shape=chunk_shape,
             chunk_order=chunk_order,
             chunk_encoding=chunk_encoding,
+            chunk_compression=chunk_compression,
+            chunk_compression_level=chunk_compression_level,
         )
     if chunk_encoding == "bytes" and chunks:
         planes = []
@@ -697,6 +764,8 @@ def from_numpy(
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
     chunk_order: str = "ZYX",
     chunk_encoding: Literal["list", "bytes"] = "list",
+    chunk_compression: str | None = None,
+    chunk_compression_level: int | None = None,
     build_chunks: bool = True,
     # meta
     physical_size_x: float = 1.0,
@@ -724,6 +793,9 @@ def from_numpy(
         chunk_order: Flattening order for chunk pixels (default "ZYX").
         chunk_encoding: ``"list"`` stores historical numeric pixel lists.
             ``"bytes"`` stores compact typed chunk byte buffers.
+        chunk_compression: Optional leaf-level compression for byte chunks,
+            such as ``"zstd"`` or ``"lz4"``.
+        chunk_compression_level: Optional codec compression level.
         build_chunks: If True, build chunked pixels from planes.
         physical_size_x: Spatial pixel size (µm) for X.
         physical_size_y: Spatial pixel size (µm) for Y.
@@ -846,6 +918,8 @@ def from_numpy(
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
         chunk_encoding=chunk_encoding,
+        chunk_compression=chunk_compression,
+        chunk_compression_level=chunk_compression_level,
         build_chunks=build_chunks,
         masks=None,
     )
@@ -892,6 +966,8 @@ def _from_array_via_numpy(
     chunk_shape: Optional[Tuple[int, int, int]],
     chunk_order: str,
     chunk_encoding: Literal["list", "bytes"],
+    chunk_compression: str | None,
+    chunk_compression_level: int | None,
     build_chunks: bool,
     physical_size_x: float,
     physical_size_y: float,
@@ -917,6 +993,8 @@ def _from_array_via_numpy(
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
         chunk_encoding=chunk_encoding,
+        chunk_compression=chunk_compression,
+        chunk_compression_level=chunk_compression_level,
         build_chunks=build_chunks,
         physical_size_x=physical_size_x,
         physical_size_y=physical_size_y,
@@ -939,6 +1017,8 @@ def from_torch_array(
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
     chunk_order: str = "ZYX",
     chunk_encoding: Literal["list", "bytes"] = "list",
+    chunk_compression: str | None = None,
+    chunk_compression_level: int | None = None,
     build_chunks: bool = True,
     # meta
     physical_size_x: float = 1.0,
@@ -971,6 +1051,9 @@ def from_torch_array(
         chunk_order: Flattening order for chunk pixels (default "ZYX").
         chunk_encoding: ``"list"`` stores historical numeric pixel lists.
             ``"bytes"`` stores compact typed chunk byte buffers.
+        chunk_compression: Optional leaf-level compression for byte chunks,
+            such as ``"zstd"`` or ``"lz4"``.
+        chunk_compression_level: Optional codec compression level.
         build_chunks: If True, build chunked pixels from planes.
         physical_size_x: Spatial pixel size (µm) for X.
         physical_size_y: Spatial pixel size (µm) for Y.
@@ -1017,6 +1100,8 @@ def from_torch_array(
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
         chunk_encoding=chunk_encoding,
+        chunk_compression=chunk_compression,
+        chunk_compression_level=chunk_compression_level,
         build_chunks=build_chunks,
         physical_size_x=physical_size_x,
         physical_size_y=physical_size_y,
@@ -1039,6 +1124,8 @@ def from_jax_array(
     chunk_shape: Optional[Tuple[int, int, int]] = (1, 512, 512),
     chunk_order: str = "ZYX",
     chunk_encoding: Literal["list", "bytes"] = "list",
+    chunk_compression: str | None = None,
+    chunk_compression_level: int | None = None,
     build_chunks: bool = True,
     # meta
     physical_size_x: float = 1.0,
@@ -1070,6 +1157,9 @@ def from_jax_array(
         chunk_order: Flattening order for chunk pixels (default "ZYX").
         chunk_encoding: ``"list"`` stores historical numeric pixel lists.
             ``"bytes"`` stores compact typed chunk byte buffers.
+        chunk_compression: Optional leaf-level compression for byte chunks,
+            such as ``"zstd"`` or ``"lz4"``.
+        chunk_compression_level: Optional codec compression level.
         build_chunks: If True, build chunked pixels from planes.
         physical_size_x: Spatial pixel size (µm) for X.
         physical_size_y: Spatial pixel size (µm) for Y.
@@ -1104,6 +1194,8 @@ def from_jax_array(
         chunk_shape=chunk_shape,
         chunk_order=chunk_order,
         chunk_encoding=chunk_encoding,
+        chunk_compression=chunk_compression,
+        chunk_compression_level=chunk_compression_level,
         build_chunks=build_chunks,
         physical_size_x=physical_size_x,
         physical_size_y=physical_size_y,

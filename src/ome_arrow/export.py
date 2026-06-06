@@ -27,7 +27,14 @@ def _chunk_payload_array(
     """Return one chunk payload as a one-dimensional NumPy array."""
     if chunk.get("pixel_bytes") is not None:
         source_dtype = np.dtype(chunk.get("dtype") or fallback_dtype)
-        payload = np.frombuffer(chunk["pixel_bytes"], dtype=source_dtype)
+        payload_bytes = chunk["pixel_bytes"]
+        compression = chunk.get("compression")
+        if compression and str(compression).strip().lower() not in {"none", ""}:
+            payload_bytes = pa.Codec(str(compression)).decompress(
+                payload_bytes,
+                expected_len * source_dtype.itemsize,
+            )
+        payload = np.frombuffer(payload_bytes, dtype=source_dtype)
     else:
         pix = chunk.get("pixels")
         try:
@@ -639,6 +646,61 @@ def _chunk_shape_from_grid(grid: Dict[str, Any] | None) -> Tuple[int, int, int] 
         return None
 
 
+def _byte_record_from_numeric_chunks(
+    record: Dict[str, Any],
+    *,
+    compression: str | None,
+    compression_level: int | None,
+) -> Dict[str, Any] | None:
+    """Convert existing numeric chunks to byte chunks without densifying."""
+    chunks = record.get("chunks") or []
+    if not chunks or any("pixels" not in chunk for chunk in chunks):
+        return None
+
+    from ome_arrow.ingest import _encode_chunk_payload, _normalize_chunk_compression
+
+    requested_compression = _normalize_chunk_compression(compression)
+    dtype = np.dtype(record["pixels_meta"]["type"])
+    byte_chunks = []
+    for i, chunk in enumerate(chunks):
+        shape_z = int(chunk["shape_z"])
+        shape_y = int(chunk["shape_y"])
+        shape_x = int(chunk["shape_x"])
+        expected_len = shape_z * shape_y * shape_x
+        pixels = np.asarray(chunk["pixels"], dtype=dtype)
+        if pixels.size != expected_len:
+            raise ValueError(
+                f"chunks[{i}].pixels length {pixels.size} != expected {expected_len}"
+            )
+        payload = np.ascontiguousarray(pixels.reshape(-1)).tobytes(order="C")
+        stored_compression, payload = _encode_chunk_payload(
+            payload,
+            compression=requested_compression,
+            compression_level=compression_level,
+        )
+        byte_chunks.append(
+            {
+                "t": int(chunk["t"]),
+                "c": int(chunk["c"]),
+                "z": int(chunk["z"]),
+                "y": int(chunk["y"]),
+                "x": int(chunk["x"]),
+                "shape_z": shape_z,
+                "shape_y": shape_y,
+                "shape_x": shape_x,
+                "dtype": dtype.name,
+                "compression": stored_compression,
+                "pixel_bytes": payload,
+            }
+        )
+
+    return {
+        **record,
+        "chunks": byte_chunks,
+        "planes": [],
+    }
+
+
 def to_ome_parquet(
     data: Dict[str, Any] | pa.StructScalar,
     out_path: str,
@@ -647,6 +709,8 @@ def to_ome_parquet(
     compression: Optional[str] = "zstd",
     row_group_size: Optional[int] = None,
     inline_chunk_encoding: Literal["existing", "list", "bytes"] = "existing",
+    inline_chunk_compression: str | None = None,
+    inline_chunk_compression_level: int | None = None,
 ) -> None:
     """
     Export an OME-Arrow record to a Parquet file as a single-row, single-column table.
@@ -669,27 +733,42 @@ def to_ome_parquet(
     if inline_chunk_encoding == "bytes" and schema != OME_ARROW_BYTE_STRUCT:
         from ome_arrow.ingest import from_numpy
 
-        arr = to_numpy(record_dict, dtype=np.dtype(record_dict["pixels_meta"]["type"]))
-        byte_scalar = from_numpy(
-            arr,
-            dim_order="TCZYX",
-            image_id=record_dict.get("id"),
-            name=record_dict.get("name"),
-            image_type=record_dict.get("image_type"),
-            acquisition_datetime=record_dict.get("acquisition_datetime"),
-            clamp_to_uint16=False,
-            chunk_shape=_chunk_shape_from_grid(record_dict.get("chunk_grid")),
-            chunk_encoding="bytes",
-            build_chunks=True,
-            physical_size_x=record_dict["pixels_meta"].get("physical_size_x") or 1.0,
-            physical_size_y=record_dict["pixels_meta"].get("physical_size_y") or 1.0,
-            physical_size_z=record_dict["pixels_meta"].get("physical_size_z") or 1.0,
-            physical_size_unit=(
-                record_dict["pixels_meta"].get("physical_size_x_unit") or "µm"
-            ),
-            dtype_meta=record_dict["pixels_meta"]["type"],
+        direct_record = _byte_record_from_numeric_chunks(
+            record_dict,
+            compression=inline_chunk_compression,
+            compression_level=inline_chunk_compression_level,
         )
-        record_dict = byte_scalar.as_py()
+        if direct_record is None:
+            arr = to_numpy(
+                record_dict, dtype=np.dtype(record_dict["pixels_meta"]["type"])
+            )
+            byte_scalar = from_numpy(
+                arr,
+                dim_order="TCZYX",
+                image_id=record_dict.get("id"),
+                name=record_dict.get("name"),
+                image_type=record_dict.get("image_type"),
+                acquisition_datetime=record_dict.get("acquisition_datetime"),
+                clamp_to_uint16=False,
+                chunk_shape=_chunk_shape_from_grid(record_dict.get("chunk_grid")),
+                chunk_encoding="bytes",
+                chunk_compression=inline_chunk_compression,
+                chunk_compression_level=inline_chunk_compression_level,
+                build_chunks=True,
+                physical_size_x=record_dict["pixels_meta"].get("physical_size_x")
+                or 1.0,
+                physical_size_y=record_dict["pixels_meta"].get("physical_size_y")
+                or 1.0,
+                physical_size_z=record_dict["pixels_meta"].get("physical_size_z")
+                or 1.0,
+                physical_size_unit=(
+                    record_dict["pixels_meta"].get("physical_size_x_unit") or "µm"
+                ),
+                dtype_meta=record_dict["pixels_meta"]["type"],
+            )
+            record_dict = byte_scalar.as_py()
+        else:
+            record_dict = direct_record
         schema = OME_ARROW_BYTE_STRUCT
     elif inline_chunk_encoding == "list":
         record_dict = {f.name: record_dict.get(f.name) for f in OME_ARROW_STRUCT}

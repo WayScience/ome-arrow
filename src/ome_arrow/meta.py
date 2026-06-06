@@ -150,6 +150,7 @@ OME_ARROW_BYTE_STRUCT: pa.StructType = pa.struct(
                             pa.field("shape_y", pa.int32()),
                             pa.field("shape_x", pa.int32()),
                             pa.field("dtype", pa.string()),
+                            pa.field("compression", pa.string()),
                             pa.field("pixel_bytes", pa.large_binary()),
                         ]
                     )

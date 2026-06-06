@@ -149,6 +149,37 @@ This keeps the ergonomic inline OME value while storing chunk payloads as typed
 whole-image reads. For large 3D/5D selective reads, prefer the typed chunk
 dataset API below.
 
+Leaf-level chunk compression is also available for inline byte chunks:
+
+```python
+record = from_numpy(
+    arr,
+    dim_order="TCZYX",
+    chunk_encoding="bytes",
+    chunk_compression="auto",
+)
+
+to_ome_parquet(
+    record,
+    "image.ome.parquet",
+    column_name="ome_arrow",
+    compression="zstd",
+)
+```
+
+Compression guidance from `benchmarks/benchmark_inline_byte_compression.py`:
+
+| Data/workload                               | Suggested setting                                                                   | Why                                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| General inline-byte tables                  | `chunk_compression="auto"` and Parquet `compression="zstd"`                         | Compresses chunks only when they shrink, then lets Parquet compress metadata. |
+| Faster reads on compressible images         | `chunk_compression="fast"` with Parquet `compression=None`                          | Uses LZ4 only when chunks shrink, keeping decode overhead low.                |
+| Best storage on compressible 3D/volume data | `chunk_compression="small"` plus Parquet `compression="zstd"`                       | Uses Zstd level 1 only when chunks shrink, then applies Parquet compression.  |
+| Noisy/high-entropy images                   | `chunk_compression="auto"` or no leaf compression; use Parquet `compression="zstd"` | Auto skips chunks that would grow; noisy data often does not compress.        |
+
+Explicit codecs such as `chunk_compression="zstd"` with
+`chunk_compression_level=1` and `chunk_compression="lz4"` are also supported
+when you want fixed behavior instead of a preset.
+
 ## Typed chunk datasets
 
 `OMEArrow.export(how="ome-parquet")` writes the typed byte-buffer dataset layout.
