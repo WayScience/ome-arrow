@@ -122,9 +122,8 @@ See full docs: [`docs/src/dlpack.md`](docs/src/dlpack.md)
 
 ## Inline byte-backed OME values
 
-The historical nested table stores pixel payloads as numeric lists inside
-`chunks[].pixels` and `planes[].pixels`. For faster one-row-per-image Parquet
-tables, write inline chunk bytes instead:
+The historical nested table stores pixel payloads as numeric lists inside `chunks[].pixels` and `planes[].pixels`.
+For faster one-row-per-image Parquet tables, write inline chunk bytes instead:
 
 ```python
 from ome_arrow import from_numpy, to_ome_parquet
@@ -144,10 +143,9 @@ to_ome_parquet(
 )
 ```
 
-This keeps the ergonomic inline OME value while storing chunk payloads as typed
-`pixel_bytes: large_binary`. Use it for moderate image-level tables and
-whole-image reads. For large 3D/5D selective reads, prefer the typed chunk
-dataset API below.
+This keeps the ergonomic inline OME value while storing chunk payloads as typed `pixel_bytes: large_binary`.
+Use it for moderate image-level tables and whole-image reads.
+For large 3D/5D selective reads, prefer the typed chunk dataset API below.
 
 Leaf-level chunk compression is also available for inline byte chunks:
 
@@ -176,11 +174,13 @@ Compression guidance from `benchmarks/benchmark_inline_byte_compression.py`:
 | Best storage on compressible 3D/volume data | `chunk_compression="small"` plus Parquet `compression="zstd"`                       | Uses Zstd level 1 only when chunks shrink, then applies Parquet compression.  |
 | Noisy/high-entropy images                   | `chunk_compression="auto"` or no leaf compression; use Parquet `compression="zstd"` | Auto skips chunks that would grow; noisy data often does not compress.        |
 
-Explicit codecs such as `chunk_compression="zstd"` with
-`chunk_compression_level=1` and `chunk_compression="lz4"` are also supported
-when you want fixed behavior instead of a preset.
+Explicit codecs such as `chunk_compression="zstd"` with `chunk_compression_level=1` and `chunk_compression="lz4"` are also supported when you want fixed behavior instead of a preset.
 
 ## Typed chunk datasets
+
+Typed chunk datasets are the optimized pixel IO path for OME-Arrow.
+Their goal is to keep image metadata small and queryable while storing pixels as typed byte chunks that can be read directly by image, plane, channel, region, or volume.
+Use this layout when performance matters for selective reads, larger 3D/5D images, or data engineering workflows that need predictable chunk indexing.
 
 `OMEArrow.export(how="ome-parquet")` writes the typed byte-buffer dataset layout.
 For explicit control over layout and chunks, use the dataset writer directly.
@@ -215,14 +215,12 @@ plane_torch = dataset.read_plane(t=0, c=0, z=0, return_type="torch")
 plane_jax = dataset.read_plane(t=0, c=0, z=0, return_type="jax")
 ```
 
-Use `chunk_rows_per_row_group=1` for the fastest direct chunk reads. Use a
-larger value, such as `8`, to reduce row-group overhead for small chunks when
-storage size matters.
+Use `chunk_rows_per_row_group=1` for the fastest direct chunk reads.
+Use a larger value, such as `8`, to reduce row-group overhead for small chunks when storage size matters.
 
-The writer preserves source pixel dtype by default. To normalize stored pixel
-buffers explicitly, pass `pixel_dtype`, for example `pixel_dtype="uint16"`.
-Integer casts clamp by default; pass `clamp=False` to use NumPy casting
-behavior directly.
+The writer preserves source pixel dtype by default.
+To normalize stored pixel buffers explicitly, pass `pixel_dtype`, for example `pixel_dtype="uint16"`.
+Integer casts clamp by default; pass `clamp=False` to use NumPy casting behavior directly.
 
 ## Tensor ingest (PyTorch/JAX)
 
@@ -260,8 +258,7 @@ scalar_jax = from_jax_array(jax_array, dim_order="TCYX")
 Notes:
 
 - Torch/JAX support is optional.
-- Install extras as needed:
-  `pip install "ome-arrow[dlpack-torch]"` or `pip install "ome-arrow[dlpack-jax]"`.
+- Install extras as needed: `pip install "ome-arrow[dlpack-torch]"` or `pip install "ome-arrow[dlpack-jax]"`.
 - Torch tensors are detached and converted on CPU for ingest.
 - `dim_order` is accepted only for NumPy/torch/JAX array inputs.
 - Ingest now passes flattened NumPy pixel buffers directly to Arrow.
@@ -269,23 +266,39 @@ Notes:
 
 ## Benchmarking lazy reads
 
-Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor
-read paths (TIFF source-backed, Parquet planes, Parquet chunks):
+Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks):
 
 ```bash
 uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
 ```
 
-For OME-IRIS-style 2D/3D/4D/5D access patterns, run:
+For OME-IRIS-style 2D/3D/4D/5D access patterns, use `benchmark_ome_iris.py`.
+This benchmark is intended to answer practical questions about pixel IO: how fast each format writes a matched artifact, how fast it reads full images or volumes, and how fast it serves selective access patterns such as planes, crops, subvolumes, timepoints, and channels.
 
 ```bash
 uv run python benchmarks/benchmark_ome_iris.py --repeats 3 --warmup 1
 ```
 
-You can pass local real-data fixtures with `--fixture name=/path/to/image.tif`.
-The benchmark writes matched temporary OME-Zarr and typed OME-Arrow artifacts,
-then compares full-image, plane, crop, subvolume, timepoint, and channel reads
-where those axes are present.
+By default, the benchmark uses local test-data fixtures when available.
+You can also pass real local TIFF fixtures explicitly:
+
+```bash
+uv run python benchmarks/benchmark_ome_iris.py \
+  --fixture 2d=/path/to/plate-image.tif \
+  --fixture 3d=/path/to/volume.tif \
+  --fixture 5d=/path/to/tczyx-image.ome.tif \
+  --repeats 3 \
+  --warmup 1 \
+  --json-out benchmark-results.json
+```
+
+Each `--fixture` argument is `name=/path/to/image.tif`.
+The `name` label is used only in the output table, so choose labels that describe the dimensionality or dataset source.
+Inputs must be TIFF files; the benchmark creates temporary matched OME-Zarr and OME-Arrow artifacts for the same source image, then reports latency, returned shape, dtype, and artifact size.
+Temporary artifacts are deleted automatically after the run.
+
+Use the printed table for quick local iteration and `--json-out` when comparing runs over time or attaching results to an issue/PR.
+Prefer multiple repeats when making performance claims, because local filesystem cache, codec warmup, and Torch/JAX initialization can affect single-run timings.
 
 The OME-IRIS-style benchmark separates return/API paths:
 
@@ -294,37 +307,27 @@ The OME-IRIS-style benchmark separates return/API paths:
 - `ome-tiff-tensor-numpy`: OME-Arrow `tensor_view(...).to_numpy()` over TIFF.
 - `ome-tiff-bioio-numpy`: direct BioImage NumPy reads over TIFF.
 - `ome-arrow-src-numpy`: source-dtype typed OME-Arrow dataset NumPy reads.
-- `ome-arrow-u16-numpy`: typed OME-Arrow dataset NumPy reads normalized to
-  `uint16` for apples-to-apples comparisons with normalized paths.
-- `ome-arrow-u16-raw-numpy`: normalized `uint16` typed OME-Arrow reads with
-  uncompressed chunk bytes for local speed comparisons.
-- `ome-arrow-*-chunks`: Arrow-native raw chunk-row reads that return
-  `pixel_bytes` without decoding into NumPy.
-- `ome-tiff-tensor-torch` / `ome-tiff-tensor-jax`: OME-Arrow tensor-view
-  Torch/JAX returns over TIFF.
-- `ome-zarr-tensor-torch` / `ome-zarr-tensor-jax`: OME-Arrow tensor-view
-  Torch/JAX returns over OME-Zarr.
-- `ome-arrow-src-torch` / `ome-arrow-src-jax`: source-dtype typed OME-Arrow
-  dataset reads with `return_type="torch"` or `return_type="jax"`.
-- `ome-arrow-u16-torch` / `ome-arrow-u16-jax`: normalized `uint16` typed
-  OME-Arrow dataset reads with Torch/JAX returns.
+- `ome-arrow-u16-numpy`: typed OME-Arrow dataset NumPy reads normalized to `uint16` for apples-to-apples comparisons with normalized paths.
+- `ome-arrow-u16-raw-numpy`: normalized `uint16` typed OME-Arrow reads with uncompressed chunk bytes for local speed comparisons.
+- `ome-arrow-*-chunks`: Arrow-native raw chunk-row reads that return `pixel_bytes` without decoding into NumPy.
+- `ome-tiff-tensor-torch` / `ome-tiff-tensor-jax`: OME-Arrow tensor-view Torch/JAX returns over TIFF.
+- `ome-zarr-tensor-torch` / `ome-zarr-tensor-jax`: OME-Arrow tensor-view Torch/JAX returns over OME-Zarr.
+- `ome-arrow-src-torch` / `ome-arrow-src-jax`: source-dtype typed OME-Arrow dataset reads with `return_type="torch"` or `return_type="jax"`.
+- `ome-arrow-u16-torch` / `ome-arrow-u16-jax`: normalized `uint16` typed OME-Arrow dataset reads with Torch/JAX returns.
 
 Notes:
 
 - This benchmark is for local iteration and relative comparisons.
 - It is not part of CI pass/fail checks.
-- CI also runs this benchmark in a dedicated `benchmark_canary` job and
-  uploads `benchmark-results.json` as a workflow artifact.
+- CI also runs this benchmark in a dedicated `benchmark_canary` job and uploads `benchmark-results.json` as a workflow artifact.
 
 Recalibrating `benchmarks/ci-baseline.json`:
 
 1. Run the benchmark on `main` a few times (for example 3-5 runs):
    `uv run python benchmarks/benchmark_lazy_tensor.py --repeats 7 --warmup 2 --json-out benchmark-results.json`
 1. For each case, collect the observed `median_ms` values.
-1. Update `benchmarks/ci-baseline.json` with stable medians from those runs
-   (prefer a conservative value near the slower side, not the fastest sample).
-1. Keep CI canary tolerance (`regression_factor` + `absolute_slack_ms`) unchanged
-   unless you have repeated false positives.
+1. Update `benchmarks/ci-baseline.json` with stable medians from those runs (prefer a conservative value near the slower side, not the fastest sample).
+1. Keep CI canary tolerance (`regression_factor` + `absolute_slack_ms`) unchanged unless you have repeated false positives.
 
 ## Contributing, Development, and Testing
 
