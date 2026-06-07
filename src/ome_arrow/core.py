@@ -23,7 +23,6 @@ import pyarrow as pa
 
 from ome_arrow.export import (
     to_numpy,
-    to_ome_parquet,
     to_ome_tiff,
     to_ome_vortex,
     to_ome_zarr,
@@ -144,6 +143,7 @@ class OMEArrow:
         self.tcz = tcz
         self._data: pa.StructScalar | None = None
         self._struct_array: pa.StructArray | None = None
+        self._dataset: Any | None = None
         self._lazy_source: _LazySourceSpec | None = None
         self._lazy_slices: list[_LazySliceSpec] = []
 
@@ -176,12 +176,16 @@ class OMEArrow:
 
         # --- 2) String path/URL: OME-Zarr / OME-Parquet / OME-TIFF ---------------
         elif isinstance(data, str):
-            self.data, self._struct_array = self._load_from_string_source(
-                data,
-                column_name=column_name,
-                row_index=row_index,
-                image_type=image_type,
-            )
+            dataset = self._try_open_dataset(data)
+            if dataset is not None:
+                self._dataset = dataset
+            else:
+                self.data, self._struct_array = self._load_from_string_source(
+                    data,
+                    column_name=column_name,
+                    row_index=row_index,
+                    image_type=image_type,
+                )
 
         # --- 3) NumPy ndarray ----------------------------------------------------
         elif isinstance(data, np.ndarray):
@@ -278,6 +282,8 @@ class OMEArrow:
             RuntimeError: If the record could not be initialized.
         """
         self._ensure_materialized()
+        if self._data is None and self._dataset is not None:
+            self._data = self._dataset_to_scalar()
         if self._data is None:
             raise RuntimeError("OMEArrow data is not initialized.")
         return self._data
@@ -294,6 +300,35 @@ class OMEArrow:
         """
         self._ensure_materialized()
         return self
+
+    @staticmethod
+    def _try_open_dataset(data: str) -> Any | None:
+        """Open a typed OME-Arrow dataset path if the manifest is present."""
+        path = pathlib.Path(data.strip())
+        if not (path.exists() and path.is_dir()):
+            return None
+        if not (path / "_ome_arrow_dataset.json").exists():
+            return None
+        from ome_arrow.dataset import OMEArrowDataset
+
+        return OMEArrowDataset(path)
+
+    def _dataset_to_scalar(self) -> pa.StructScalar:
+        """Materialize a dataset-backed image into the legacy scalar shape."""
+        if self._dataset is None:
+            raise RuntimeError("OMEArrow has no dataset backing.")
+        image_id = self._dataset.image_ids[0]
+        meta = self._dataset.image_metadata(image_id)
+        arr = self._dataset.read_image(image_id)
+        return from_numpy(
+            arr,
+            dim_order="TCZYX",
+            image_id=str(image_id),
+            name=str(meta.get("name") or image_id),
+            image_type=meta.get("image_type"),
+            clamp_to_uint16=False,
+            dtype_meta=str(meta["dtype"]),
+        )
 
     @staticmethod
     def _load_from_string_source(
@@ -372,6 +407,11 @@ class OMEArrow:
         if self._lazy_source is None:
             return
         lazy_source = self._lazy_source
+        dataset = self._try_open_dataset(lazy_source.data)
+        if dataset is not None and not self._lazy_slices:
+            self._dataset = dataset
+            self._lazy_source = None
+            return
         # Intentionally do not clear `_lazy_source` / `_lazy_slices` before load.
         # If `_load_from_string_source(...)` raises, lazy state is preserved so
         # callers can inspect/retry without losing the deferred plan.
@@ -410,6 +450,8 @@ class OMEArrow:
 
     def _tensor_source(self) -> pa.StructScalar | pa.StructArray:
         self._ensure_materialized()
+        if self._dataset is not None and self._data is None:
+            return self._dataset_to_scalar()
         if self._struct_array is not None:
             return self._struct_array
         if self._data is None:
@@ -554,6 +596,18 @@ class OMEArrow:
         ValueError:
             Unknown 'how' or missing required params.
         """
+        mode = how.lower().replace("_", "-")
+
+        if self._dataset is not None and mode == "numpy":
+            arr = self._dataset.read_image()
+            dtype_obj = np.dtype(dtype)
+            if arr.dtype != dtype_obj:
+                if clamp and np.issubdtype(dtype_obj, np.integer):
+                    info = np.iinfo(dtype_obj)
+                    arr = np.clip(arr, info.min, info.max)
+                arr = arr.astype(dtype_obj, copy=False)
+            return arr
+
         self._ensure_materialized()
 
         # existing modes
@@ -563,8 +617,6 @@ class OMEArrow:
             return self.data.as_py()
         if how == "scalar":
             return self.data
-
-        mode = how.lower().replace("_", "-")
 
         # OME-TIFF via BioIO
         if mode in {"ome-tiff", "ometiff", "tiff"}:
@@ -603,12 +655,20 @@ class OMEArrow:
         if mode in {"ome-parquet", "omeparquet", "parquet"}:
             if not out:
                 raise ValueError("export(how='parquet') requires 'out' path.")
-            to_ome_parquet(
-                data=self.data,
-                out_path=out,
-                column_name=parquet_column_name,
-                compression=parquet_compression,  # default 'zstd'
-                file_metadata=parquet_metadata,
+            from ome_arrow.dataset import write_ome_arrow_dataset
+
+            # Kept for call-site compatibility with the old single-file
+            # Parquet writer; the typed dataset layout does not use a struct
+            # column name or arbitrary file-level metadata.
+            _legacy_parquet_options = (parquet_column_name, parquet_metadata)
+            write_ome_arrow_dataset(
+                [self.data],
+                out,
+                layout="auto",
+                access_pattern="balanced",
+                compression=parquet_compression,
+                pixel_dtype=dtype,
+                clamp=clamp,
             )
             return out
 
@@ -637,6 +697,19 @@ class OMEArrow:
                 - summary: human-readable text
         """
         self._ensure_materialized()
+        if self._dataset is not None and self._data is None:
+            meta = self._dataset.image_metadata(self._dataset.image_ids[0])
+            return describe_ome_arrow(
+                {
+                    "pixels_meta": {
+                        "size_t": meta["size_t"],
+                        "size_c": meta["size_c"],
+                        "size_z": meta["size_z"],
+                        "size_y": meta["size_y"],
+                        "size_x": meta["size_x"],
+                    }
+                }
+            )
         return describe_ome_arrow(self.data)
 
     def view(

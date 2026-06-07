@@ -2,10 +2,16 @@
 Tests for chunked pixel support.
 """
 
-import numpy as np
+from pathlib import Path
 
-from ome_arrow.export import plane_from_chunks, to_numpy
-from ome_arrow.ingest import to_ome_arrow
+import numpy as np
+import pyarrow.parquet as pq
+import pytest
+
+import ome_arrow.export as export_mod
+from ome_arrow import OME_ARROW_BYTE_STRUCT, OMEArrow
+from ome_arrow.export import plane_from_chunks, to_numpy, to_ome_parquet
+from ome_arrow.ingest import from_numpy, from_ome_parquet, to_ome_arrow
 
 
 def test_to_numpy_from_chunks(example_correct_data: dict) -> None:
@@ -81,3 +87,144 @@ def test_plane_from_chunks(example_correct_data: dict) -> None:
         plane,
         np.array([[100, 101, 102, 103], [110, 111, 112, 113], [120, 121, 122, 123]]),
     )
+
+
+def test_to_numpy_from_byte_chunks() -> None:
+    """Decode inline typed chunk bytes without numeric pixel lists."""
+    arr = np.arange(1 * 1 * 2 * 3 * 4, dtype=np.uint16).reshape(1, 1, 2, 3, 4)
+
+    scalar = from_numpy(
+        arr,
+        dim_order="TCZYX",
+        chunk_shape=(1, 2, 2),
+        chunk_encoding="bytes",
+    )
+    record = scalar.as_py()
+
+    assert scalar.type == OME_ARROW_BYTE_STRUCT
+    assert record["planes"] == []
+    assert "pixel_bytes" in record["chunks"][0]
+    assert "pixels" not in record["chunks"][0]
+    np.testing.assert_array_equal(to_numpy(scalar), arr)
+    np.testing.assert_array_equal(
+        plane_from_chunks(scalar, t=0, c=0, z=1), arr[0, 0, 1]
+    )
+
+
+def test_to_numpy_from_leaf_compressed_byte_chunks() -> None:
+    """Decode inline typed chunk bytes compressed at the chunk leaf."""
+    arr = np.arange(1 * 1 * 2 * 16 * 16, dtype=np.uint16).reshape(1, 1, 2, 16, 16)
+
+    scalar = from_numpy(
+        arr,
+        dim_order="TCZYX",
+        chunk_shape=(1, 8, 8),
+        chunk_encoding="bytes",
+        chunk_compression="zstd",
+        chunk_compression_level=1,
+    )
+    record = scalar.as_py()
+
+    assert record["chunks"][0]["compression"] == "zstd"
+    np.testing.assert_array_equal(to_numpy(scalar), arr)
+    np.testing.assert_array_equal(
+        plane_from_chunks(scalar, t=0, c=0, z=1), arr[0, 0, 1]
+    )
+
+
+def test_auto_leaf_compression_skips_high_entropy_chunks() -> None:
+    """Avoid storing larger compressed payloads for noisy chunks."""
+    rng = np.random.default_rng(42)
+    arr = rng.integers(0, 65535, size=(1, 1, 1, 64, 64), dtype=np.uint16)
+
+    scalar = from_numpy(
+        arr,
+        dim_order="TCZYX",
+        chunk_shape=(1, 64, 64),
+        chunk_encoding="bytes",
+        chunk_compression="auto",
+    )
+    record = scalar.as_py()
+
+    assert record["chunks"][0]["compression"] is None
+    np.testing.assert_array_equal(to_numpy(scalar), arr)
+
+
+def test_inline_byte_parquet_roundtrip_and_tensor_view(tmp_path: Path) -> None:
+    """Write/read an ergonomic inline OME value backed by typed chunk bytes."""
+    arr = np.arange(1 * 1 * 2 * 3 * 4, dtype=np.uint16).reshape(1, 1, 2, 3, 4)
+    scalar = from_numpy(arr, dim_order="TCZYX", build_chunks=True)
+    out = tmp_path / "inline-bytes.ome.parquet"
+
+    to_ome_parquet(
+        scalar,
+        str(out),
+        column_name="ome_arrow",
+        inline_chunk_encoding="bytes",
+    )
+
+    table = pq.read_table(out)
+    assert table["ome_arrow"].type == OME_ARROW_BYTE_STRUCT
+
+    roundtrip, struct_array = from_ome_parquet(
+        out,
+        column_name="ome_arrow",
+        return_array=True,
+    )
+    np.testing.assert_array_equal(to_numpy(roundtrip), arr)
+    np.testing.assert_array_equal(
+        OMEArrow(str(out)).tensor_view(layout="TCZYX").to_numpy(contiguous=True),
+        arr,
+    )
+    np.testing.assert_array_equal(
+        OMEArrow(str(out)).tensor_view(t=0, z=1, c=0, layout="YX").to_numpy(),
+        arr[0, 0, 1],
+    )
+    assert struct_array.type == OME_ARROW_BYTE_STRUCT
+
+
+def test_inline_byte_parquet_converts_existing_chunks_without_densifying(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Convert numeric chunks directly to byte chunks at Parquet write time."""
+    arr = np.arange(1 * 1 * 2 * 16 * 16, dtype=np.uint16).reshape(1, 1, 2, 16, 16)
+    scalar = from_numpy(arr, dim_order="TCZYX", chunk_shape=(1, 8, 8))
+    out = tmp_path / "inline-direct-bytes.ome.parquet"
+
+    monkeypatch.setattr(
+        export_mod,
+        "to_numpy",
+        lambda *_args, **_kwargs: pytest.fail("dense conversion was used"),
+    )
+
+    to_ome_parquet(
+        scalar,
+        str(out),
+        column_name="ome_arrow",
+        inline_chunk_encoding="bytes",
+        inline_chunk_compression="auto",
+    )
+
+    roundtrip = from_ome_parquet(out, column_name="ome_arrow")
+    np.testing.assert_array_equal(to_numpy(roundtrip), arr)
+
+
+def test_inline_leaf_compressed_byte_parquet_roundtrip(tmp_path: Path) -> None:
+    """Convert nested values to leaf-compressed inline byte chunks."""
+    arr = np.arange(1 * 1 * 2 * 16 * 16, dtype=np.uint16).reshape(1, 1, 2, 16, 16)
+    scalar = from_numpy(arr, dim_order="TCZYX", chunk_shape=(1, 8, 8))
+    out = tmp_path / "inline-zstd-bytes.ome.parquet"
+
+    to_ome_parquet(
+        scalar,
+        str(out),
+        column_name="ome_arrow",
+        inline_chunk_encoding="bytes",
+        inline_chunk_compression="zstd",
+        inline_chunk_compression_level=1,
+    )
+
+    roundtrip = from_ome_parquet(out, column_name="ome_arrow")
+    assert roundtrip.as_py()["chunks"][0]["compression"] == "zstd"
+    np.testing.assert_array_equal(to_numpy(roundtrip), arr)

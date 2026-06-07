@@ -22,7 +22,7 @@ from typing import Callable
 
 import numpy as np
 
-from ome_arrow import OMEArrow
+from ome_arrow import OMEArrow, OMEArrowDataset, write_ome_arrow_dataset
 from ome_arrow.export import to_ome_parquet
 from ome_arrow.ingest import from_numpy
 
@@ -78,7 +78,7 @@ def _time_case(
     )
 
 
-def _build_parquet_fixtures(workdir: Path) -> tuple[Path, Path]:
+def _build_parquet_fixtures(workdir: Path) -> tuple[Path, Path, Path, Path]:
     """Create small planes/chunks parquet fixtures for local benchmarking."""
     arr = np.arange(1 * 2 * 3 * 256 * 256, dtype=np.uint16).reshape(1, 2, 3, 256, 256)
 
@@ -92,9 +92,24 @@ def _build_parquet_fixtures(workdir: Path) -> tuple[Path, Path]:
 
     planes_path = workdir / "bench_planes.ome.parquet"
     chunks_path = workdir / "bench_chunks.ome.parquet"
+    inline_bytes_path = workdir / "bench_inline_bytes.ome.parquet"
+    typed_dataset_path = workdir / "bench_typed_dataset"
     to_ome_parquet(planes_scalar, out_path=str(planes_path), column_name="ome_arrow")
     to_ome_parquet(chunks_scalar, out_path=str(chunks_path), column_name="ome_arrow")
-    return planes_path, chunks_path
+    to_ome_parquet(
+        chunks_scalar,
+        out_path=str(inline_bytes_path),
+        column_name="ome_arrow",
+        inline_chunk_encoding="bytes",
+    )
+    write_ome_arrow_dataset(
+        [arr],
+        typed_dataset_path,
+        layout="tile",
+        chunk_shape=(1, 1, 1, 64, 64),
+        compression="zstd",
+    )
+    return planes_path, chunks_path, inline_bytes_path, typed_dataset_path
 
 
 def _print_results(results: list[BenchmarkResult]) -> None:
@@ -262,7 +277,11 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory(prefix="ome_arrow_lazy_bench_") as tmp:
         tmpdir = Path(tmp)
-        planes_path, chunks_path = _build_parquet_fixtures(tmpdir)
+        planes_path, chunks_path, inline_bytes_path, typed_dataset_path = (
+            _build_parquet_fixtures(tmpdir)
+        )
+        typed_dataset = OMEArrowDataset(typed_dataset_path)
+        typed_image_id = typed_dataset.images["image_id"].to_pylist()[0]
 
         cases: list[tuple[str, Callable[[], np.ndarray]]] = []
         if args.tiff_path.exists():
@@ -295,6 +314,22 @@ def main() -> None:
                         OMEArrow.scan(str(chunks_path))
                         .tensor_view(t=0, z=1, c=1, layout="YX")
                         .to_numpy(contiguous=True)
+                    ),
+                ),
+                (
+                    "scan+parquet(inline-bytes) -> tensor_view(YX)",
+                    lambda: (
+                        OMEArrow.scan(str(inline_bytes_path))
+                        .tensor_view(t=0, z=1, c=1, layout="YX")
+                        .to_numpy(contiguous=True)
+                    ),
+                ),
+                (
+                    "typed-dataset(tile) -> read_plane",
+                    lambda: typed_dataset.pixels.read_plane(
+                        typed_image_id,
+                        z=1,
+                        c=1,
                     ),
                 ),
             ]

@@ -2,13 +2,57 @@
 Module for exporting OME-Arrow data to other formats.
 """
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from ome_arrow.meta import OME_ARROW_STRUCT, OME_ARROW_TAG_TYPE, OME_ARROW_TAG_VERSION
+from ome_arrow.meta import (
+    OME_ARROW_BYTE_STRUCT,
+    OME_ARROW_STRUCT,
+    OME_ARROW_TAG_TYPE,
+    OME_ARROW_TAG_VERSION,
+)
+
+
+def _chunk_payload_array(
+    chunk: Dict[str, Any],
+    *,
+    expected_len: int,
+    fallback_dtype: np.dtype,
+    label: str,
+    strict: bool,
+) -> np.ndarray:
+    """Return one chunk payload as a one-dimensional NumPy array."""
+    if chunk.get("pixel_bytes") is not None:
+        source_dtype = np.dtype(chunk.get("dtype") or fallback_dtype)
+        payload_bytes = chunk["pixel_bytes"]
+        compression = chunk.get("compression")
+        if compression and str(compression).strip().lower() not in {"none", ""}:
+            payload_bytes = pa.Codec(str(compression)).decompress(
+                payload_bytes,
+                expected_len * source_dtype.itemsize,
+            )
+        payload = np.frombuffer(payload_bytes, dtype=source_dtype)
+    else:
+        pix = chunk.get("pixels")
+        try:
+            payload = np.asarray(pix)
+        except Exception as exc:
+            raise ValueError(f"{label}.pixels is not a sequence") from exc
+
+    if payload.size != expected_len:
+        if strict:
+            raise ValueError(
+                f"{label} pixel payload length {payload.size} != expected "
+                f"{expected_len}"
+            )
+        if payload.size > expected_len:
+            payload = payload[:expected_len]
+        else:
+            payload = np.pad(payload, (0, expected_len - payload.size))
+    return payload
 
 
 def to_numpy(
@@ -121,24 +165,14 @@ def to_numpy(
                     f"> sx={sx}"
                 )
 
-            pix = ch["pixels"]
-            try:
-                n = len(pix)
-            except Exception as e:
-                raise ValueError(f"chunks[{i}].pixels is not a sequence") from e
-
             expected_len = shape_z * shape_y * shape_x
-            if n != expected_len:
-                if strict:
-                    raise ValueError(
-                        f"chunks[{i}].pixels length {n} != expected {expected_len}"
-                    )
-                if n > expected_len:
-                    pix = pix[:expected_len]
-                else:
-                    pix = list(pix) + [0] * (expected_len - n)
-
-            arr3d = np.asarray(pix).reshape(shape_z, shape_y, shape_x)
+            arr3d = _chunk_payload_array(
+                ch,
+                expected_len=expected_len,
+                fallback_dtype=dtype,
+                label=f"chunks[{i}]",
+                strict=strict,
+            ).reshape(shape_z, shape_y, shape_x)
             arr3d = _cast_plane(arr3d)
             out[t, c, z : z + shape_z, y : y + shape_y, x : x + shape_x] = arr3d
         return out
@@ -278,25 +312,16 @@ def plane_from_chunks(
                 if strict:
                     raise ValueError(msg)
                 continue
-            pix = ch["pixels"]
-            try:
-                n = len(pix)
-            except Exception as e:
-                raise ValueError(f"chunks[{i}].pixels is not a sequence") from e
             expected_len = szc * syc * sxc
-            if n != expected_len:
-                if strict:
-                    raise ValueError(
-                        f"chunks[{i}].pixels length {n} != expected {expected_len}"
-                    )
-                # Lenient mode: truncate or zero-pad to match the expected size.
-                if n > expected_len:
-                    pix = pix[:expected_len]
-                else:
-                    pix = list(pix) + [0] * (expected_len - n)
 
             # Convert to a Z/Y/X slab and copy the requested Z slice into the plane.
-            slab = np.asarray(pix).reshape(szc, syc, sxc)
+            slab = _chunk_payload_array(
+                ch,
+                expected_len=expected_len,
+                fallback_dtype=dtype,
+                label=f"chunks[{i}]",
+                strict=strict,
+            ).reshape(szc, syc, sxc)
             slab = _cast_plane(slab)
             zi = z - z0
             plane[y0 : y0 + syc, x0 : x0 + sxc] = slab[zi]
@@ -608,6 +633,74 @@ def to_ome_zarr(
     writer.write_full_volume(arr)
 
 
+def _chunk_shape_from_grid(grid: Dict[str, Any] | None) -> Tuple[int, int, int] | None:
+    if not grid:
+        return None
+    try:
+        return (
+            int(grid["chunk_z"]),
+            int(grid["chunk_y"]),
+            int(grid["chunk_x"]),
+        )
+    except Exception:
+        return None
+
+
+def _byte_record_from_numeric_chunks(
+    record: Dict[str, Any],
+    *,
+    compression: str | None,
+    compression_level: int | None,
+) -> Dict[str, Any] | None:
+    """Convert existing numeric chunks to byte chunks without densifying."""
+    chunks = record.get("chunks") or []
+    if not chunks or any("pixels" not in chunk for chunk in chunks):
+        return None
+
+    from ome_arrow.ingest import _encode_chunk_payload, _normalize_chunk_compression
+
+    requested_compression = _normalize_chunk_compression(compression)
+    dtype = np.dtype(record["pixels_meta"]["type"])
+    byte_chunks = []
+    for i, chunk in enumerate(chunks):
+        shape_z = int(chunk["shape_z"])
+        shape_y = int(chunk["shape_y"])
+        shape_x = int(chunk["shape_x"])
+        expected_len = shape_z * shape_y * shape_x
+        pixels = np.asarray(chunk["pixels"], dtype=dtype)
+        if pixels.size != expected_len:
+            raise ValueError(
+                f"chunks[{i}].pixels length {pixels.size} != expected {expected_len}"
+            )
+        payload = np.ascontiguousarray(pixels.reshape(-1)).tobytes(order="C")
+        stored_compression, payload = _encode_chunk_payload(
+            payload,
+            compression=requested_compression,
+            compression_level=compression_level,
+        )
+        byte_chunks.append(
+            {
+                "t": int(chunk["t"]),
+                "c": int(chunk["c"]),
+                "z": int(chunk["z"]),
+                "y": int(chunk["y"]),
+                "x": int(chunk["x"]),
+                "shape_z": shape_z,
+                "shape_y": shape_y,
+                "shape_x": shape_x,
+                "dtype": dtype.name,
+                "compression": stored_compression,
+                "pixel_bytes": payload,
+            }
+        )
+
+    return {
+        **record,
+        "chunks": byte_chunks,
+        "planes": [],
+    }
+
+
 def to_ome_parquet(
     data: Dict[str, Any] | pa.StructScalar,
     out_path: str,
@@ -615,23 +708,75 @@ def to_ome_parquet(
     file_metadata: Optional[Dict[str, str]] = None,
     compression: Optional[str] = "zstd",
     row_group_size: Optional[int] = None,
+    inline_chunk_encoding: Literal["existing", "list", "bytes"] = "existing",
+    inline_chunk_compression: str | None = None,
+    inline_chunk_compression_level: int | None = None,
 ) -> None:
     """
     Export an OME-Arrow record to a Parquet file as a single-row, single-column table.
-    The single column holds a struct with the OME-Arrow schema.
+    The single column holds a struct with an OME-Arrow schema.
     """
+    if inline_chunk_encoding not in {"existing", "list", "bytes"}:
+        raise ValueError("inline_chunk_encoding must be one of: existing, list, bytes")
 
     # 1) Normalize to a plain Python dict (works better with pyarrow builders,
     #    especially when the struct has a `null`-typed field like "masks").
     if isinstance(data, pa.StructScalar):
         record_dict = data.as_py()
+        schema = data.type if data.type == OME_ARROW_BYTE_STRUCT else OME_ARROW_STRUCT
     else:
         # Validate by round-tripping through a typed scalar, then back to dict.
         record_dict = {f.name: data.get(f.name) for f in OME_ARROW_STRUCT}
         record_dict = pa.scalar(record_dict, type=OME_ARROW_STRUCT).as_py()
+        schema = OME_ARROW_STRUCT
+
+    if inline_chunk_encoding == "bytes" and schema != OME_ARROW_BYTE_STRUCT:
+        from ome_arrow.ingest import from_numpy
+
+        direct_record = _byte_record_from_numeric_chunks(
+            record_dict,
+            compression=inline_chunk_compression,
+            compression_level=inline_chunk_compression_level,
+        )
+        if direct_record is None:
+            arr = to_numpy(
+                record_dict, dtype=np.dtype(record_dict["pixels_meta"]["type"])
+            )
+            byte_scalar = from_numpy(
+                arr,
+                dim_order="TCZYX",
+                image_id=record_dict.get("id"),
+                name=record_dict.get("name"),
+                image_type=record_dict.get("image_type"),
+                acquisition_datetime=record_dict.get("acquisition_datetime"),
+                clamp_to_uint16=False,
+                chunk_shape=_chunk_shape_from_grid(record_dict.get("chunk_grid")),
+                chunk_encoding="bytes",
+                chunk_compression=inline_chunk_compression,
+                chunk_compression_level=inline_chunk_compression_level,
+                build_chunks=True,
+                physical_size_x=record_dict["pixels_meta"].get("physical_size_x")
+                or 1.0,
+                physical_size_y=record_dict["pixels_meta"].get("physical_size_y")
+                or 1.0,
+                physical_size_z=record_dict["pixels_meta"].get("physical_size_z")
+                or 1.0,
+                physical_size_unit=(
+                    record_dict["pixels_meta"].get("physical_size_x_unit") or "µm"
+                ),
+                dtype_meta=record_dict["pixels_meta"]["type"],
+            )
+            record_dict = byte_scalar.as_py()
+        else:
+            record_dict = direct_record
+        schema = OME_ARROW_BYTE_STRUCT
+    elif inline_chunk_encoding == "list":
+        record_dict = {f.name: record_dict.get(f.name) for f in OME_ARROW_STRUCT}
+        record_dict = pa.scalar(record_dict, type=OME_ARROW_STRUCT).as_py()
+        schema = OME_ARROW_STRUCT
 
     # 2) Build a single-row struct array from the dict, explicitly passing the schema
-    struct_array = pa.array([record_dict], type=OME_ARROW_STRUCT)  # len=1
+    struct_array = pa.array([record_dict], type=schema)  # len=1
 
     # 3) Wrap into a one-column table
     table = pa.table({column_name: struct_array})

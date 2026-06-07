@@ -129,3 +129,38 @@ OME_ARROW_STRUCT: pa.StructType = pa.struct(
         pa.field("masks", pa.null()),  # reserved for future annotations
     ]
 )
+
+# Faster inline OME value variant. This keeps the same top-level OME-Arrow value
+# shape, but stores chunk payloads as typed bytes instead of nested numeric
+# lists. The historical OME_ARROW_STRUCT remains the compatibility baseline.
+OME_ARROW_BYTE_STRUCT: pa.StructType = pa.struct(
+    [
+        (
+            pa.field(
+                "chunks",
+                pa.list_(
+                    pa.struct(
+                        [
+                            pa.field("t", pa.int32()),
+                            pa.field("c", pa.int16()),
+                            pa.field("z", pa.int32()),
+                            pa.field("y", pa.int32()),
+                            pa.field("x", pa.int32()),
+                            pa.field("shape_z", pa.int32()),
+                            pa.field("shape_y", pa.int32()),
+                            pa.field("shape_x", pa.int32()),
+                            pa.field("dtype", pa.string()),
+                            pa.field("compression", pa.string()),
+                            pa.field("pixel_bytes", pa.large_binary()),
+                        ]
+                    )
+                ),
+            )
+            if field.name == "chunks"
+            else field
+        )
+        for field in OME_ARROW_STRUCT
+    ]
+)
+
+OME_ARROW_KNOWN_STRUCTS = (OME_ARROW_STRUCT, OME_ARROW_BYTE_STRUCT)
