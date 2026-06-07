@@ -427,7 +427,7 @@ Please also reference an example notebook: <a class="reference external" href="h
 <span class="c1"># (great for ZYX 3D images; install extras: `pip install &#39;ome-arrow[viz]&#39;`).</span>
 <span class="n">oa_image</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">how</span><span class="o">=</span><span class="s2">&quot;pyvista&quot;</span><span class="p">)</span>
 
-<span class="c1"># Export to OME-Parquet.</span>
+<span class="c1"># Export to OME-Parquet. This writes the typed chunk dataset layout.</span>
 <span class="c1"># We can also export OME-TIFF, OME-Zarr or NumPy arrays.</span>
 <span class="n">oa_image</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">how</span><span class="o">=</span><span class="s2">&quot;ome-parquet&quot;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="s2">&quot;your_image.ome.parquet&quot;</span><span class="p">)</span>
 
@@ -475,6 +475,116 @@ Please also reference an example notebook: <a class="reference external" href="h
 </ul>
 <p>See full docs: <a class="reference internal" href="dlpack.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">docs/src/dlpack.md</span></code></span></a></p>
 </section>
+<section id="inline-byte-backed-ome-values">
+<h2>Inline byte-backed OME values<a class="headerlink" href="#inline-byte-backed-ome-values" title="Link to this heading">#</a></h2>
+<p>The historical nested table stores pixel payloads as numeric lists inside <code class="docutils literal notranslate"><span class="pre">chunks[].pixels</span></code> and <code class="docutils literal notranslate"><span class="pre">planes[].pixels</span></code>.
+For faster one-row-per-image Parquet tables, write inline chunk bytes instead:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">from_numpy</span><span class="p">,</span> <span class="n">to_ome_parquet</span>
+
+<span class="n">record</span> <span class="o">=</span> <span class="n">from_numpy</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;TCZYX&quot;</span><span class="p">,</span> <span class="n">chunk_encoding</span><span class="o">=</span><span class="s2">&quot;bytes&quot;</span><span class="p">)</span>
+<span class="n">to_ome_parquet</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="s2">&quot;image.ome.parquet&quot;</span><span class="p">,</span> <span class="n">column_name</span><span class="o">=</span><span class="s2">&quot;ome_arrow&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can also convert an existing OME-Arrow record at write time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">to_ome_parquet</span><span class="p">(</span>
+    <span class="n">record</span><span class="p">,</span>
+    <span class="s2">&quot;image.ome.parquet&quot;</span><span class="p">,</span>
+    <span class="n">column_name</span><span class="o">=</span><span class="s2">&quot;ome_arrow&quot;</span><span class="p">,</span>
+    <span class="n">inline_chunk_encoding</span><span class="o">=</span><span class="s2">&quot;bytes&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>This keeps the ergonomic inline OME value while storing chunk payloads as typed <code class="docutils literal notranslate"><span class="pre">pixel_bytes:</span> <span class="pre">large_binary</span></code>.
+Use it for moderate image-level tables and whole-image reads.
+For large 3D/5D selective reads, prefer the typed chunk dataset API below.</p>
+<p>Leaf-level chunk compression is also available for inline byte chunks:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span> <span class="o">=</span> <span class="n">from_numpy</span><span class="p">(</span>
+    <span class="n">arr</span><span class="p">,</span>
+    <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;TCZYX&quot;</span><span class="p">,</span>
+    <span class="n">chunk_encoding</span><span class="o">=</span><span class="s2">&quot;bytes&quot;</span><span class="p">,</span>
+    <span class="n">chunk_compression</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">to_ome_parquet</span><span class="p">(</span>
+    <span class="n">record</span><span class="p">,</span>
+    <span class="s2">&quot;image.ome.parquet&quot;</span><span class="p">,</span>
+    <span class="n">column_name</span><span class="o">=</span><span class="s2">&quot;ome_arrow&quot;</span><span class="p">,</span>
+    <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;zstd&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Compression guidance from <code class="docutils literal notranslate"><span class="pre">benchmarks/benchmark_inline_byte_compression.py</span></code>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Data/workload</p></th>
+<th class="head"><p>Suggested setting</p></th>
+<th class="head"><p>Why</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>General inline-byte tables</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chunk_compression=&quot;auto&quot;</span></code> and Parquet <code class="docutils literal notranslate"><span class="pre">compression=&quot;zstd&quot;</span></code></p></td>
+<td><p>Compresses chunks only when they shrink, then lets Parquet compress metadata.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Faster reads on compressible images</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chunk_compression=&quot;fast&quot;</span></code> with Parquet <code class="docutils literal notranslate"><span class="pre">compression=None</span></code></p></td>
+<td><p>Uses LZ4 only when chunks shrink, keeping decode overhead low.</p></td>
+</tr>
+<tr class="row-even"><td><p>Best storage on compressible 3D/volume data</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chunk_compression=&quot;small&quot;</span></code> plus Parquet <code class="docutils literal notranslate"><span class="pre">compression=&quot;zstd&quot;</span></code></p></td>
+<td><p>Uses Zstd level 1 only when chunks shrink, then applies Parquet compression.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Noisy/high-entropy images</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chunk_compression=&quot;auto&quot;</span></code> or no leaf compression; use Parquet <code class="docutils literal notranslate"><span class="pre">compression=&quot;zstd&quot;</span></code></p></td>
+<td><p>Auto skips chunks that would grow; noisy data often does not compress.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Explicit codecs such as <code class="docutils literal notranslate"><span class="pre">chunk_compression=&quot;zstd&quot;</span></code> with <code class="docutils literal notranslate"><span class="pre">chunk_compression_level=1</span></code> and <code class="docutils literal notranslate"><span class="pre">chunk_compression=&quot;lz4&quot;</span></code> are also supported when you want fixed behavior instead of a preset.</p>
+</section>
+<section id="typed-chunk-datasets">
+<h2>Typed chunk datasets<a class="headerlink" href="#typed-chunk-datasets" title="Link to this heading">#</a></h2>
+<p>Typed chunk datasets are the optimized pixel IO path for OME-Arrow.
+Their goal is to keep image metadata small and queryable while storing pixels as typed byte chunks that can be read directly by image, plane, channel, region, or volume.
+Use this layout when performance matters for selective reads, larger 3D/5D images, or data engineering workflows that need predictable chunk indexing.</p>
+<p><code class="docutils literal notranslate"><span class="pre">OMEArrow.export(how=&quot;ome-parquet&quot;)</span></code> writes the typed byte-buffer dataset layout.
+For explicit control over layout and chunks, use the dataset writer directly.
+By default, this stores image metadata separately from pixel chunks and writes one chunk per Parquet row group, so <code class="docutils literal notranslate"><span class="pre">read_plane()</span></code> and <code class="docutils literal notranslate"><span class="pre">read_region()</span></code> can jump through a physical index instead of materializing the older nested struct payload.
+You can change that row-group packing with <code class="docutils literal notranslate"><span class="pre">chunk_rows_per_row_group</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrowDataset</span><span class="p">,</span> <span class="n">write_ome_arrow_dataset</span>
+
+<span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>  <span class="c1"># TCZYX</span>
+
+<span class="n">choice</span> <span class="o">=</span> <span class="n">write_ome_arrow_dataset</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">arr</span><span class="p">],</span>
+    <span class="s2">&quot;image.ome-arrow&quot;</span><span class="p">,</span>
+    <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;tile&quot;</span><span class="p">,</span>
+    <span class="n">chunk_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">),</span>
+    <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;zstd&quot;</span><span class="p">,</span>
+    <span class="n">chunk_rows_per_row_group</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">choice</span><span class="o">.</span><span class="n">rationale</span><span class="p">)</span>
+
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">OMEArrowDataset</span><span class="p">(</span><span class="s2">&quot;image.ome-arrow&quot;</span><span class="p">)</span>
+<span class="n">image_id</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;image_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">plane</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">read_plane</span><span class="p">(</span><span class="n">image_id</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">crop</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">read_region</span><span class="p">(</span><span class="n">image_id</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">384</span><span class="p">),</span> <span class="n">x</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">384</span><span class="p">))</span>
+
+<span class="c1"># Dataset-level shortcuts return NumPy by default and can return Torch/JAX</span>
+<span class="c1"># arrays when those packages are installed.</span>
+<span class="n">plane_np</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">read_plane</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">plane_torch</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">read_plane</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s2">&quot;torch&quot;</span><span class="p">)</span>
+<span class="n">plane_jax</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">read_plane</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s2">&quot;jax&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">chunk_rows_per_row_group=1</span></code> for the fastest direct chunk reads.
+Use a larger value, such as <code class="docutils literal notranslate"><span class="pre">8</span></code>, to reduce row-group overhead for small chunks when storage size matters.</p>
+<p>The writer preserves source pixel dtype by default.
+To normalize stored pixel buffers explicitly, pass <code class="docutils literal notranslate"><span class="pre">pixel_dtype</span></code>, for example <code class="docutils literal notranslate"><span class="pre">pixel_dtype=&quot;uint16&quot;</span></code>.
+Integer casts clamp by default; pass <code class="docutils literal notranslate"><span class="pre">clamp=False</span></code> to use NumPy casting behavior directly.</p>
+</section>
 <section id="tensor-ingest-pytorch-jax">
 <h2>Tensor ingest (PyTorch/JAX)<a class="headerlink" href="#tensor-ingest-pytorch-jax" title="Link to this heading">#</a></h2>
 <p>You can ingest torch or JAX arrays directly with <code class="docutils literal notranslate"><span class="pre">OMEArrow(...)</span></code>.
@@ -508,8 +618,7 @@ You can also use explicit helper functions from <code class="docutils literal no
 <p>Notes:</p>
 <ul class="simple">
 <li><p>Torch/JAX support is optional.</p></li>
-<li><p>Install extras as needed:
-<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;ome-arrow[dlpack-torch]&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;ome-arrow[dlpack-jax]&quot;</span></code>.</p></li>
+<li><p>Install extras as needed: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;ome-arrow[dlpack-torch]&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;ome-arrow[dlpack-jax]&quot;</span></code>.</p></li>
 <li><p>Torch tensors are detached and converted on CPU for ingest.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">dim_order</span></code> is accepted only for NumPy/torch/JAX array inputs.</p></li>
 <li><p>Ingest now passes flattened NumPy pixel buffers directly to Arrow.</p></li>
@@ -518,27 +627,60 @@ You can also use explicit helper functions from <code class="docutils literal no
 </section>
 <section id="benchmarking-lazy-reads">
 <h2>Benchmarking lazy reads<a class="headerlink" href="#benchmarking-lazy-reads" title="Link to this heading">#</a></h2>
-<p>Use the lightweight benchmark utility in <code class="docutils literal notranslate"><span class="pre">benchmarks/</span></code> to compare lazy tensor
-read paths (TIFF source-backed, Parquet planes, Parquet chunks):</p>
+<p>Use the lightweight benchmark utility in <code class="docutils literal notranslate"><span class="pre">benchmarks/</span></code> to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/benchmark_lazy_tensor.py<span class="w"> </span>--repeats<span class="w"> </span><span class="m">5</span><span class="w"> </span>--warmup<span class="w"> </span><span class="m">1</span>
 </pre></div>
 </div>
+<p>For OME-IRIS-style 2D/3D/4D/5D access patterns, use <code class="docutils literal notranslate"><span class="pre">benchmark_ome_iris.py</span></code>.
+This benchmark is intended to answer practical questions about pixel IO: how fast each format writes a matched artifact, how fast it reads full images or volumes, and how fast it serves selective access patterns such as planes, crops, subvolumes, timepoints, and channels.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/benchmark_ome_iris.py<span class="w"> </span>--repeats<span class="w"> </span><span class="m">3</span><span class="w"> </span>--warmup<span class="w"> </span><span class="m">1</span>
+</pre></div>
+</div>
+<p>By default, the benchmark uses local test-data fixtures when available.
+You can also pass real local TIFF fixtures explicitly:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/benchmark_ome_iris.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--fixture<span class="w"> </span><span class="nv">2d</span><span class="o">=</span>/path/to/plate-image.tif<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--fixture<span class="w"> </span><span class="nv">3d</span><span class="o">=</span>/path/to/volume.tif<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--fixture<span class="w"> </span><span class="nv">5d</span><span class="o">=</span>/path/to/tczyx-image.ome.tif<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--repeats<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--warmup<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--json-out<span class="w"> </span>benchmark-results.json
+</pre></div>
+</div>
+<p>Each <code class="docutils literal notranslate"><span class="pre">--fixture</span></code> argument is <code class="docutils literal notranslate"><span class="pre">name=/path/to/image.tif</span></code>.
+The <code class="docutils literal notranslate"><span class="pre">name</span></code> label is used only in the output table, so choose labels that describe the dimensionality or dataset source.
+Inputs must be TIFF files; the benchmark creates temporary matched OME-Zarr and OME-Arrow artifacts for the same source image, then reports latency, returned shape, dtype, and artifact size.
+Temporary artifacts are deleted automatically after the run.</p>
+<p>Use the printed table for quick local iteration and <code class="docutils literal notranslate"><span class="pre">--json-out</span></code> when comparing runs over time or attaching results to an issue/PR.
+Prefer multiple repeats when making performance claims, because local filesystem cache, codec warmup, and Torch/JAX initialization can affect single-run timings.</p>
+<p>The OME-IRIS-style benchmark separates return/API paths:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-zarr-tensor-numpy</span></code>: OME-Arrow <code class="docutils literal notranslate"><span class="pre">tensor_view(...).to_numpy()</span></code> over OME-Zarr.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-zarr-bioio-numpy</span></code>: direct BioImage NumPy reads over OME-Zarr.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-tiff-tensor-numpy</span></code>: OME-Arrow <code class="docutils literal notranslate"><span class="pre">tensor_view(...).to_numpy()</span></code> over TIFF.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-tiff-bioio-numpy</span></code>: direct BioImage NumPy reads over TIFF.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-arrow-src-numpy</span></code>: source-dtype typed OME-Arrow dataset NumPy reads.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-arrow-u16-numpy</span></code>: typed OME-Arrow dataset NumPy reads normalized to <code class="docutils literal notranslate"><span class="pre">uint16</span></code> for apples-to-apples comparisons with normalized paths.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-arrow-u16-raw-numpy</span></code>: normalized <code class="docutils literal notranslate"><span class="pre">uint16</span></code> typed OME-Arrow reads with uncompressed chunk bytes for local speed comparisons.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-arrow-*-chunks</span></code>: Arrow-native raw chunk-row reads that return <code class="docutils literal notranslate"><span class="pre">pixel_bytes</span></code> without decoding into NumPy.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-tiff-tensor-torch</span></code> / <code class="docutils literal notranslate"><span class="pre">ome-tiff-tensor-jax</span></code>: OME-Arrow tensor-view Torch/JAX returns over TIFF.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-zarr-tensor-torch</span></code> / <code class="docutils literal notranslate"><span class="pre">ome-zarr-tensor-jax</span></code>: OME-Arrow tensor-view Torch/JAX returns over OME-Zarr.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-arrow-src-torch</span></code> / <code class="docutils literal notranslate"><span class="pre">ome-arrow-src-jax</span></code>: source-dtype typed OME-Arrow dataset reads with <code class="docutils literal notranslate"><span class="pre">return_type=&quot;torch&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">return_type=&quot;jax&quot;</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ome-arrow-u16-torch</span></code> / <code class="docutils literal notranslate"><span class="pre">ome-arrow-u16-jax</span></code>: normalized <code class="docutils literal notranslate"><span class="pre">uint16</span></code> typed OME-Arrow dataset reads with Torch/JAX returns.</p></li>
+</ul>
 <p>Notes:</p>
 <ul class="simple">
 <li><p>This benchmark is for local iteration and relative comparisons.</p></li>
 <li><p>It is not part of CI pass/fail checks.</p></li>
-<li><p>CI also runs this benchmark in a dedicated <code class="docutils literal notranslate"><span class="pre">benchmark_canary</span></code> job and
-uploads <code class="docutils literal notranslate"><span class="pre">benchmark-results.json</span></code> as a workflow artifact.</p></li>
+<li><p>CI also runs this benchmark in a dedicated <code class="docutils literal notranslate"><span class="pre">benchmark_canary</span></code> job and uploads <code class="docutils literal notranslate"><span class="pre">benchmark-results.json</span></code> as a workflow artifact.</p></li>
 </ul>
 <p>Recalibrating <code class="docutils literal notranslate"><span class="pre">benchmarks/ci-baseline.json</span></code>:</p>
 <ol class="arabic simple">
 <li><p>Run the benchmark on <code class="docutils literal notranslate"><span class="pre">main</span></code> a few times (for example 3-5 runs):
 <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">benchmarks/benchmark_lazy_tensor.py</span> <span class="pre">--repeats</span> <span class="pre">7</span> <span class="pre">--warmup</span> <span class="pre">2</span> <span class="pre">--json-out</span> <span class="pre">benchmark-results.json</span></code></p></li>
 <li><p>For each case, collect the observed <code class="docutils literal notranslate"><span class="pre">median_ms</span></code> values.</p></li>
-<li><p>Update <code class="docutils literal notranslate"><span class="pre">benchmarks/ci-baseline.json</span></code> with stable medians from those runs
-(prefer a conservative value near the slower side, not the fastest sample).</p></li>
-<li><p>Keep CI canary tolerance (<code class="docutils literal notranslate"><span class="pre">regression_factor</span></code> + <code class="docutils literal notranslate"><span class="pre">absolute_slack_ms</span></code>) unchanged
-unless you have repeated false positives.</p></li>
+<li><p>Update <code class="docutils literal notranslate"><span class="pre">benchmarks/ci-baseline.json</span></code> with stable medians from those runs (prefer a conservative value near the slower side, not the fastest sample).</p></li>
+<li><p>Keep CI canary tolerance (<code class="docutils literal notranslate"><span class="pre">regression_factor</span></code> + <code class="docutils literal notranslate"><span class="pre">absolute_slack_ms</span></code>) unchanged unless you have repeated false positives.</p></li>
 </ol>
 </section>
 <section id="contributing-development-and-testing">

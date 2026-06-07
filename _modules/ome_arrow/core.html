@@ -416,7 +416,6 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.export</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">to_numpy</span><span class="p">,</span>
-    <span class="n">to_ome_parquet</span><span class="p">,</span>
     <span class="n">to_ome_tiff</span><span class="p">,</span>
     <span class="n">to_ome_vortex</span><span class="p">,</span>
     <span class="n">to_ome_zarr</span><span class="p">,</span>
@@ -539,6 +538,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">tcz</span> <span class="o">=</span> <span class="n">tcz</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span><span class="p">:</span> <span class="n">_LazySourceSpec</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_LazySliceSpec</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -571,12 +571,16 @@
 
         <span class="c1"># --- 2) String path/URL: OME-Zarr / OME-Parquet / OME-TIFF ---------------</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_string_source</span><span class="p">(</span>
-                <span class="n">data</span><span class="p">,</span>
-                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
-                <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
-                <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
-            <span class="p">)</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_try_open_dataset</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="o">=</span> <span class="n">dataset</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_string_source</span><span class="p">(</span>
+                    <span class="n">data</span><span class="p">,</span>
+                    <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                    <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+                    <span class="n">image_type</span><span class="o">=</span><span class="n">image_type</span><span class="p">,</span>
+                <span class="p">)</span>
 
         <span class="c1"># --- 3) NumPy ndarray ----------------------------------------------------</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
@@ -676,6 +680,8 @@
 <span class="sd">            RuntimeError: If the record could not be initialized.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_to_scalar</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;OMEArrow data is not initialized.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span>
@@ -695,6 +701,35 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_try_open_dataset</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Open a typed OME-Arrow dataset path if the manifest is present.&quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;_ome_arrow_dataset.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">OMEArrowDataset</span>
+
+        <span class="k">return</span> <span class="n">OMEArrowDataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dataset_to_scalar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Materialize a dataset-backed image into the legacy scalar shape.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;OMEArrow has no dataset backing.&quot;</span><span class="p">)</span>
+        <span class="n">image_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">image_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">image_metadata</span><span class="p">(</span><span class="n">image_id</span><span class="p">)</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">read_image</span><span class="p">(</span><span class="n">image_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">from_numpy</span><span class="p">(</span>
+            <span class="n">arr</span><span class="p">,</span>
+            <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;TCZYX&quot;</span><span class="p">,</span>
+            <span class="n">image_id</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">image_id</span><span class="p">),</span>
+            <span class="n">name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">image_id</span><span class="p">),</span>
+            <span class="n">image_type</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_type&quot;</span><span class="p">),</span>
+            <span class="n">clamp_to_uint16</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">dtype_meta</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]),</span>
+        <span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_from_string_source</span><span class="p">(</span>
@@ -773,6 +808,11 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span>
         <span class="n">lazy_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_try_open_dataset</span><span class="p">(</span><span class="n">lazy_source</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_slices</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="o">=</span> <span class="n">dataset</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_source</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">return</span>
         <span class="c1"># Intentionally do not clear `_lazy_source` / `_lazy_slices` before load.</span>
         <span class="c1"># If `_load_from_string_source(...)` raises, lazy state is preserved so</span>
         <span class="c1"># callers can inspect/retry without losing the deferred plan.</span>
@@ -811,6 +851,8 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_tensor_source</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span> <span class="o">|</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructArray</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_to_scalar</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -957,6 +999,18 @@
 <span class="sd">        ValueError:</span>
 <span class="sd">            Unknown &#39;how&#39; or missing required params.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">how</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;numpy&quot;</span><span class="p">:</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">read_image</span><span class="p">()</span>
+            <span class="n">dtype_obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">dtype_obj</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">clamp</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">dtype_obj</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+                    <span class="n">info</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">dtype_obj</span><span class="p">)</span>
+                    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype_obj</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">arr</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
 
         <span class="c1"># existing modes</span>
@@ -966,8 +1020,6 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;scalar&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
-
-        <span class="n">mode</span> <span class="o">=</span> <span class="n">how</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
 
         <span class="c1"># OME-TIFF via BioIO</span>
         <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;ome-tiff&quot;</span><span class="p">,</span> <span class="s2">&quot;ometiff&quot;</span><span class="p">,</span> <span class="s2">&quot;tiff&quot;</span><span class="p">}:</span>
@@ -1006,12 +1058,20 @@
         <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;ome-parquet&quot;</span><span class="p">,</span> <span class="s2">&quot;omeparquet&quot;</span><span class="p">,</span> <span class="s2">&quot;parquet&quot;</span><span class="p">}:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;export(how=&#39;parquet&#39;) requires &#39;out&#39; path.&quot;</span><span class="p">)</span>
-            <span class="n">to_ome_parquet</span><span class="p">(</span>
-                <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
-                <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
-                <span class="n">column_name</span><span class="o">=</span><span class="n">parquet_column_name</span><span class="p">,</span>
-                <span class="n">compression</span><span class="o">=</span><span class="n">parquet_compression</span><span class="p">,</span>  <span class="c1"># default &#39;zstd&#39;</span>
-                <span class="n">file_metadata</span><span class="o">=</span><span class="n">parquet_metadata</span><span class="p">,</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_ome_arrow_dataset</span>
+
+            <span class="c1"># Kept for call-site compatibility with the old single-file</span>
+            <span class="c1"># Parquet writer; the typed dataset layout does not use a struct</span>
+            <span class="c1"># column name or arbitrary file-level metadata.</span>
+            <span class="n">_legacy_parquet_options</span> <span class="o">=</span> <span class="p">(</span><span class="n">parquet_column_name</span><span class="p">,</span> <span class="n">parquet_metadata</span><span class="p">)</span>
+            <span class="n">write_ome_arrow_dataset</span><span class="p">(</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">],</span>
+                <span class="n">out</span><span class="p">,</span>
+                <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                <span class="n">access_pattern</span><span class="o">=</span><span class="s2">&quot;balanced&quot;</span><span class="p">,</span>
+                <span class="n">compression</span><span class="o">=</span><span class="n">parquet_compression</span><span class="p">,</span>
+                <span class="n">pixel_dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">clamp</span><span class="o">=</span><span class="n">clamp</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">out</span>
 
@@ -1043,6 +1103,19 @@
 <span class="sd">                - summary: human-readable text</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_materialized</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">image_metadata</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">image_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">describe_ome_arrow</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;pixels_meta&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;size_t&quot;</span><span class="p">:</span> <span class="n">meta</span><span class="p">[</span><span class="s2">&quot;size_t&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;size_c&quot;</span><span class="p">:</span> <span class="n">meta</span><span class="p">[</span><span class="s2">&quot;size_c&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;size_z&quot;</span><span class="p">:</span> <span class="n">meta</span><span class="p">[</span><span class="s2">&quot;size_z&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;size_y&quot;</span><span class="p">:</span> <span class="n">meta</span><span class="p">[</span><span class="s2">&quot;size_y&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;size_x&quot;</span><span class="p">:</span> <span class="n">meta</span><span class="p">[</span><span class="s2">&quot;size_x&quot;</span><span class="p">],</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="n">describe_ome_arrow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span></div>
 
 

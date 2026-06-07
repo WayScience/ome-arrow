@@ -1404,6 +1404,9 @@
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_chunks</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">_chunks_have_pixel_bytes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span><span class="p">):</span>
+                <span class="n">data_py</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_py_dict</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">plane_from_chunks</span><span class="p">(</span><span class="n">data_py</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span><span class="p">)</span>
             <span class="n">chunk_order</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chunk_grid</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;chunk_order&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;ZYX&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">_plane_from_chunks_arrow</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_struct_array</span><span class="p">,</span>
@@ -1702,6 +1705,11 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;mode=&#39;arrow&#39; requires Arrow-backed data.&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_chunks</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">_chunks_have_pixel_bytes</span><span class="p">(</span><span class="n">struct_arr</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;mode=&#39;arrow&#39; does not support byte-backed inline chunks; &quot;</span>
+                    <span class="s2">&quot;use mode=&#39;numpy&#39;.&quot;</span>
+                <span class="p">)</span>
             <span class="k">return</span> <span class="n">_select_chunk_values</span><span class="p">(</span>
                 <span class="n">struct_arr</span><span class="p">,</span>
                 <span class="n">t</span><span class="o">=</span><span class="n">t_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -1958,7 +1966,7 @@
             <span class="ne">UserWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">data</span><span class="o">.</span><span class="n">as_py</span><span class="p">()],</span> <span class="nb">type</span><span class="o">=</span><span class="n">OME_ARROW_STRUCT</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">data</span><span class="o">.</span><span class="n">as_py</span><span class="p">()],</span> <span class="nb">type</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
             <span class="s2">&quot;mode=&#39;arrow&#39; received a dict; converting to Arrow buffers, &quot;</span>
@@ -2043,6 +2051,15 @@
 
     <span class="n">pixels_list</span> <span class="o">=</span> <span class="n">selected</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;pixels&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">pixels_list</span><span class="o">.</span><span class="n">values</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_chunks_have_pixel_bytes</span><span class="p">(</span><span class="n">struct_arr</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True when chunk entries use pixel_bytes instead of pixels.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">chunks_type</span> <span class="o">=</span> <span class="n">struct_arr</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;chunks&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">value_type</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="s2">&quot;pixel_bytes&quot;</span> <span class="ow">in</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">chunks_type</span><span class="p">}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_plane_from_chunks_arrow</span><span class="p">(</span>

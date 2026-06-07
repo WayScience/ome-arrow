@@ -395,13 +395,57 @@
 <span class="sd">Module for exporting OME-Arrow data to other formats.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.meta</span><span class="w"> </span><span class="kn">import</span> <span class="n">OME_ARROW_STRUCT</span><span class="p">,</span> <span class="n">OME_ARROW_TAG_TYPE</span><span class="p">,</span> <span class="n">OME_ARROW_TAG_VERSION</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.meta</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">OME_ARROW_BYTE_STRUCT</span><span class="p">,</span>
+    <span class="n">OME_ARROW_STRUCT</span><span class="p">,</span>
+    <span class="n">OME_ARROW_TAG_TYPE</span><span class="p">,</span>
+    <span class="n">OME_ARROW_TAG_VERSION</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_chunk_payload_array</span><span class="p">(</span>
+    <span class="n">chunk</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">expected_len</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">fallback_dtype</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return one chunk payload as a one-dimensional NumPy array.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">chunk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pixel_bytes&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">source_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dtype&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">fallback_dtype</span><span class="p">)</span>
+        <span class="n">payload_bytes</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;pixel_bytes&quot;</span><span class="p">]</span>
+        <span class="n">compression</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;compression&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">compression</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">compression</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">}:</span>
+            <span class="n">payload_bytes</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Codec</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">compression</span><span class="p">))</span><span class="o">.</span><span class="n">decompress</span><span class="p">(</span>
+                <span class="n">payload_bytes</span><span class="p">,</span>
+                <span class="n">expected_len</span> <span class="o">*</span> <span class="n">source_dtype</span><span class="o">.</span><span class="n">itemsize</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">payload_bytes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">source_dtype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pix</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pixels&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pix</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">.pixels is not a sequence&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="k">if</span> <span class="n">payload</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">expected_len</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> pixel payload length </span><span class="si">{</span><span class="n">payload</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> != expected &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">expected_len</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">payload</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="n">expected_len</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span><span class="p">[:</span><span class="n">expected_len</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">expected_len</span> <span class="o">-</span> <span class="n">payload</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">payload</span>
 
 
 <div class="viewcode-block" id="to_numpy">
@@ -516,24 +560,14 @@
                     <span class="sa">f</span><span class="s2">&quot;&gt; sx=</span><span class="si">{</span><span class="n">sx</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
 
-            <span class="n">pix</span> <span class="o">=</span> <span class="n">ch</span><span class="p">[</span><span class="s2">&quot;pixels&quot;</span><span class="p">]</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pix</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chunks[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">].pixels is not a sequence&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-
             <span class="n">expected_len</span> <span class="o">=</span> <span class="n">shape_z</span> <span class="o">*</span> <span class="n">shape_y</span> <span class="o">*</span> <span class="n">shape_x</span>
-            <span class="k">if</span> <span class="n">n</span> <span class="o">!=</span> <span class="n">expected_len</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;chunks[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">].pixels length </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> != expected </span><span class="si">{</span><span class="n">expected_len</span><span class="si">}</span><span class="s2">&quot;</span>
-                    <span class="p">)</span>
-                <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">expected_len</span><span class="p">:</span>
-                    <span class="n">pix</span> <span class="o">=</span> <span class="n">pix</span><span class="p">[:</span><span class="n">expected_len</span><span class="p">]</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">pix</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pix</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">expected_len</span> <span class="o">-</span> <span class="n">n</span><span class="p">)</span>
-
-            <span class="n">arr3d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pix</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape_z</span><span class="p">,</span> <span class="n">shape_y</span><span class="p">,</span> <span class="n">shape_x</span><span class="p">)</span>
+            <span class="n">arr3d</span> <span class="o">=</span> <span class="n">_chunk_payload_array</span><span class="p">(</span>
+                <span class="n">ch</span><span class="p">,</span>
+                <span class="n">expected_len</span><span class="o">=</span><span class="n">expected_len</span><span class="p">,</span>
+                <span class="n">fallback_dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;chunks[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">,</span>
+                <span class="n">strict</span><span class="o">=</span><span class="n">strict</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape_z</span><span class="p">,</span> <span class="n">shape_y</span><span class="p">,</span> <span class="n">shape_x</span><span class="p">)</span>
             <span class="n">arr3d</span> <span class="o">=</span> <span class="n">_cast_plane</span><span class="p">(</span><span class="n">arr3d</span><span class="p">)</span>
             <span class="n">out</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">z</span> <span class="p">:</span> <span class="n">z</span> <span class="o">+</span> <span class="n">shape_z</span><span class="p">,</span> <span class="n">y</span> <span class="p">:</span> <span class="n">y</span> <span class="o">+</span> <span class="n">shape_y</span><span class="p">,</span> <span class="n">x</span> <span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="n">shape_x</span><span class="p">]</span> <span class="o">=</span> <span class="n">arr3d</span>
         <span class="k">return</span> <span class="n">out</span>
@@ -676,25 +710,16 @@
                 <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
                 <span class="k">continue</span>
-            <span class="n">pix</span> <span class="o">=</span> <span class="n">ch</span><span class="p">[</span><span class="s2">&quot;pixels&quot;</span><span class="p">]</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pix</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chunks[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">].pixels is not a sequence&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
             <span class="n">expected_len</span> <span class="o">=</span> <span class="n">szc</span> <span class="o">*</span> <span class="n">syc</span> <span class="o">*</span> <span class="n">sxc</span>
-            <span class="k">if</span> <span class="n">n</span> <span class="o">!=</span> <span class="n">expected_len</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;chunks[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">].pixels length </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> != expected </span><span class="si">{</span><span class="n">expected_len</span><span class="si">}</span><span class="s2">&quot;</span>
-                    <span class="p">)</span>
-                <span class="c1"># Lenient mode: truncate or zero-pad to match the expected size.</span>
-                <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">expected_len</span><span class="p">:</span>
-                    <span class="n">pix</span> <span class="o">=</span> <span class="n">pix</span><span class="p">[:</span><span class="n">expected_len</span><span class="p">]</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">pix</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pix</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">expected_len</span> <span class="o">-</span> <span class="n">n</span><span class="p">)</span>
 
             <span class="c1"># Convert to a Z/Y/X slab and copy the requested Z slice into the plane.</span>
-            <span class="n">slab</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pix</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">szc</span><span class="p">,</span> <span class="n">syc</span><span class="p">,</span> <span class="n">sxc</span><span class="p">)</span>
+            <span class="n">slab</span> <span class="o">=</span> <span class="n">_chunk_payload_array</span><span class="p">(</span>
+                <span class="n">ch</span><span class="p">,</span>
+                <span class="n">expected_len</span><span class="o">=</span><span class="n">expected_len</span><span class="p">,</span>
+                <span class="n">fallback_dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;chunks[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">,</span>
+                <span class="n">strict</span><span class="o">=</span><span class="n">strict</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">szc</span><span class="p">,</span> <span class="n">syc</span><span class="p">,</span> <span class="n">sxc</span><span class="p">)</span>
             <span class="n">slab</span> <span class="o">=</span> <span class="n">_cast_plane</span><span class="p">(</span><span class="n">slab</span><span class="p">)</span>
             <span class="n">zi</span> <span class="o">=</span> <span class="n">z</span> <span class="o">-</span> <span class="n">z0</span>
             <span class="n">plane</span><span class="p">[</span><span class="n">y0</span> <span class="p">:</span> <span class="n">y0</span> <span class="o">+</span> <span class="n">syc</span><span class="p">,</span> <span class="n">x0</span> <span class="p">:</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">sxc</span><span class="p">]</span> <span class="o">=</span> <span class="n">slab</span><span class="p">[</span><span class="n">zi</span><span class="p">]</span>
@@ -1013,6 +1038,74 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_chunk_shape_from_grid</span><span class="p">(</span><span class="n">grid</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="s2">&quot;chunk_z&quot;</span><span class="p">]),</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="s2">&quot;chunk_y&quot;</span><span class="p">]),</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="s2">&quot;chunk_x&quot;</span><span class="p">]),</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_byte_record_from_numeric_chunks</span><span class="p">(</span>
+    <span class="n">record</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">compression_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert existing numeric chunks to byte chunks without densifying.&quot;&quot;&quot;</span>
+    <span class="n">chunks</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;chunks&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">chunks</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="s2">&quot;pixels&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">chunk</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.ingest</span><span class="w"> </span><span class="kn">import</span> <span class="n">_encode_chunk_payload</span><span class="p">,</span> <span class="n">_normalize_chunk_compression</span>
+
+    <span class="n">requested_compression</span> <span class="o">=</span> <span class="n">_normalize_chunk_compression</span><span class="p">(</span><span class="n">compression</span><span class="p">)</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;pixels_meta&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">])</span>
+    <span class="n">byte_chunks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chunks</span><span class="p">):</span>
+        <span class="n">shape_z</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;shape_z&quot;</span><span class="p">])</span>
+        <span class="n">shape_y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;shape_y&quot;</span><span class="p">])</span>
+        <span class="n">shape_x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;shape_x&quot;</span><span class="p">])</span>
+        <span class="n">expected_len</span> <span class="o">=</span> <span class="n">shape_z</span> <span class="o">*</span> <span class="n">shape_y</span> <span class="o">*</span> <span class="n">shape_x</span>
+        <span class="n">pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;pixels&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pixels</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">expected_len</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;chunks[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">].pixels length </span><span class="si">{</span><span class="n">pixels</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> != expected </span><span class="si">{</span><span class="n">expected_len</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">pixels</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">tobytes</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">)</span>
+        <span class="n">stored_compression</span><span class="p">,</span> <span class="n">payload</span> <span class="o">=</span> <span class="n">_encode_chunk_payload</span><span class="p">(</span>
+            <span class="n">payload</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="n">requested_compression</span><span class="p">,</span>
+            <span class="n">compression_level</span><span class="o">=</span><span class="n">compression_level</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">byte_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;shape_z&quot;</span><span class="p">:</span> <span class="n">shape_z</span><span class="p">,</span>
+                <span class="s2">&quot;shape_y&quot;</span><span class="p">:</span> <span class="n">shape_y</span><span class="p">,</span>
+                <span class="s2">&quot;shape_x&quot;</span><span class="p">:</span> <span class="n">shape_x</span><span class="p">,</span>
+                <span class="s2">&quot;dtype&quot;</span><span class="p">:</span> <span class="n">dtype</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="s2">&quot;compression&quot;</span><span class="p">:</span> <span class="n">stored_compression</span><span class="p">,</span>
+                <span class="s2">&quot;pixel_bytes&quot;</span><span class="p">:</span> <span class="n">payload</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="o">**</span><span class="n">record</span><span class="p">,</span>
+        <span class="s2">&quot;chunks&quot;</span><span class="p">:</span> <span class="n">byte_chunks</span><span class="p">,</span>
+        <span class="s2">&quot;planes&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="p">}</span>
+
+
 <div class="viewcode-block" id="to_ome_parquet">
 <a class="viewcode-back" href="../../python-api.html#ome_arrow.export.to_ome_parquet">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">to_ome_parquet</span><span class="p">(</span>
@@ -1022,23 +1115,75 @@
     <span class="n">file_metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">compression</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;zstd&quot;</span><span class="p">,</span>
     <span class="n">row_group_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">inline_chunk_encoding</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;existing&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;bytes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;existing&quot;</span><span class="p">,</span>
+    <span class="n">inline_chunk_compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">inline_chunk_compression_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Export an OME-Arrow record to a Parquet file as a single-row, single-column table.</span>
-<span class="sd">    The single column holds a struct with the OME-Arrow schema.</span>
+<span class="sd">    The single column holds a struct with an OME-Arrow schema.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">inline_chunk_encoding</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;existing&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;bytes&quot;</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;inline_chunk_encoding must be one of: existing, list, bytes&quot;</span><span class="p">)</span>
 
     <span class="c1"># 1) Normalize to a plain Python dict (works better with pyarrow builders,</span>
     <span class="c1">#    especially when the struct has a `null`-typed field like &quot;masks&quot;).</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">):</span>
         <span class="n">record_dict</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">type</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">OME_ARROW_BYTE_STRUCT</span> <span class="k">else</span> <span class="n">OME_ARROW_STRUCT</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># Validate by round-tripping through a typed scalar, then back to dict.</span>
         <span class="n">record_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">OME_ARROW_STRUCT</span><span class="p">}</span>
         <span class="n">record_dict</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="n">record_dict</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">OME_ARROW_STRUCT</span><span class="p">)</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">OME_ARROW_STRUCT</span>
+
+    <span class="k">if</span> <span class="n">inline_chunk_encoding</span> <span class="o">==</span> <span class="s2">&quot;bytes&quot;</span> <span class="ow">and</span> <span class="n">schema</span> <span class="o">!=</span> <span class="n">OME_ARROW_BYTE_STRUCT</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.ingest</span><span class="w"> </span><span class="kn">import</span> <span class="n">from_numpy</span>
+
+        <span class="n">direct_record</span> <span class="o">=</span> <span class="n">_byte_record_from_numeric_chunks</span><span class="p">(</span>
+            <span class="n">record_dict</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="n">inline_chunk_compression</span><span class="p">,</span>
+            <span class="n">compression_level</span><span class="o">=</span><span class="n">inline_chunk_compression_level</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">direct_record</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span>
+                <span class="n">record_dict</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">record_dict</span><span class="p">[</span><span class="s2">&quot;pixels_meta&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">])</span>
+            <span class="p">)</span>
+            <span class="n">byte_scalar</span> <span class="o">=</span> <span class="n">from_numpy</span><span class="p">(</span>
+                <span class="n">arr</span><span class="p">,</span>
+                <span class="n">dim_order</span><span class="o">=</span><span class="s2">&quot;TCZYX&quot;</span><span class="p">,</span>
+                <span class="n">image_id</span><span class="o">=</span><span class="n">record_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">record_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span>
+                <span class="n">image_type</span><span class="o">=</span><span class="n">record_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_type&quot;</span><span class="p">),</span>
+                <span class="n">acquisition_datetime</span><span class="o">=</span><span class="n">record_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;acquisition_datetime&quot;</span><span class="p">),</span>
+                <span class="n">clamp_to_uint16</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">chunk_shape</span><span class="o">=</span><span class="n">_chunk_shape_from_grid</span><span class="p">(</span><span class="n">record_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;chunk_grid&quot;</span><span class="p">)),</span>
+                <span class="n">chunk_encoding</span><span class="o">=</span><span class="s2">&quot;bytes&quot;</span><span class="p">,</span>
+                <span class="n">chunk_compression</span><span class="o">=</span><span class="n">inline_chunk_compression</span><span class="p">,</span>
+                <span class="n">chunk_compression_level</span><span class="o">=</span><span class="n">inline_chunk_compression_level</span><span class="p">,</span>
+                <span class="n">build_chunks</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">physical_size_x</span><span class="o">=</span><span class="n">record_dict</span><span class="p">[</span><span class="s2">&quot;pixels_meta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;physical_size_x&quot;</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="mf">1.0</span><span class="p">,</span>
+                <span class="n">physical_size_y</span><span class="o">=</span><span class="n">record_dict</span><span class="p">[</span><span class="s2">&quot;pixels_meta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;physical_size_y&quot;</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="mf">1.0</span><span class="p">,</span>
+                <span class="n">physical_size_z</span><span class="o">=</span><span class="n">record_dict</span><span class="p">[</span><span class="s2">&quot;pixels_meta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;physical_size_z&quot;</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="mf">1.0</span><span class="p">,</span>
+                <span class="n">physical_size_unit</span><span class="o">=</span><span class="p">(</span>
+                    <span class="n">record_dict</span><span class="p">[</span><span class="s2">&quot;pixels_meta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;physical_size_x_unit&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;µm&quot;</span>
+                <span class="p">),</span>
+                <span class="n">dtype_meta</span><span class="o">=</span><span class="n">record_dict</span><span class="p">[</span><span class="s2">&quot;pixels_meta&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="n">record_dict</span> <span class="o">=</span> <span class="n">byte_scalar</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">record_dict</span> <span class="o">=</span> <span class="n">direct_record</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">OME_ARROW_BYTE_STRUCT</span>
+    <span class="k">elif</span> <span class="n">inline_chunk_encoding</span> <span class="o">==</span> <span class="s2">&quot;list&quot;</span><span class="p">:</span>
+        <span class="n">record_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">record_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">OME_ARROW_STRUCT</span><span class="p">}</span>
+        <span class="n">record_dict</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="n">record_dict</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">OME_ARROW_STRUCT</span><span class="p">)</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">OME_ARROW_STRUCT</span>
 
     <span class="c1"># 2) Build a single-row struct array from the dict, explicitly passing the schema</span>
-    <span class="n">struct_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">record_dict</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">OME_ARROW_STRUCT</span><span class="p">)</span>  <span class="c1"># len=1</span>
+    <span class="n">struct_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">record_dict</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">schema</span><span class="p">)</span>  <span class="c1"># len=1</span>
 
     <span class="c1"># 3) Wrap into a one-column table</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">({</span><span class="n">column_name</span><span class="p">:</span> <span class="n">struct_array</span><span class="p">})</span>
