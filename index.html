@@ -375,6 +375,9 @@
 <section id="open-interoperable-and-queryable-microscopy-images-with-ome-arrow">
 <h1>Open, interoperable, and queryable microscopy images with OME Arrow<a class="headerlink" href="#open-interoperable-and-queryable-microscopy-images-with-ome-arrow" title="Link to this heading">#</a></h1>
 <p>OME-Arrow uses <a class="reference external" href="https://github.com/ome">Open Microscopy Environment (OME)</a> specifications through <a class="reference external" href="https://arrow.apache.org/">Apache Arrow</a> for fast, queryable, and language agnostic bioimage data.</p>
+<blockquote>
+<div><p>📐 Benchmark results that inform OME Arrow’s design decisions are available in the <a class="reference external" href="https://github.com/WayScience/ome-arrow-benchmarks">ome-arrow-benchmarks</a> repository.</p>
+</div></blockquote>
 <img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/references_to_files.png">
 <p><strong>Images are often left behind from the data model, referenced but excluded from databases.</strong></p>
 <img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/various_ome_arrow_schema.png">
@@ -627,7 +630,8 @@ You can also use explicit helper functions from <code class="docutils literal no
 </section>
 <section id="benchmarking-lazy-reads">
 <h2>Benchmarking lazy reads<a class="headerlink" href="#benchmarking-lazy-reads" title="Link to this heading">#</a></h2>
-<p>Use the lightweight benchmark utility in <code class="docutils literal notranslate"><span class="pre">benchmarks/</span></code> to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks):</p>
+<p>Use the lightweight benchmark utility in <code class="docutils literal notranslate"><span class="pre">benchmarks/</span></code> to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks).
+For more detailed benchmark results and analysis, see the <a class="reference external" href="https://github.com/WayScience/ome-arrow-benchmarks">ome-arrow-benchmarks</a> repository.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/benchmark_lazy_tensor.py<span class="w"> </span>--repeats<span class="w"> </span><span class="m">5</span><span class="w"> </span>--warmup<span class="w"> </span><span class="m">1</span>
 </pre></div>
 </div>
@@ -696,6 +700,7 @@ Prefer multiple repeats when making performance claims, because local filesystem
 <li><p><a class="reference external" href="https://github.com/cytomining/coSMicQC"><code class="docutils literal notranslate"><span class="pre">coSMicQC</span></code></a>: performs quality control on microscopy feature datasets, visualized using CytoDataFrames.</p></li>
 <li><p><a class="reference external" href="https://github.com/cytomining/pycytominer"><code class="docutils literal notranslate"><span class="pre">pycytominer</span></code></a>: supports feature profiling, normalization, and downstream analysis workflows for image-based profiling datasets.</p></li>
 <li><p><a class="reference external" href="https://github.com/WayScience/iceberg-bioimage"><code class="docutils literal notranslate"><span class="pre">iceberg-bioimage</span></code></a>: defines warehouse-oriented patterns for connecting bioimage formats and analytical tables at scale.</p></li>
+<li><p><a class="reference external" href="https://github.com/WayScience/ome-arrow-benchmarks"><code class="docutils literal notranslate"><span class="pre">ome-arrow-benchmarks</span></code></a>: contains benchmark results and analysis that inform the design choices in OME Arrow.</p></li>
 <li><p><a class="reference external" href="https://github.com/cytomining/CytoTable"><code class="docutils literal notranslate"><span class="pre">CytoTable</span></code></a>: converts image-based profiling outputs into analysis-ready tabular formats such as Parquet.</p></li>
 </ul>
 <div class="toctree-wrapper compound">

@@ -40,6 +40,7 @@ OME Arrow is not a universal replacement for OME-Zarr.
 ## Preliminary benchmark signal
 
 Preliminary results in [ome-arrow-benchmarks](https://github.com/WayScience/ome-arrow-benchmarks) show that outcomes are highly workload- and layout-dependent.
+These benchmarks provide important insights into the performance tradeoffs of different OME Arrow layouts and access patterns.
 In the repository's synthetic wide-table plus image-column runs, Arrow-table-native backends can reduce full-table read time and storage size relative to some alternatives, while write performance varies by backend.
 In the OME-Arrow-only benchmark that compares against directory-per-image OME-Zarr and TIFF layouts, full write/read timings and random-read timings diverge in different directions depending on operation type.
 In that same OME-Arrow-only setup, Lance showed random-read timing similar to OME-Zarr (about 0.020 seconds vs about 0.019 seconds average), suggesting Lance can be a practical OME-Arrow-based option for large image repositories when table-native workflows are desired.
