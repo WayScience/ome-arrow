@@ -10,6 +10,8 @@
 
 OME-Arrow uses [Open Microscopy Environment (OME)](https://github.com/ome) specifications through [Apache Arrow](https://arrow.apache.org/) for fast, queryable, and language agnostic bioimage data.
 
+> 📐 Benchmark results that inform OME Arrow's design decisions are available in the [ome-arrow-benchmarks](https://github.com/WayScience/ome-arrow-benchmarks) repository.
+
 <img height="200" src="https://raw.githubusercontent.com/wayscience/ome-arrow/main/docs/src/_static/references_to_files.png">
 
 __Images are often left behind from the data model, referenced but excluded from databases.__
@@ -266,7 +268,7 @@ Notes:
 
 ## Benchmarking lazy reads
 
-Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks):
+Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks). For more detailed benchmark results and analysis, see the [ome-arrow-benchmarks](https://github.com/WayScience/ome-arrow-benchmarks) repository.
 
 ```bash
 uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
@@ -342,4 +344,5 @@ OME Arrow is used or inspired by the following projects, check them out!
 - [`coSMicQC`](https://github.com/cytomining/coSMicQC): performs quality control on microscopy feature datasets, visualized using CytoDataFrames.
 - [`pycytominer`](https://github.com/cytomining/pycytominer): supports feature profiling, normalization, and downstream analysis workflows for image-based profiling datasets.
 - [`iceberg-bioimage`](https://github.com/WayScience/iceberg-bioimage): defines warehouse-oriented patterns for connecting bioimage formats and analytical tables at scale.
+- [`ome-arrow-benchmarks`](https://github.com/WayScience/ome-arrow-benchmarks): contains benchmark results and analysis that inform the design choices in OME Arrow.
 - [`CytoTable`](https://github.com/cytomining/CytoTable): converts image-based profiling outputs into analysis-ready tabular formats such as Parquet.
