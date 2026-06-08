@@ -268,7 +268,8 @@ Notes:
 
 ## Benchmarking lazy reads
 
-Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks). For more detailed benchmark results and analysis, see the [ome-arrow-benchmarks](https://github.com/WayScience/ome-arrow-benchmarks) repository.
+Use the lightweight benchmark utility in `benchmarks/` to compare lazy tensor read paths (TIFF source-backed, Parquet planes, Parquet chunks).
+For more detailed benchmark results and analysis, see the [ome-arrow-benchmarks](https://github.com/WayScience/ome-arrow-benchmarks) repository.
 
 ```bash
 uv run python benchmarks/benchmark_lazy_tensor.py --repeats 5 --warmup 1
