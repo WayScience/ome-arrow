@@ -1213,6 +1213,9 @@ def from_tiff(
     channel_names: Optional[Sequence[str]] = None,
     acquisition_datetime: Optional[datetime] = None,
     clamp_to_uint16: bool = True,
+    chunk_encoding: Literal["list", "bytes"] = "list",
+    chunk_compression: str | None = None,
+    chunk_compression_level: int | None = None,
 ) -> pa.StructScalar:
     """
     Read a TIFF and return a typed OME-Arrow StructScalar.
@@ -1228,6 +1231,11 @@ def from_tiff(
         channel_names: Optional channel names; defaults to C0..C{n-1}.
         acquisition_datetime: Optional acquisition time (UTC now if None).
         clamp_to_uint16: If True, clamp/cast planes to uint16.
+        chunk_encoding: ``"list"`` stores historical numeric pixel lists.
+            ``"bytes"`` stores compact typed chunk byte buffers.
+        chunk_compression: Optional leaf-level compression for byte chunks,
+            such as ``"zstd"`` or ``"lz4"``.
+        chunk_compression_level: Optional codec compression level.
 
     Returns:
         pa.StructScalar validated against `struct`.
@@ -1307,6 +1315,9 @@ def from_tiff(
         physical_size_unit=psize_unit,
         channels=channels,
         planes=planes,
+        chunk_encoding=chunk_encoding,
+        chunk_compression=chunk_compression,
+        chunk_compression_level=chunk_compression_level,
         masks=None,
     )
 
@@ -1631,6 +1642,9 @@ def from_ome_zarr(
     channel_names: Optional[Sequence[str]] = None,
     acquisition_datetime: Optional[datetime] = None,
     clamp_to_uint16: bool = True,
+    chunk_encoding: Literal["list", "bytes"] = "list",
+    chunk_compression: str | None = None,
+    chunk_compression_level: int | None = None,
 ) -> pa.StructScalar:
     """
     Read an OME-Zarr directory and return a typed OME-Arrow StructScalar.
@@ -1654,6 +1668,14 @@ def from_ome_zarr(
             Optional datetime (defaults to UTC now).
         clamp_to_uint16:
             If True, cast pixels to uint16.
+        chunk_encoding:
+            ``"list"`` stores historical numeric pixel lists. ``"bytes"``
+            stores compact typed chunk byte buffers.
+        chunk_compression:
+            Optional leaf-level compression for byte chunks, such as
+            ``"zstd"`` or ``"lz4"``.
+        chunk_compression_level:
+            Optional codec compression level.
 
     Returns:
         pa.StructScalar: Validated OME-Arrow struct for this image.
@@ -1742,6 +1764,9 @@ def from_ome_zarr(
         physical_size_unit=psize_unit,
         channels=channels,
         planes=planes,
+        chunk_encoding=chunk_encoding,
+        chunk_compression=chunk_compression,
+        chunk_compression_level=chunk_compression_level,
         masks=None,
     )
 
