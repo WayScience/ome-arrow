@@ -1623,6 +1623,9 @@
     <span class="n">channel_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">acquisition_datetime</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">clamp_to_uint16</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">chunk_encoding</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;bytes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span>
+    <span class="n">chunk_compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">chunk_compression_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read a TIFF and return a typed OME-Arrow StructScalar.</span>
@@ -1638,6 +1641,11 @@
 <span class="sd">        channel_names: Optional channel names; defaults to C0..C{n-1}.</span>
 <span class="sd">        acquisition_datetime: Optional acquisition time (UTC now if None).</span>
 <span class="sd">        clamp_to_uint16: If True, clamp/cast planes to uint16.</span>
+<span class="sd">        chunk_encoding: ``&quot;list&quot;`` stores historical numeric pixel lists.</span>
+<span class="sd">            ``&quot;bytes&quot;`` stores compact typed chunk byte buffers.</span>
+<span class="sd">        chunk_compression: Optional leaf-level compression for byte chunks,</span>
+<span class="sd">            such as ``&quot;zstd&quot;`` or ``&quot;lz4&quot;``.</span>
+<span class="sd">        chunk_compression_level: Optional codec compression level.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        pa.StructScalar validated against `struct`.</span>
@@ -1717,6 +1725,9 @@
         <span class="n">physical_size_unit</span><span class="o">=</span><span class="n">psize_unit</span><span class="p">,</span>
         <span class="n">channels</span><span class="o">=</span><span class="n">channels</span><span class="p">,</span>
         <span class="n">planes</span><span class="o">=</span><span class="n">planes</span><span class="p">,</span>
+        <span class="n">chunk_encoding</span><span class="o">=</span><span class="n">chunk_encoding</span><span class="p">,</span>
+        <span class="n">chunk_compression</span><span class="o">=</span><span class="n">chunk_compression</span><span class="p">,</span>
+        <span class="n">chunk_compression_level</span><span class="o">=</span><span class="n">chunk_compression_level</span><span class="p">,</span>
         <span class="n">masks</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span></div>
 
@@ -2047,6 +2058,9 @@
     <span class="n">channel_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">acquisition_datetime</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">clamp_to_uint16</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">chunk_encoding</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;bytes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span>
+    <span class="n">chunk_compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">chunk_compression_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">StructScalar</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read an OME-Zarr directory and return a typed OME-Arrow StructScalar.</span>
@@ -2070,6 +2084,14 @@
 <span class="sd">            Optional datetime (defaults to UTC now).</span>
 <span class="sd">        clamp_to_uint16:</span>
 <span class="sd">            If True, cast pixels to uint16.</span>
+<span class="sd">        chunk_encoding:</span>
+<span class="sd">            ``&quot;list&quot;`` stores historical numeric pixel lists. ``&quot;bytes&quot;``</span>
+<span class="sd">            stores compact typed chunk byte buffers.</span>
+<span class="sd">        chunk_compression:</span>
+<span class="sd">            Optional leaf-level compression for byte chunks, such as</span>
+<span class="sd">            ``&quot;zstd&quot;`` or ``&quot;lz4&quot;``.</span>
+<span class="sd">        chunk_compression_level:</span>
+<span class="sd">            Optional codec compression level.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        pa.StructScalar: Validated OME-Arrow struct for this image.</span>
@@ -2158,6 +2180,9 @@
         <span class="n">physical_size_unit</span><span class="o">=</span><span class="n">psize_unit</span><span class="p">,</span>
         <span class="n">channels</span><span class="o">=</span><span class="n">channels</span><span class="p">,</span>
         <span class="n">planes</span><span class="o">=</span><span class="n">planes</span><span class="p">,</span>
+        <span class="n">chunk_encoding</span><span class="o">=</span><span class="n">chunk_encoding</span><span class="p">,</span>
+        <span class="n">chunk_compression</span><span class="o">=</span><span class="n">chunk_compression</span><span class="p">,</span>
+        <span class="n">chunk_compression_level</span><span class="o">=</span><span class="n">chunk_compression_level</span><span class="p">,</span>
         <span class="n">masks</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span></div>
 
