@@ -224,6 +224,58 @@ The writer preserves source pixel dtype by default.
 To normalize stored pixel buffers explicitly, pass `pixel_dtype`, for example `pixel_dtype="uint16"`.
 Integer casts clamp by default; pass `clamp=False` to use NumPy casting behavior directly.
 
+## Shape tables
+
+OME-Zarr and OME-NGFF are strong fits for dense image pixels and label rasters.
+The gap is object-level analytics: cells, nuclei, ROIs, detections, tracks,
+measurements, and relationships are naturally queried as tables.
+
+OME-Arrow Shapes fills that gap without replacing OME-Zarr.
+Each row is one biological object, geometry is a single logical column, dense
+label masks remain canonical label images, and object rows reference labels with
+`label_image_id` plus `label_value`.
+Measurements remain ordinary Arrow columns for DuckDB, Polars, DataFusion,
+PyArrow, and Parquet workflows.
+
+```python
+from ome_arrow import make_relationship_table, make_shape_table
+
+shapes = make_shape_table(
+    [
+        {
+            "object_id": "cell-1",
+            "image_id": "image-1",
+            "label_image_id": "labels-1",
+            "label_value": 7,
+            "geometry": [128.0, 256.0],
+            "centroid": [128.0, 256.0],
+            "class": "cell",
+            "area_um2": 84.2,
+        }
+    ],
+    geometry_encoding="geoarrow.point",
+    axes=("y", "x"),
+    units=("pixel", "pixel"),
+)
+
+relationships = make_relationship_table(
+    [
+        {
+            "parent_id": "cell-1",
+            "child_id": "nucleus-1",
+            "relationship_type": "contains",
+        }
+    ]
+)
+```
+
+Measurements remain normal Arrow columns (`area_um2` above).
+Label masks are represented by reference with `label_image_id` and
+`label_value`, keeping the segmentation raster canonical instead of embedding
+mask payloads in each object row.
+
+See the dedicated Shapes docs: [`docs/src/shapes.md`](docs/src/shapes.md).
+
 ## Tensor ingest (PyTorch/JAX)
 
 You can ingest torch or JAX arrays directly with `OMEArrow(...)`.

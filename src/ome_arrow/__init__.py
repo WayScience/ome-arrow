@@ -36,6 +36,18 @@ from ome_arrow.meta import (
     OME_ARROW_TAG_TYPE,
     OME_ARROW_TAG_VERSION,
 )
+from ome_arrow.shapes import (
+    OME_ARROW_RELATIONSHIPS_METADATA_KEY,
+    OME_ARROW_SHAPES_METADATA_KEY,
+    OMEArrowShapes,
+    geometry_storage_type,
+    make_relationship_table,
+    make_shape_table,
+    relationship_schema,
+    shape_schema,
+    validate_relationship_table,
+    validate_shape_table,
+)
 from ome_arrow.tensor import LazyTensorView, TensorView
 from ome_arrow.utils import describe_ome_arrow, verify_ome_arrow
 from ome_arrow.view import view_matplotlib, view_pyvista
