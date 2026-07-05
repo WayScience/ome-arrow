@@ -7,7 +7,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-
 SCALE = 2
 OUT = Path(__file__).with_name("various_ome_arrow_schema.png")
 

@@ -86,17 +86,17 @@ shapes = make_shape_table(
 
 The canonical columns are:
 
-| Column | Purpose |
-| --- | --- |
-| `object_id` | stable object identifier |
-| `image_id` | source image identifier |
-| `label_image_id` | source label image identifier |
-| `label_value` | integer label value in the label raster |
-| `geometry` | one logical geometry value |
-| `centroid` | coordinate vector for object center |
-| `bbox` | min/max coordinate bounds |
-| `class` | object class or annotation category |
-| `confidence` | detection or classification confidence |
+| Column           | Purpose                                 |
+| ---------------- | --------------------------------------- |
+| `object_id`      | stable object identifier                |
+| `image_id`       | source image identifier                 |
+| `label_image_id` | source label image identifier           |
+| `label_value`    | integer label value in the label raster |
+| `geometry`       | one logical geometry value              |
+| `centroid`       | coordinate vector for object center     |
+| `bbox`           | min/max coordinate bounds               |
+| `class`          | object class or annotation category     |
+| `confidence`     | detection or classification confidence  |
 
 Any additional columns are measurements.
 They remain ordinary Arrow columns and can be queried directly.
@@ -105,16 +105,16 @@ They remain ordinary Arrow columns and can be queried directly.
 
 The current registry includes:
 
-| Encoding | Storage intent |
-| --- | --- |
-| `geoarrow.point` | point coordinate vector |
-| `geoarrow.linestring` | list of coordinate vectors |
-| `geoarrow.polygon` | list of rings |
-| `geoarrow.multipolygon` | list of polygons |
-| `ome.labelmask` | label image reference |
-| `ome.pointcloud` | list of coordinate vectors |
-| `ome.boundingbox` | min/max coordinate vectors |
-| `ome.mesh3d` | vertices and faces |
+| Encoding                | Storage intent             |
+| ----------------------- | -------------------------- |
+| `geoarrow.point`        | point coordinate vector    |
+| `geoarrow.linestring`   | list of coordinate vectors |
+| `geoarrow.polygon`      | list of rings              |
+| `geoarrow.multipolygon` | list of polygons           |
+| `ome.labelmask`         | label image reference      |
+| `ome.pointcloud`        | list of coordinate vectors |
+| `ome.boundingbox`       | min/max coordinate vectors |
+| `ome.mesh3d`            | vertices and faces         |
 
 The registry lets 2D shapes reuse GeoArrow-like nested Arrow layouts while
 leaving room for bioimaging-specific geometry such as label masks, point clouds,
