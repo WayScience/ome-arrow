@@ -195,5 +195,18 @@ Run them with:
 python -m pytest tests/test_shapes.py tests/test_shapes_performance.py
 ```
 
-For deeper benchmark work, add workload-specific scripts under `benchmarks/`
-that report medians over repeated runs and compare against checked-in baselines.
+For Parquet read/write performance, run:
+
+```sh
+python benchmarks/benchmark_shapes_parquet.py --repeats 5 --warmup 1
+```
+
+This benchmark reports scientifically interpretable workload dimensions:
+image count, object count, measurement count, geometry encoding, projected
+column count, filtered row count, file size, and read/write timings.
+It includes both centroid-like `geoarrow.point` rows and `ome.labelmask` rows
+that reference canonical label rasters.
+
+Projected and filtered reads exercise the performance path most analysis tools
+need: load only the object IDs, image IDs, label values, and measurements needed
+for a specific query.

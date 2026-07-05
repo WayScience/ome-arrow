@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from os import PathLike
 from typing import Any, Iterable, Literal, Sequence
 
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.parquet as pq
 
 from ome_arrow.meta import OME_ARROW_TAG_VERSION
 
@@ -71,11 +73,11 @@ RELATIONSHIP_SCHEMA = pa.schema(
 )
 
 
-def _coordinate_type(dimensions: int) -> pa.FixedSizeListType:
+def _coordinate_type(dimensions: int) -> pa.ListType:
     """Return the Arrow coordinate vector type for a geometry dimension."""
     if dimensions < 1:
         raise ValueError("geometry dimensions must be at least 1.")
-    return pa.list_(pa.float64(), list_size=dimensions)
+    return pa.list_(pa.float64())
 
 
 def geometry_storage_type(
@@ -337,6 +339,85 @@ def validate_shape_table(table: pa.Table) -> None:
         raise ValueError("Shape table geometry column does not match metadata.")
     if pc.any(pc.is_null(table["object_id"])).as_py():
         raise ValueError("Shape table object_id values must not be null.")
+
+
+def write_shape_parquet(
+    table: pa.Table,
+    path: str | PathLike[str],
+    *,
+    compression: str | None = "zstd",
+    row_group_size: int | None = 65_536,
+    use_dictionary: bool | list[str] = True,
+    validate: bool = True,
+) -> None:
+    """Write an OME-Arrow shape table to Parquet.
+
+    Args:
+        table: OME-Arrow shape table to write.
+        path: Output Parquet path.
+        compression: Parquet compression codec, or ``None`` for uncompressed.
+        row_group_size: Number of rows per Parquet row group.
+        use_dictionary: Dictionary-encode eligible columns. This is useful for
+            repeated scientific labels such as image IDs, label image IDs, and
+            object classes.
+        validate: Validate the table before writing.
+
+    Raises:
+        ValueError: If validation fails.
+    """
+    if validate:
+        validate_shape_table(table)
+    pq.write_table(
+        table,
+        path,
+        compression=compression,
+        row_group_size=row_group_size,
+        use_dictionary=use_dictionary,
+    )
+
+
+def read_shape_parquet(
+    path: str | PathLike[str],
+    *,
+    columns: Sequence[str] | None = None,
+    filters: Any | None = None,
+    memory_map: bool = True,
+    validate: bool = True,
+) -> pa.Table:
+    """Read an OME-Arrow shape Parquet table.
+
+    Args:
+        path: Input Parquet path.
+        columns: Optional column projection for analytical reads.
+        filters: Optional PyArrow Parquet filters for predicate pushdown.
+        memory_map: Use memory mapping where supported.
+        validate: Validate complete shape tables after reading. Projected reads
+            that omit required columns still validate schema metadata but skip
+            full table validation.
+
+    Returns:
+        Arrow table read from Parquet.
+
+    Raises:
+        ValueError: If OME-Arrow shape metadata or complete-table validation
+            fails.
+    """
+    schema = pq.read_schema(path, memory_map=memory_map)
+    metadata = _shape_metadata_from_schema(schema)
+    table = pq.read_table(
+        path,
+        columns=columns,
+        filters=filters,
+        memory_map=memory_map,
+    )
+    if not validate:
+        return table
+
+    geometry_column = metadata.get("geometry_column", "geometry")
+    required = {"object_id", geometry_column}
+    if required.issubset(table.column_names):
+        validate_shape_table(table)
+    return table
 
 
 def relationship_metadata() -> dict[str, Any]:

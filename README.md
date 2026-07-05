@@ -275,6 +275,8 @@ Label masks are represented by reference with `label_image_id` and
 mask payloads in each object row.
 
 See the dedicated Shapes docs: [`docs/src/shapes.md`](docs/src/shapes.md).
+For local Parquet read/write benchmarks, run:
+`python benchmarks/benchmark_shapes_parquet.py --repeats 5 --warmup 1`.
 
 ## Tensor ingest (PyTorch/JAX)
 

@@ -13,10 +13,12 @@ ome_arrow
                      geometry_storage_type,
                      make_relationship_table,
                      make_shape_table,
+                     read_shape_parquet,
                      relationship_schema,
                      shape_schema,
                      validate_relationship_table,
-                     validate_shape_table
+                     validate_shape_table,
+                     write_shape_parquet
 ```
 
 ```{eval-rst}

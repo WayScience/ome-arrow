@@ -3,6 +3,7 @@
 import json
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from ome_arrow import (
@@ -10,9 +11,11 @@ from ome_arrow import (
     OMEArrowShapes,
     make_relationship_table,
     make_shape_table,
+    read_shape_parquet,
     shape_schema,
     validate_relationship_table,
     validate_shape_table,
+    write_shape_parquet,
 )
 from ome_arrow.shapes import SUPPORTED_GEOMETRY_ENCODINGS
 
@@ -44,9 +47,7 @@ def test_make_shape_table_stores_single_geometry_column_with_metadata() -> None:
 
     assert table.num_rows == 1
     assert table.column_names.count("geometry") == 1
-    assert table.schema.field("geometry").type == pa.list_(
-        pa.list_(pa.float64(), list_size=2)
-    )
+    assert table.schema.field("geometry").type == pa.list_(pa.list_(pa.float64()))
     assert table.schema.field("area").type == pa.float64()
     assert metadata["type"] == "ome.arrow.shapes"
     assert metadata["geometry_encoding"] == "geoarrow.linestring"
@@ -150,3 +151,80 @@ def test_relationship_table_models_object_edges() -> None:
     assert table.schema.field("relationship_type").type == pa.string()
     assert table["parent_id"].to_pylist() == ["cell-1"]
     assert validate_relationship_table(table) is None
+
+
+def test_shape_parquet_roundtrip_preserves_metadata(tmp_path) -> None:
+    """Write and read complete shape tables with schema metadata intact."""
+    path = tmp_path / "cells.ome-shapes.parquet"
+    table = make_shape_table(
+        [
+            {
+                "object_id": "cell-1",
+                "image_id": "image-1",
+                "label_image_id": "labels-1",
+                "label_value": 1,
+                "geometry": [10.0, 20.0],
+                "area_um2": 42.5,
+            }
+        ],
+        geometry_encoding="geoarrow.point",
+        axes=("y", "x"),
+        units=("micrometer", "micrometer"),
+        coordinate_space="physical",
+    )
+
+    write_shape_parquet(table, path)
+    roundtrip = read_shape_parquet(path)
+
+    assert roundtrip.schema.metadata[OME_ARROW_SHAPES_METADATA_KEY]
+    assert roundtrip["object_id"].to_pylist() == ["cell-1"]
+    assert roundtrip["area_um2"].to_pylist() == [42.5]
+    assert pq.ParquetFile(path).metadata.num_rows == 1
+
+
+def test_shape_parquet_projection_and_filters_support_label_references(
+    tmp_path,
+) -> None:
+    """Read only needed label-reference columns with Parquet predicate filters."""
+    path = tmp_path / "label_refs.ome-shapes.parquet"
+    table = make_shape_table(
+        [
+            {
+                "object_id": "nucleus-1",
+                "image_id": "image-1",
+                "label_image_id": "nuclear-labels",
+                "label_value": 1,
+                "geometry": {
+                    "label_image_id": "nuclear-labels",
+                    "label_value": 1,
+                },
+                "class": "nucleus",
+            },
+            {
+                "object_id": "nucleus-2",
+                "image_id": "image-2",
+                "label_image_id": "nuclear-labels",
+                "label_value": 2,
+                "geometry": {
+                    "label_image_id": "nuclear-labels",
+                    "label_value": 2,
+                },
+                "class": "nucleus",
+            },
+        ],
+        geometry_encoding="ome.labelmask",
+    )
+
+    write_shape_parquet(table, path, row_group_size=1)
+    projected = read_shape_parquet(
+        path,
+        columns=["object_id", "image_id", "label_value"],
+        filters=[("image_id", "==", "image-2")],
+    )
+
+    assert projected.column_names == ["object_id", "image_id", "label_value"]
+    assert projected.to_pydict() == {
+        "object_id": ["nucleus-2"],
+        "image_id": ["image-2"],
+        "label_value": [2],
+    }
