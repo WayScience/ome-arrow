@@ -102,33 +102,35 @@ def geometry_storage_type(
 
     coordinate = _coordinate_type(dimensions)
     if geometry_encoding == "geoarrow.point":
-        return coordinate
-    if geometry_encoding in {"geoarrow.linestring", "ome.pointcloud"}:
-        return pa.list_(coordinate)
-    if geometry_encoding == "geoarrow.polygon":
-        return pa.list_(pa.list_(coordinate))
-    if geometry_encoding == "geoarrow.multipolygon":
-        return pa.list_(pa.list_(pa.list_(coordinate)))
-    if geometry_encoding == "ome.boundingbox":
-        return pa.struct(
+        storage_type = coordinate
+    elif geometry_encoding in {"geoarrow.linestring", "ome.pointcloud"}:
+        storage_type = pa.list_(coordinate)
+    elif geometry_encoding == "geoarrow.polygon":
+        storage_type = pa.list_(pa.list_(coordinate))
+    elif geometry_encoding == "geoarrow.multipolygon":
+        storage_type = pa.list_(pa.list_(pa.list_(coordinate)))
+    elif geometry_encoding == "ome.boundingbox":
+        storage_type = pa.struct(
             [
                 pa.field("min", coordinate, nullable=False),
                 pa.field("max", coordinate, nullable=False),
             ]
         )
-    if geometry_encoding == "ome.labelmask":
-        return pa.struct(
+    elif geometry_encoding == "ome.labelmask":
+        storage_type = pa.struct(
             [
                 pa.field("label_image_id", pa.string(), nullable=False),
                 pa.field("label_value", pa.int64(), nullable=False),
             ]
         )
-    return pa.struct(
-        [
-            pa.field("vertices", pa.list_(_coordinate_type(3)), nullable=False),
-            pa.field("faces", pa.list_(pa.list_(pa.int32())), nullable=False),
-        ]
-    )
+    else:
+        storage_type = pa.struct(
+            [
+                pa.field("vertices", pa.list_(_coordinate_type(3)), nullable=False),
+                pa.field("faces", pa.list_(pa.list_(pa.int32())), nullable=False),
+            ]
+        )
+    return storage_type
 
 
 def shape_metadata(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pathlib
 import time
 
 from ome_arrow import (
@@ -57,7 +58,7 @@ def test_shape_filtering_stays_vectorized_for_image_ids() -> None:
     assert elapsed < 0.25
 
 
-def test_shape_parquet_projection_stays_fast(tmp_path) -> None:
+def test_shape_parquet_projection_stays_fast(tmp_path: pathlib.Path) -> None:
     """Keep projected shape reads on Parquet's columnar fast path."""
     path = tmp_path / "cells.ome-shapes.parquet"
     table = make_shape_table(_shape_rows(20_000), geometry_encoding="geoarrow.point")

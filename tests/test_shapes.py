@@ -1,6 +1,7 @@
 """Tests for Arrow-native OME-Arrow shape tables."""
 
 import json
+import pathlib
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -153,7 +154,9 @@ def test_relationship_table_models_object_edges() -> None:
     assert validate_relationship_table(table) is None
 
 
-def test_shape_parquet_roundtrip_preserves_metadata(tmp_path) -> None:
+def test_shape_parquet_roundtrip_preserves_metadata(
+    tmp_path: pathlib.Path,
+) -> None:
     """Write and read complete shape tables with schema metadata intact."""
     path = tmp_path / "cells.ome-shapes.parquet"
     table = make_shape_table(
@@ -183,7 +186,7 @@ def test_shape_parquet_roundtrip_preserves_metadata(tmp_path) -> None:
 
 
 def test_shape_parquet_projection_and_filters_support_label_references(
-    tmp_path,
+    tmp_path: pathlib.Path,
 ) -> None:
     """Read only needed label-reference columns with Parquet predicate filters."""
     path = tmp_path / "label_refs.ome-shapes.parquet"

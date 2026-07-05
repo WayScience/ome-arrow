@@ -7,7 +7,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-
 SCALE = 2
 OUT = Path(__file__).with_name("various_ome_arrow_schema.png")
 
@@ -255,7 +254,7 @@ def _draw_shape_icon(
         ((cx - 4) * SCALE, (cy + 19) * SCALE),
     ]
     draw.polygon(polygon, fill="#d8efff", outline="#2c7fb8")
-    draw.line(polygon + [polygon[0]], fill="#2c7fb8", width=3 * SCALE)
+    draw.line([*polygon, polygon[0]], fill="#2c7fb8", width=3 * SCALE)
     for px, py in (
         (cx - 20, cy - 3),
         (cx - 8, cy - 19),
