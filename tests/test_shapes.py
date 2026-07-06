@@ -97,14 +97,81 @@ def test_validate_shape_table_requires_metadata_and_identity() -> None:
     with pytest.raises(ValueError, match="schema metadata"):
         validate_shape_table(table)
 
-    table = make_shape_table(
+    schema = shape_schema("geoarrow.point").remove(0)
+    table = pa.Table.from_pylist(
         [{"geometry": [0.0, 1.0]}],
-        geometry_encoding="geoarrow.point",
-        validate=False,
+        schema=schema,
     )
 
     with pytest.raises(ValueError, match="object_id"):
         validate_shape_table(table)
+
+
+def test_validate_shape_table_rejects_wrong_coordinate_arity() -> None:
+    """Reject geometry, centroid, and bbox coordinates that do not match axes."""
+    with pytest.raises(ValueError, match="geometry row 0"):
+        make_shape_table(
+            [
+                {
+                    "object_id": "cell-1",
+                    "geometry": [0.0, 1.0, 2.0],
+                }
+            ],
+            geometry_encoding="geoarrow.point",
+        )
+
+    with pytest.raises(ValueError, match="centroid row 0"):
+        make_shape_table(
+            [
+                {
+                    "object_id": "cell-1",
+                    "geometry": [0.0, 1.0],
+                    "centroid": [0.0, 1.0, 2.0],
+                }
+            ],
+            geometry_encoding="geoarrow.point",
+        )
+
+    with pytest.raises(ValueError, match="bbox row 0"):
+        make_shape_table(
+            [
+                {
+                    "object_id": "cell-1",
+                    "geometry": [0.0, 1.0],
+                    "bbox": {"min": [0.0], "max": [1.0, 2.0]},
+                }
+            ],
+            geometry_encoding="geoarrow.point",
+        )
+
+
+def test_make_shape_table_reserves_custom_geometry_column() -> None:
+    """Do not infer custom geometry columns as measurement fields."""
+    table = make_shape_table(
+        [
+            {
+                "object_id": "cell-1",
+                "shape": [0.0, 1.0],
+                "area": 12.5,
+            }
+        ],
+        geometry_encoding="geoarrow.point",
+        geometry_column="shape",
+    )
+
+    assert table.column_names == [
+        "object_id",
+        "image_id",
+        "label_image_id",
+        "label_value",
+        "shape",
+        "centroid",
+        "bbox",
+        "class",
+        "confidence",
+        "area",
+    ]
+    assert validate_shape_table(table) is None
 
 
 def test_ome_arrow_shapes_wrapper_exposes_metadata_and_filtering() -> None:
@@ -152,6 +219,59 @@ def test_relationship_table_models_object_edges() -> None:
     assert table.schema.field("relationship_type").type == pa.string()
     assert table["parent_id"].to_pylist() == ["cell-1"]
     assert validate_relationship_table(table) is None
+
+
+def test_validate_relationship_table_rejects_invalid_tables() -> None:
+    """Reject missing metadata, missing IDs, null IDs, and unknown relationships."""
+    table = pa.table(
+        {
+            "parent_id": ["cell-1"],
+            "child_id": ["nucleus-1"],
+            "relationship_type": ["contains"],
+        }
+    )
+    with pytest.raises(ValueError, match="schema metadata"):
+        validate_relationship_table(table)
+
+    missing_parent = make_relationship_table(
+        [{"child_id": "nucleus-1", "relationship_type": "contains"}],
+        validate=False,
+    ).drop(["parent_id"])
+    with pytest.raises(ValueError, match="parent_id"):
+        validate_relationship_table(missing_parent)
+
+    null_child = make_relationship_table(
+        [
+            {
+                "parent_id": "cell-1",
+                "child_id": None,
+                "relationship_type": "contains",
+            }
+        ],
+        validate=False,
+    )
+    with pytest.raises(ValueError, match="child_id values"):
+        validate_relationship_table(null_child)
+
+    missing_relationship_type = make_relationship_table(
+        [{"parent_id": "cell-1", "child_id": "nucleus-1"}],
+        validate=False,
+    ).drop(["relationship_type"])
+    with pytest.raises(ValueError, match="relationship_type"):
+        validate_relationship_table(missing_relationship_type)
+
+    unsupported_relationship = make_relationship_table(
+        [
+            {
+                "parent_id": "cell-1",
+                "child_id": "nucleus-1",
+                "relationship_type": "overlaps",
+            }
+        ],
+        validate=False,
+    )
+    with pytest.raises(ValueError, match="Unsupported relationship_type"):
+        validate_relationship_table(unsupported_relationship)
 
 
 def test_shape_parquet_roundtrip_preserves_metadata(

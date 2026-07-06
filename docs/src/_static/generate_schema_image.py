@@ -11,7 +11,7 @@ SCALE = 2
 OUT = Path(__file__).with_name("various_ome_arrow_schema.png")
 
 
-def _font(size: int, *, bold: bool = False) -> ImageFont.FreeTypeFont:
+def _font(size: int, *, bold: bool = False) -> ImageFont.ImageFont:
     """Load a readable system font with a Pillow fallback."""
     candidates = (
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "",

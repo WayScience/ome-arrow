@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from os import PathLike
-from typing import Any, Iterable, Literal, Sequence
+from typing import Any, Iterable, Literal, Sequence, get_args
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -24,18 +24,7 @@ GeometryEncoding = Literal[
     "ome.boundingbox",
 ]
 
-SUPPORTED_GEOMETRY_ENCODINGS: frozenset[str] = frozenset(
-    {
-        "geoarrow.point",
-        "geoarrow.linestring",
-        "geoarrow.polygon",
-        "geoarrow.multipolygon",
-        "ome.mesh3d",
-        "ome.labelmask",
-        "ome.pointcloud",
-        "ome.boundingbox",
-    }
-)
+SUPPORTED_GEOMETRY_ENCODINGS: frozenset[str] = frozenset(get_args(GeometryEncoding))
 
 OME_ARROW_SHAPES_METADATA_KEY = b"ome.arrow.shapes"
 OME_ARROW_RELATIONSHIPS_METADATA_KEY = b"ome.arrow.relationships"
@@ -250,14 +239,19 @@ def shape_schema(
     )
 
 
-def _infer_measurement_fields(rows: Sequence[dict[str, Any]]) -> list[pa.Field]:
+def _infer_measurement_fields(
+    rows: Sequence[dict[str, Any]],
+    *,
+    geometry_column: str = "geometry",
+) -> list[pa.Field]:
     """Infer measurement fields for columns outside the canonical shape columns."""
     if not rows:
         return []
 
     fields: list[pa.Field] = []
     row_columns = set().union(*(row.keys() for row in rows))
-    for name in sorted(row_columns - DEFAULT_SHAPE_COLUMNS):
+    reserved_columns = DEFAULT_SHAPE_COLUMNS | {geometry_column}
+    for name in sorted(row_columns - reserved_columns):
         values = [row.get(name) for row in rows]
         fields.append(pa.field(name, pa.array(values).type))
     return fields
@@ -294,7 +288,10 @@ def make_shape_table(
         units=units,
         coordinate_space=coordinate_space,
         geometry_column=geometry_column,
-        measurement_fields=_infer_measurement_fields(row_list),
+        measurement_fields=_infer_measurement_fields(
+            row_list,
+            geometry_column=geometry_column,
+        ),
     )
     table = pa.Table.from_pylist(row_list, schema=schema)
     if validate:
@@ -312,6 +309,106 @@ def _shape_metadata_from_schema(schema: pa.Schema) -> dict[str, Any]:
     if metadata.get("type") != "ome.arrow.shapes":
         raise ValueError("Shape table metadata type must be 'ome.arrow.shapes'.")
     return metadata
+
+
+def _is_coordinate(value: Any, dimensions: int) -> bool:
+    """Return whether a Python value is a coordinate of the expected arity."""
+    return isinstance(value, list) and len(value) == dimensions
+
+
+def _validate_coordinate(value: Any, dimensions: int, path: str) -> None:
+    """Validate one coordinate vector.
+
+    Args:
+        value: Python value to validate.
+        dimensions: Expected coordinate length.
+        path: Human-readable location used in error messages.
+
+    Raises:
+        ValueError: If the value is not a coordinate of the expected arity.
+    """
+    if not _is_coordinate(value, dimensions):
+        raise ValueError(f"{path} must contain {dimensions} coordinates.")
+
+
+def _validate_geometry_value(
+    value: Any,
+    *,
+    geometry_encoding: str,
+    dimensions: int,
+    row_index: int,
+) -> None:
+    """Validate coordinate arity for one geometry value."""
+    if value is None or geometry_encoding == "ome.labelmask":
+        return
+    if geometry_encoding == "geoarrow.point":
+        _validate_coordinate(value, dimensions, f"geometry row {row_index}")
+    elif geometry_encoding in {"geoarrow.linestring", "ome.pointcloud"}:
+        for point_index, point in enumerate(value):
+            _validate_coordinate(
+                point,
+                dimensions,
+                f"geometry row {row_index} point {point_index}",
+            )
+    elif geometry_encoding == "geoarrow.polygon":
+        for ring_index, ring in enumerate(value):
+            for point_index, point in enumerate(ring):
+                _validate_coordinate(
+                    point,
+                    dimensions,
+                    f"geometry row {row_index} ring {ring_index} point {point_index}",
+                )
+    elif geometry_encoding == "geoarrow.multipolygon":
+        for polygon_index, polygon in enumerate(value):
+            for ring_index, ring in enumerate(polygon):
+                for point_index, point in enumerate(ring):
+                    _validate_coordinate(
+                        point,
+                        dimensions,
+                        "geometry row "
+                        f"{row_index} polygon {polygon_index} "
+                        f"ring {ring_index} point {point_index}",
+                    )
+    elif geometry_encoding == "ome.boundingbox":
+        _validate_coordinate(value.get("min"), dimensions, f"bbox row {row_index} min")
+        _validate_coordinate(value.get("max"), dimensions, f"bbox row {row_index} max")
+    elif geometry_encoding == "ome.mesh3d":
+        for vertex_index, vertex in enumerate(value.get("vertices", [])):
+            _validate_coordinate(
+                vertex, 3, f"mesh row {row_index} vertex {vertex_index}"
+            )
+
+
+def _validate_coordinate_columns(table: pa.Table, metadata: dict[str, Any]) -> None:
+    """Validate coordinate arity for geometry, centroid, and bounding boxes."""
+    dimensions = len(metadata.get("axes", []))
+    if dimensions < 1:
+        raise ValueError("Shape table axes metadata must contain at least one axis.")
+
+    geometry_column = metadata.get("geometry_column", "geometry")
+    geometry_encoding = str(metadata.get("geometry_encoding"))
+    for row_index, value in enumerate(table[geometry_column].to_pylist()):
+        _validate_geometry_value(
+            value,
+            geometry_encoding=geometry_encoding,
+            dimensions=dimensions,
+            row_index=row_index,
+        )
+
+    if "centroid" in table.column_names:
+        for row_index, value in enumerate(table["centroid"].to_pylist()):
+            if value is not None:
+                _validate_coordinate(value, dimensions, f"centroid row {row_index}")
+
+    if "bbox" in table.column_names:
+        for row_index, value in enumerate(table["bbox"].to_pylist()):
+            if value is not None:
+                _validate_coordinate(
+                    value.get("min"), dimensions, f"bbox row {row_index} min"
+                )
+                _validate_coordinate(
+                    value.get("max"), dimensions, f"bbox row {row_index} max"
+                )
 
 
 def validate_shape_table(table: pa.Table) -> None:
@@ -339,6 +436,7 @@ def validate_shape_table(table: pa.Table) -> None:
         dimensions=len(axes),
     ):
         raise ValueError("Shape table geometry column does not match metadata.")
+    _validate_coordinate_columns(table, metadata)
     if pc.any(pc.is_null(table["object_id"])).as_py():
         raise ValueError("Shape table object_id values must not be null.")
 
