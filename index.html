@@ -147,6 +147,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="shapes.html">
+    OME-Arrow Shapes
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="why-ome-arrow.html">
     Why OME Arrow?
   </a>
@@ -269,6 +276,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="dlpack.html">
     Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="shapes.html">
+    OME-Arrow Shapes
   </a>
 </li>
 
@@ -588,6 +602,52 @@ Use a larger value, such as <code class="docutils literal notranslate"><span cla
 To normalize stored pixel buffers explicitly, pass <code class="docutils literal notranslate"><span class="pre">pixel_dtype</span></code>, for example <code class="docutils literal notranslate"><span class="pre">pixel_dtype=&quot;uint16&quot;</span></code>.
 Integer casts clamp by default; pass <code class="docutils literal notranslate"><span class="pre">clamp=False</span></code> to use NumPy casting behavior directly.</p>
 </section>
+<section id="shape-tables">
+<h2>Shape tables<a class="headerlink" href="#shape-tables" title="Link to this heading">#</a></h2>
+<p>OME-Zarr and OME-NGFF are strong fits for dense image pixels and label rasters.
+The gap is object-level analytics: cells, nuclei, ROIs, detections, tracks, measurements, and relationships are naturally queried as tables.</p>
+<p>OME-Arrow Shapes fills that gap without replacing OME-Zarr.
+Each row is one biological object, geometry is a single logical column, dense label masks remain canonical label images, and object rows reference labels with <code class="docutils literal notranslate"><span class="pre">label_image_id</span></code> plus <code class="docutils literal notranslate"><span class="pre">label_value</span></code>.
+Measurements remain ordinary Arrow columns for DuckDB, Polars, DataFusion, PyArrow, and Parquet workflows.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_relationship_table</span><span class="p">,</span> <span class="n">make_shape_table</span>
+
+<span class="n">shapes</span> <span class="o">=</span> <span class="n">make_shape_table</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;object_id&quot;</span><span class="p">:</span> <span class="s2">&quot;cell-1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;image_id&quot;</span><span class="p">:</span> <span class="s2">&quot;image-1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;label_image_id&quot;</span><span class="p">:</span> <span class="s2">&quot;labels-1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;label_value&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+            <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">128.0</span><span class="p">,</span> <span class="mf">256.0</span><span class="p">],</span>
+            <span class="s2">&quot;centroid&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">128.0</span><span class="p">,</span> <span class="mf">256.0</span><span class="p">],</span>
+            <span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;area_um2&quot;</span><span class="p">:</span> <span class="mf">84.2</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="n">geometry_encoding</span><span class="o">=</span><span class="s2">&quot;geoarrow.point&quot;</span><span class="p">,</span>
+    <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">),</span>
+    <span class="n">units</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;pixel&quot;</span><span class="p">,</span> <span class="s2">&quot;pixel&quot;</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">relationships</span> <span class="o">=</span> <span class="n">make_relationship_table</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;parent_id&quot;</span><span class="p">:</span> <span class="s2">&quot;cell-1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;child_id&quot;</span><span class="p">:</span> <span class="s2">&quot;nucleus-1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;relationship_type&quot;</span><span class="p">:</span> <span class="s2">&quot;contains&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Measurements remain normal Arrow columns (<code class="docutils literal notranslate"><span class="pre">area_um2</span></code> above).
+Label masks are represented by reference with <code class="docutils literal notranslate"><span class="pre">label_image_id</span></code> and
+<code class="docutils literal notranslate"><span class="pre">label_value</span></code>, keeping the segmentation raster canonical instead of embedding
+mask payloads in each object row.</p>
+<p>See the dedicated Shapes docs: <a class="reference internal" href="shapes.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">docs/src/shapes.md</span></code></span></a>.
+For local Parquet read/write benchmarks, run:
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">benchmarks/benchmark_shapes_parquet.py</span> <span class="pre">--repeats</span> <span class="pre">5</span> <span class="pre">--warmup</span> <span class="pre">1</span></code>.</p>
+</section>
 <section id="tensor-ingest-pytorch-jax">
 <h2>Tensor ingest (PyTorch/JAX)<a class="headerlink" href="#tensor-ingest-pytorch-jax" title="Link to this heading">#</a></h2>
 <p>You can ingest torch or JAX arrays directly with <code class="docutils literal notranslate"><span class="pre">OMEArrow(...)</span></code>.
@@ -735,6 +795,21 @@ Prefer multiple repeats when making performance claims, because local filesystem
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.meta">ome_arrow.meta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.shapes">ome_arrow.shapes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.OMEArrowShapes"><code class="docutils literal notranslate"><span class="pre">OMEArrowShapes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.geometry_storage_type"><code class="docutils literal notranslate"><span class="pre">geometry_storage_type()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.make_relationship_table"><code class="docutils literal notranslate"><span class="pre">make_relationship_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.make_shape_table"><code class="docutils literal notranslate"><span class="pre">make_shape_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.read_shape_parquet"><code class="docutils literal notranslate"><span class="pre">read_shape_parquet()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.relationship_metadata"><code class="docutils literal notranslate"><span class="pre">relationship_metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.relationship_schema"><code class="docutils literal notranslate"><span class="pre">relationship_schema()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.shape_metadata"><code class="docutils literal notranslate"><span class="pre">shape_metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.shape_schema"><code class="docutils literal notranslate"><span class="pre">shape_schema()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.validate_relationship_table"><code class="docutils literal notranslate"><span class="pre">validate_relationship_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.validate_shape_table"><code class="docutils literal notranslate"><span class="pre">validate_shape_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.shapes.write_shape_parquet"><code class="docutils literal notranslate"><span class="pre">write_shape_parquet()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="python-api.html#module-ome_arrow.tensor">ome_arrow.tensor</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.tensor.LazyTensorView"><code class="docutils literal notranslate"><span class="pre">LazyTensorView</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="python-api.html#ome_arrow.tensor.TensorView"><code class="docutils literal notranslate"><span class="pre">TensorView</span></code></a></li>
@@ -767,6 +842,16 @@ Prefer multiple repeats when making performance claims, because local filesystem
 <li class="toctree-l3"><a class="reference internal" href="dlpack.html#recalibrating-ci-baseline-json">Recalibrating <code class="docutils literal notranslate"><span class="pre">ci-baseline.json</span></code></a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="shapes.html">OME-Arrow Shapes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#ome-arrow-shapes-provides-location-based-queries-to-data">OME-Arrow Shapes provides location-based queries to data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#alignment-with-ome">Alignment With OME</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#shape-schema">Shape Schema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#geometry-encodings">Geometry Encodings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#label-references">Label References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#relationships">Relationships</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#performance-contract">Performance Contract</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="why-ome-arrow.html">Why OME Arrow?</a><ul>

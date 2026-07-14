@@ -1,0 +1,1197 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ome_arrow.shapes &#8212; ome_arrow  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=a95f357e85573c9b56d5" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=a95f357e85573c9b56d5" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=a95f357e85573c9b56d5"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=a95f357e85573c9b56d5" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=a95f357e85573c9b56d5" />
+
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ome_arrow/shapes';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ome_arrow</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../python-api.html">
+    Python API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../dlpack.html">
+    Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../shapes.html">
+    OME-Arrow Shapes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../why-ome-arrow.html">
+    Why OME Arrow?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../presentations.html">
+    Presentations
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/wayscience/ome-arrow" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../python-api.html">
+    Python API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../dlpack.html">
+    Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../shapes.html">
+    OME-Arrow Shapes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../why-ome-arrow.html">
+    Why OME Arrow?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../presentations.html">
+    Presentations
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/learning_to_fly_with_ome-arrow.html">
+    Learning to fly with OME-Arrow
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/wayscience/ome-arrow" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">ome_arrow.shapes</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for ome_arrow.shapes</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Arrow-native shape and relationship tables for OME-Arrow.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">get_args</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.compute</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ome_arrow.meta</span><span class="w"> </span><span class="kn">import</span> <span class="n">OME_ARROW_TAG_VERSION</span>
+
+<span class="n">GeometryEncoding</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span>
+    <span class="s2">&quot;geoarrow.point&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;geoarrow.linestring&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;geoarrow.polygon&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;geoarrow.multipolygon&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ome.mesh3d&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ome.labelmask&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ome.pointcloud&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ome.boundingbox&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">SUPPORTED_GEOMETRY_ENCODINGS</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">get_args</span><span class="p">(</span><span class="n">GeometryEncoding</span><span class="p">))</span>
+
+<span class="n">OME_ARROW_SHAPES_METADATA_KEY</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;ome.arrow.shapes&quot;</span>
+<span class="n">OME_ARROW_RELATIONSHIPS_METADATA_KEY</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;ome.arrow.relationships&quot;</span>
+
+<span class="n">DEFAULT_SHAPE_COLUMNS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;object_id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;image_id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;label_image_id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;label_value&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;centroid&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bbox&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;class&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;confidence&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">RELATIONSHIP_TYPES</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;contains&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;adjacent&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;touches&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;parent&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;track&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;derived_from&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">RELATIONSHIP_SCHEMA</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;parent_id&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;child_id&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;relationship_type&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;confidence&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">()),</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_coordinate_type</span><span class="p">(</span><span class="n">dimensions</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ListType</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the Arrow coordinate vector type for a geometry dimension.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dimensions</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;geometry dimensions must be at least 1.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float64</span><span class="p">())</span>
+
+
+<div class="viewcode-block" id="geometry_storage_type">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.geometry_storage_type">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">geometry_storage_type</span><span class="p">(</span>
+    <span class="n">geometry_encoding</span><span class="p">:</span> <span class="n">GeometryEncoding</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">dimensions</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">DataType</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the Arrow storage type for a registered geometry encoding.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        geometry_encoding: Registered OME-Arrow geometry encoding name.</span>
+<span class="sd">        dimensions: Number of coordinate dimensions for coordinate vectors.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Arrow data type for the logical geometry column.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the encoding is unknown or dimensions are invalid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">geometry_encoding</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_GEOMETRY_ENCODINGS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported geometry_encoding: </span><span class="si">{</span><span class="n">geometry_encoding</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+    <span class="n">coordinate</span> <span class="o">=</span> <span class="n">_coordinate_type</span><span class="p">(</span><span class="n">dimensions</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;geoarrow.point&quot;</span><span class="p">:</span>
+        <span class="n">storage_type</span> <span class="o">=</span> <span class="n">coordinate</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;geoarrow.linestring&quot;</span><span class="p">,</span> <span class="s2">&quot;ome.pointcloud&quot;</span><span class="p">}:</span>
+        <span class="n">storage_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;geoarrow.polygon&quot;</span><span class="p">:</span>
+        <span class="n">storage_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">coordinate</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;geoarrow.multipolygon&quot;</span><span class="p">:</span>
+        <span class="n">storage_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)))</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;ome.boundingbox&quot;</span><span class="p">:</span>
+        <span class="n">storage_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;ome.labelmask&quot;</span><span class="p">:</span>
+        <span class="n">storage_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;label_image_id&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;label_value&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">storage_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;vertices&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">_coordinate_type</span><span class="p">(</span><span class="mi">3</span><span class="p">)),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;faces&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">())),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">storage_type</span></div>
+
+
+
+<div class="viewcode-block" id="shape_metadata">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.shape_metadata">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">shape_metadata</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">geometry_encoding</span><span class="p">:</span> <span class="n">GeometryEncoding</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">),</span>
+    <span class="n">units</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">coordinate_space</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pixel&quot;</span><span class="p">,</span>
+    <span class="n">geometry_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build JSON-serializable schema metadata for a shape table.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        geometry_encoding: Registered OME-Arrow geometry encoding name.</span>
+<span class="sd">        axes: Coordinate axis names for geometry values.</span>
+<span class="sd">        units: Units aligned to axes. Defaults to ``&quot;pixel&quot;`` for each axis.</span>
+<span class="sd">        coordinate_space: Name of the coordinate space for geometry values.</span>
+<span class="sd">        geometry_column: Name of the logical geometry column.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Metadata dictionary stored under ``OME_ARROW_SHAPES_METADATA_KEY``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the encoding, axes, or units are invalid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">geometry_encoding</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_GEOMETRY_ENCODINGS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported geometry_encoding: </span><span class="si">{</span><span class="n">geometry_encoding</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">axes</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;axes must contain at least one axis name.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">units</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="s2">&quot;pixel&quot;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">units</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;units must have the same length as axes.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;ome.arrow.shapes&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">OME_ARROW_TAG_VERSION</span><span class="p">),</span>
+        <span class="s2">&quot;geometry_column&quot;</span><span class="p">:</span> <span class="n">geometry_column</span><span class="p">,</span>
+        <span class="s2">&quot;geometry_encoding&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">geometry_encoding</span><span class="p">),</span>
+        <span class="s2">&quot;axes&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">axes</span><span class="p">),</span>
+        <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">units</span><span class="p">),</span>
+        <span class="s2">&quot;coordinate_space&quot;</span><span class="p">:</span> <span class="n">coordinate_space</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_schema_with_json_metadata</span><span class="p">(</span>
+    <span class="n">schema</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Schema</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
+    <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Schema</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Attach compact JSON metadata to an Arrow schema.&quot;&quot;&quot;</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">schema</span><span class="o">.</span><span class="n">with_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="shape_schema">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.shape_schema">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">shape_schema</span><span class="p">(</span>
+    <span class="n">geometry_encoding</span><span class="p">:</span> <span class="n">GeometryEncoding</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">),</span>
+    <span class="n">units</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">coordinate_space</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pixel&quot;</span><span class="p">,</span>
+    <span class="n">geometry_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+    <span class="n">measurement_fields</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">Field</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Schema</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an OME-Arrow shape table schema.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        geometry_encoding: Registered OME-Arrow geometry encoding name.</span>
+<span class="sd">        axes: Coordinate axis names for geometry, centroid, and bounding boxes.</span>
+<span class="sd">        units: Units aligned to axes. Defaults to ``&quot;pixel&quot;`` for each axis.</span>
+<span class="sd">        coordinate_space: Name of the coordinate space for geometry values.</span>
+<span class="sd">        geometry_column: Name of the logical geometry column.</span>
+<span class="sd">        measurement_fields: Extra Arrow fields for ordinary measurement columns.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Arrow schema with OME-Arrow shape metadata attached.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">shape_metadata</span><span class="p">(</span>
+        <span class="n">geometry_encoding</span><span class="o">=</span><span class="n">geometry_encoding</span><span class="p">,</span>
+        <span class="n">axes</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span>
+        <span class="n">units</span><span class="o">=</span><span class="n">units</span><span class="p">,</span>
+        <span class="n">coordinate_space</span><span class="o">=</span><span class="n">coordinate_space</span><span class="p">,</span>
+        <span class="n">geometry_column</span><span class="o">=</span><span class="n">geometry_column</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">coordinate</span> <span class="o">=</span> <span class="n">_coordinate_type</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">))</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;object_id&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;image_id&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;label_image_id&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;label_value&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">()),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
+            <span class="n">geometry_column</span><span class="p">,</span>
+            <span class="n">geometry_storage_type</span><span class="p">(</span><span class="n">geometry_encoding</span><span class="p">,</span> <span class="n">dimensions</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">)),</span>
+        <span class="p">),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;centroid&quot;</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
+            <span class="s2">&quot;bbox&quot;</span><span class="p">,</span>
+            <span class="n">pa</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                <span class="p">]</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;confidence&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">()),</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="n">measurement_fields</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fields</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">measurement_fields</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_schema_with_json_metadata</span><span class="p">(</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span><span class="n">fields</span><span class="p">),</span>
+        <span class="n">key</span><span class="o">=</span><span class="n">OME_ARROW_SHAPES_METADATA_KEY</span><span class="p">,</span>
+        <span class="n">payload</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_infer_measurement_fields</span><span class="p">(</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">geometry_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">Field</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Infer measurement fields for columns outside the canonical shape columns.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">Field</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">row_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">))</span>
+    <span class="n">reserved_columns</span> <span class="o">=</span> <span class="n">DEFAULT_SHAPE_COLUMNS</span> <span class="o">|</span> <span class="p">{</span><span class="n">geometry_column</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">row_columns</span> <span class="o">-</span> <span class="n">reserved_columns</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+        <span class="n">fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">type</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">fields</span>
+
+
+<div class="viewcode-block" id="make_shape_table">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.make_shape_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_shape_table</span><span class="p">(</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">geometry_encoding</span><span class="p">:</span> <span class="n">GeometryEncoding</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">),</span>
+    <span class="n">units</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">coordinate_space</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pixel&quot;</span><span class="p">,</span>
+    <span class="n">geometry_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+    <span class="n">validate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an OME-Arrow shape table from Python row dictionaries.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        rows: Shape rows, where each row represents one biological object.</span>
+<span class="sd">        geometry_encoding: Registered OME-Arrow geometry encoding name.</span>
+<span class="sd">        axes: Coordinate axis names for geometry, centroid, and bounding boxes.</span>
+<span class="sd">        units: Units aligned to axes. Defaults to ``&quot;pixel&quot;`` for each axis.</span>
+<span class="sd">        coordinate_space: Name of the coordinate space for geometry values.</span>
+<span class="sd">        geometry_column: Name of the logical geometry column.</span>
+<span class="sd">        validate: Validate the table after construction.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Arrow table with OME-Arrow shape schema metadata.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">row_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">shape_schema</span><span class="p">(</span>
+        <span class="n">geometry_encoding</span><span class="p">,</span>
+        <span class="n">axes</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span>
+        <span class="n">units</span><span class="o">=</span><span class="n">units</span><span class="p">,</span>
+        <span class="n">coordinate_space</span><span class="o">=</span><span class="n">coordinate_space</span><span class="p">,</span>
+        <span class="n">geometry_column</span><span class="o">=</span><span class="n">geometry_column</span><span class="p">,</span>
+        <span class="n">measurement_fields</span><span class="o">=</span><span class="n">_infer_measurement_fields</span><span class="p">(</span>
+            <span class="n">row_list</span><span class="p">,</span>
+            <span class="n">geometry_column</span><span class="o">=</span><span class="n">geometry_column</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pylist</span><span class="p">(</span><span class="n">row_list</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">validate</span><span class="p">:</span>
+        <span class="n">validate_shape_table</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">table</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_shape_metadata_from_schema</span><span class="p">(</span><span class="n">schema</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Schema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read OME-Arrow shape JSON metadata from a schema.&quot;&quot;&quot;</span>
+    <span class="n">raw_metadata</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">raw_payload</span> <span class="o">=</span> <span class="n">raw_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">OME_ARROW_SHAPES_METADATA_KEY</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">raw_payload</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Shape table schema metadata is missing OME-Arrow shapes.&quot;</span><span class="p">)</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">raw_payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;ome.arrow.shapes&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Shape table metadata type must be &#39;ome.arrow.shapes&#39;.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">metadata</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_coordinate</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return whether a Python value is a coordinate of the expected arity.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="n">dimensions</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_coordinate</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate one coordinate vector.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value: Python value to validate.</span>
+<span class="sd">        dimensions: Expected coordinate length.</span>
+<span class="sd">        path: Human-readable location used in error messages.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the value is not a coordinate of the expected arity.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_coordinate</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> must contain </span><span class="si">{</span><span class="n">dimensions</span><span class="si">}</span><span class="s2"> coordinates.&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_geometry_value</span><span class="p">(</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">geometry_encoding</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">dimensions</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">row_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate coordinate arity for one geometry value.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;ome.labelmask&quot;</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;geoarrow.point&quot;</span><span class="p">:</span>
+        <span class="n">_validate_coordinate</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;geometry row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;geoarrow.linestring&quot;</span><span class="p">,</span> <span class="s2">&quot;ome.pointcloud&quot;</span><span class="p">}:</span>
+        <span class="k">for</span> <span class="n">point_index</span><span class="p">,</span> <span class="n">point</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="n">_validate_coordinate</span><span class="p">(</span>
+                <span class="n">point</span><span class="p">,</span>
+                <span class="n">dimensions</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;geometry row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> point </span><span class="si">{</span><span class="n">point_index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;geoarrow.polygon&quot;</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">ring_index</span><span class="p">,</span> <span class="n">ring</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">point_index</span><span class="p">,</span> <span class="n">point</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ring</span><span class="p">):</span>
+                <span class="n">_validate_coordinate</span><span class="p">(</span>
+                    <span class="n">point</span><span class="p">,</span>
+                    <span class="n">dimensions</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;geometry row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> ring </span><span class="si">{</span><span class="n">ring_index</span><span class="si">}</span><span class="s2"> point </span><span class="si">{</span><span class="n">point_index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;geoarrow.multipolygon&quot;</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">polygon_index</span><span class="p">,</span> <span class="n">polygon</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">ring_index</span><span class="p">,</span> <span class="n">ring</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">polygon</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">point_index</span><span class="p">,</span> <span class="n">point</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ring</span><span class="p">):</span>
+                    <span class="n">_validate_coordinate</span><span class="p">(</span>
+                        <span class="n">point</span><span class="p">,</span>
+                        <span class="n">dimensions</span><span class="p">,</span>
+                        <span class="s2">&quot;geometry row &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> polygon </span><span class="si">{</span><span class="n">polygon_index</span><span class="si">}</span><span class="s2"> &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;ring </span><span class="si">{</span><span class="n">ring_index</span><span class="si">}</span><span class="s2"> point </span><span class="si">{</span><span class="n">point_index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;ome.boundingbox&quot;</span><span class="p">:</span>
+        <span class="n">_validate_coordinate</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">),</span> <span class="n">dimensions</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bbox row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> min&quot;</span><span class="p">)</span>
+        <span class="n">_validate_coordinate</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">),</span> <span class="n">dimensions</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bbox row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> max&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">geometry_encoding</span> <span class="o">==</span> <span class="s2">&quot;ome.mesh3d&quot;</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">vertex_index</span><span class="p">,</span> <span class="n">vertex</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;vertices&quot;</span><span class="p">,</span> <span class="p">[])):</span>
+            <span class="n">_validate_coordinate</span><span class="p">(</span>
+                <span class="n">vertex</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;mesh row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> vertex </span><span class="si">{</span><span class="n">vertex_index</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_coordinate_columns</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate coordinate arity for geometry, centroid, and bounding boxes.&quot;&quot;&quot;</span>
+    <span class="n">dimensions</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;axes&quot;</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="k">if</span> <span class="n">dimensions</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Shape table axes metadata must contain at least one axis.&quot;</span><span class="p">)</span>
+
+    <span class="n">geometry_column</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;geometry_column&quot;</span><span class="p">,</span> <span class="s2">&quot;geometry&quot;</span><span class="p">)</span>
+    <span class="n">geometry_encoding</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;geometry_encoding&quot;</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">row_index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">geometry_column</span><span class="p">]</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()):</span>
+        <span class="n">_validate_geometry_value</span><span class="p">(</span>
+            <span class="n">value</span><span class="p">,</span>
+            <span class="n">geometry_encoding</span><span class="o">=</span><span class="n">geometry_encoding</span><span class="p">,</span>
+            <span class="n">dimensions</span><span class="o">=</span><span class="n">dimensions</span><span class="p">,</span>
+            <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;centroid&quot;</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">row_index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;centroid&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">_validate_coordinate</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;centroid row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;bbox&quot;</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">row_index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;bbox&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">_validate_coordinate</span><span class="p">(</span>
+                    <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">),</span> <span class="n">dimensions</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bbox row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> min&quot;</span>
+                <span class="p">)</span>
+                <span class="n">_validate_coordinate</span><span class="p">(</span>
+                    <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">),</span> <span class="n">dimensions</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bbox row </span><span class="si">{</span><span class="n">row_index</span><span class="si">}</span><span class="s2"> max&quot;</span>
+                <span class="p">)</span>
+
+
+<div class="viewcode-block" id="validate_shape_table">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.validate_shape_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">validate_shape_table</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate an OME-Arrow shape table.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        table: Arrow table to validate.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If required metadata, columns, encoding, or IDs are invalid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">_shape_metadata_from_schema</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
+    <span class="n">geometry_column</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;geometry_column&quot;</span><span class="p">,</span> <span class="s2">&quot;geometry&quot;</span><span class="p">)</span>
+    <span class="n">geometry_encoding</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;geometry_encoding&quot;</span><span class="p">)</span>
+    <span class="n">axes</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;axes&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+    <span class="k">if</span> <span class="n">geometry_encoding</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_GEOMETRY_ENCODINGS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported geometry_encoding: </span><span class="si">{</span><span class="n">geometry_encoding</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;object_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Shape table must contain an object_id column.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">geometry_column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Shape table must contain </span><span class="si">{</span><span class="n">geometry_column</span><span class="si">!r}</span><span class="s2"> column.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">geometry_column</span><span class="p">)</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">geometry_storage_type</span><span class="p">(</span>
+        <span class="n">geometry_encoding</span><span class="p">,</span>
+        <span class="n">dimensions</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">),</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Shape table geometry column does not match metadata.&quot;</span><span class="p">)</span>
+    <span class="n">_validate_coordinate_columns</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">pc</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">pc</span><span class="o">.</span><span class="n">is_null</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;object_id&quot;</span><span class="p">]))</span><span class="o">.</span><span class="n">as_py</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Shape table object_id values must not be null.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="write_shape_parquet">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.write_shape_parquet">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_shape_parquet</span><span class="p">(</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">,</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;zstd&quot;</span><span class="p">,</span>
+    <span class="n">row_group_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">65_536</span><span class="p">,</span>
+    <span class="n">use_dictionary</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">validate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write an OME-Arrow shape table to Parquet.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        table: OME-Arrow shape table to write.</span>
+<span class="sd">        path: Output Parquet path.</span>
+<span class="sd">        compression: Parquet compression codec, or ``None`` for uncompressed.</span>
+<span class="sd">        row_group_size: Number of rows per Parquet row group.</span>
+<span class="sd">        use_dictionary: Dictionary-encode eligible columns. This is useful for</span>
+<span class="sd">            repeated scientific labels such as image IDs, label image IDs, and</span>
+<span class="sd">            object classes.</span>
+<span class="sd">        validate: Validate the table before writing.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If validation fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">validate</span><span class="p">:</span>
+        <span class="n">validate_shape_table</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="n">pq</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span>
+        <span class="n">table</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">,</span>
+        <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+        <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">,</span>
+        <span class="n">use_dictionary</span><span class="o">=</span><span class="n">use_dictionary</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="read_shape_parquet">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.read_shape_parquet">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_shape_parquet</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">filters</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">memory_map</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">validate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read an OME-Arrow shape Parquet table.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: Input Parquet path.</span>
+<span class="sd">        columns: Optional column projection for analytical reads.</span>
+<span class="sd">        filters: Optional PyArrow Parquet filters for predicate pushdown.</span>
+<span class="sd">        memory_map: Use memory mapping where supported.</span>
+<span class="sd">        validate: Validate complete shape tables after reading. Projected reads</span>
+<span class="sd">            that omit required columns still validate schema metadata but skip</span>
+<span class="sd">            full table validation.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Arrow table read from Parquet.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If OME-Arrow shape metadata or complete-table validation</span>
+<span class="sd">            fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">read_schema</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">_shape_metadata_from_schema</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span>
+        <span class="n">path</span><span class="p">,</span>
+        <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span>
+        <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">validate</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">table</span>
+
+    <span class="n">geometry_column</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;geometry_column&quot;</span><span class="p">,</span> <span class="s2">&quot;geometry&quot;</span><span class="p">)</span>
+    <span class="n">required</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;object_id&quot;</span><span class="p">,</span> <span class="n">geometry_column</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">required</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">):</span>
+        <span class="n">validate_shape_table</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">table</span></div>
+
+
+
+<div class="viewcode-block" id="relationship_metadata">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.relationship_metadata">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">relationship_metadata</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build JSON-serializable schema metadata for object relationships.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;ome.arrow.relationships&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">OME_ARROW_TAG_VERSION</span><span class="p">),</span>
+        <span class="s2">&quot;relationship_types&quot;</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">RELATIONSHIP_TYPES</span><span class="p">),</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="relationship_schema">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.relationship_schema">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">relationship_schema</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Schema</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an OME-Arrow relationship table schema.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Arrow schema with OME-Arrow relationship metadata attached.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_schema_with_json_metadata</span><span class="p">(</span>
+        <span class="n">RELATIONSHIP_SCHEMA</span><span class="p">,</span>
+        <span class="n">key</span><span class="o">=</span><span class="n">OME_ARROW_RELATIONSHIPS_METADATA_KEY</span><span class="p">,</span>
+        <span class="n">payload</span><span class="o">=</span><span class="n">relationship_metadata</span><span class="p">(),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="make_relationship_table">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.make_relationship_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_relationship_table</span><span class="p">(</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">validate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an OME-Arrow relationship table from edge rows.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        rows: Relationship rows with parent, child, and relationship type.</span>
+<span class="sd">        validate: Validate the table after construction.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Arrow table with OME-Arrow relationship metadata.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pylist</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="n">schema</span><span class="o">=</span><span class="n">relationship_schema</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">validate</span><span class="p">:</span>
+        <span class="n">validate_relationship_table</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">table</span></div>
+
+
+
+<div class="viewcode-block" id="validate_relationship_table">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.validate_relationship_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">validate_relationship_table</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate an OME-Arrow relationship table.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        table: Arrow table to validate.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If required metadata, columns, IDs, or relationship types fail.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">raw_payload</span> <span class="o">=</span> <span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="n">OME_ARROW_RELATIONSHIPS_METADATA_KEY</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">raw_payload</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Relationship table schema metadata is missing OME-Arrow relationships.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">raw_payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;ome.arrow.relationships&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Relationship table metadata type must be &#39;ome.arrow.relationships&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;parent_id&quot;</span><span class="p">,</span> <span class="s2">&quot;child_id&quot;</span><span class="p">,</span> <span class="s2">&quot;relationship_type&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Relationship table must contain a </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> column.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pc</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">pc</span><span class="o">.</span><span class="n">is_null</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span><span class="o">.</span><span class="n">as_py</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Relationship table </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> values must not be null.&quot;</span><span class="p">)</span>
+
+    <span class="n">unknown</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;relationship_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">())</span> <span class="o">-</span> <span class="n">RELATIONSHIP_TYPES</span>
+    <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported relationship_type values: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="OMEArrowShapes">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.OMEArrowShapes">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">OMEArrowShapes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convenience wrapper around a validated OME-Arrow shape table.&quot;&quot;&quot;</span>
+
+    <span class="n">table</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate the wrapped shape table.&quot;&quot;&quot;</span>
+        <span class="n">validate_shape_table</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">)</span>
+
+<div class="viewcode-block" id="OMEArrowShapes.from_rows">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.OMEArrowShapes.from_rows">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_rows</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">geometry_encoding</span><span class="p">:</span> <span class="n">GeometryEncoding</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">),</span>
+        <span class="n">units</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">coordinate_space</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pixel&quot;</span><span class="p">,</span>
+        <span class="n">geometry_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OMEArrowShapes</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a shape wrapper from Python row dictionaries.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            rows: Shape rows, where each row represents one biological object.</span>
+<span class="sd">            geometry_encoding: Registered OME-Arrow geometry encoding name.</span>
+<span class="sd">            axes: Coordinate axis names for geometry, centroid, and bounding boxes.</span>
+<span class="sd">            units: Units aligned to axes. Defaults to ``&quot;pixel&quot;`` for each axis.</span>
+<span class="sd">            coordinate_space: Name of the coordinate space for geometry values.</span>
+<span class="sd">            geometry_column: Name of the logical geometry column.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Validated OME-Arrow shapes wrapper.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">make_shape_table</span><span class="p">(</span>
+                <span class="n">rows</span><span class="p">,</span>
+                <span class="n">geometry_encoding</span><span class="o">=</span><span class="n">geometry_encoding</span><span class="p">,</span>
+                <span class="n">axes</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span>
+                <span class="n">units</span><span class="o">=</span><span class="n">units</span><span class="p">,</span>
+                <span class="n">coordinate_space</span><span class="o">=</span><span class="n">coordinate_space</span><span class="p">,</span>
+                <span class="n">geometry_column</span><span class="o">=</span><span class="n">geometry_column</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return decoded OME-Arrow shapes metadata.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">_shape_metadata_from_schema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">geometry_encoding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the registered geometry encoding for the table.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;geometry_encoding&quot;</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return coordinate axis names for the shape table.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;axes&quot;</span><span class="p">])</span>
+
+<div class="viewcode-block" id="OMEArrowShapes.for_image">
+<a class="viewcode-back" href="../../python-api.html#ome_arrow.shapes.OMEArrowShapes.for_image">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">for_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OMEArrowShapes</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return shapes that reference one image ID.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            image_id: Image identifier to filter on.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            New wrapper containing only matching shape rows.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;image_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;image_id&quot;</span><span class="p">],</span> <span class="n">image_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">mask</span><span class="p">))</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=a95f357e85573c9b56d5"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=a95f357e85573c9b56d5"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Way Science Community.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__center">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.19.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

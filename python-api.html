@@ -148,6 +148,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="shapes.html">
+    OME-Arrow Shapes
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="why-ome-arrow.html">
     Why OME Arrow?
   </a>
@@ -268,6 +275,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="dlpack.html">
     Exporting OME-Arrow pixel data via DLPack
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="shapes.html">
+    OME-Arrow Shapes
   </a>
 </li>
 
@@ -1241,6 +1255,272 @@ column holds a struct with the OME-Arrow schema.</p>
 <section id="module-ome_arrow.meta">
 <span id="ome-arrow-meta"></span><h2>ome_arrow.meta<a class="headerlink" href="#module-ome_arrow.meta" title="Link to this heading">#</a></h2>
 <p>Meta-definition for OME-Arrow format.</p>
+</section>
+<section id="module-ome_arrow.shapes">
+<span id="ome-arrow-shapes"></span><h2>ome_arrow.shapes<a class="headerlink" href="#module-ome_arrow.shapes" title="Link to this heading">#</a></h2>
+<p>Arrow-native shape and relationship tables for OME-Arrow.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ome_arrow.shapes.OMEArrowShapes">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">OMEArrowShapes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Table</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ome_arrow/shapes.html#OMEArrowShapes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.OMEArrowShapes" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Convenience wrapper around a validated OME-Arrow shape table.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="ome_arrow.shapes.OMEArrowShapes.axes">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">axes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#ome_arrow.shapes.OMEArrowShapes.axes" title="Link to this definition">#</a></dt>
+<dd><p>Return coordinate axis names for the shape table.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ome_arrow.shapes.OMEArrowShapes.for_image">
+<span class="sig-name descname"><span class="pre">for_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ome_arrow.shapes.OMEArrowShapes" title="ome_arrow.shapes.OMEArrowShapes"><span class="pre">OMEArrowShapes</span></a></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#OMEArrowShapes.for_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.OMEArrowShapes.for_image" title="Link to this definition">#</a></dt>
+<dd><p>Return shapes that reference one image ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>image_id</strong> – Image identifier to filter on.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>New wrapper containing only matching shape rows.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ome_arrow.shapes.OMEArrowShapes.from_rows">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_rows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'geoarrow.point'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.linestring'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.polygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.multipolygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.mesh3d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.labelmask'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.pointcloud'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.boundingbox'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('y',</span> <span class="pre">'x')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'pixel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'geometry'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ome_arrow.shapes.OMEArrowShapes" title="ome_arrow.shapes.OMEArrowShapes"><span class="pre">OMEArrowShapes</span></a></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#OMEArrowShapes.from_rows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.OMEArrowShapes.from_rows" title="Link to this definition">#</a></dt>
+<dd><p>Create a shape wrapper from Python row dictionaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rows</strong> – Shape rows, where each row represents one biological object.</p></li>
+<li><p><strong>geometry_encoding</strong> – Registered OME-Arrow geometry encoding name.</p></li>
+<li><p><strong>axes</strong> – Coordinate axis names for geometry, centroid, and bounding boxes.</p></li>
+<li><p><strong>units</strong> – Units aligned to axes. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;pixel&quot;</span></code> for each axis.</p></li>
+<li><p><strong>coordinate_space</strong> – Name of the coordinate space for geometry values.</p></li>
+<li><p><strong>geometry_column</strong> – Name of the logical geometry column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated OME-Arrow shapes wrapper.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ome_arrow.shapes.OMEArrowShapes.geometry_encoding">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">geometry_encoding</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#ome_arrow.shapes.OMEArrowShapes.geometry_encoding" title="Link to this definition">#</a></dt>
+<dd><p>Return the registered geometry encoding for the table.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ome_arrow.shapes.OMEArrowShapes.metadata">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metadata</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#ome_arrow.shapes.OMEArrowShapes.metadata" title="Link to this definition">#</a></dt>
+<dd><p>Return decoded OME-Arrow shapes metadata.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ome_arrow.shapes.OMEArrowShapes.table">
+<span class="sig-name descname"><span class="pre">table</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Table</span></span><a class="headerlink" href="#ome_arrow.shapes.OMEArrowShapes.table" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.geometry_storage_type">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">geometry_storage_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry_encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'geoarrow.point'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.linestring'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.polygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.multipolygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.mesh3d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.labelmask'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.pointcloud'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.boundingbox'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">dimensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataType</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#geometry_storage_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.geometry_storage_type" title="Link to this definition">#</a></dt>
+<dd><p>Return the Arrow storage type for a registered geometry encoding.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry_encoding</strong> – Registered OME-Arrow geometry encoding name.</p></li>
+<li><p><strong>dimensions</strong> – Number of coordinate dimensions for coordinate vectors.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Arrow data type for the logical geometry column.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the encoding is unknown or dimensions are invalid.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.make_relationship_table">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">make_relationship_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Table</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#make_relationship_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.make_relationship_table" title="Link to this definition">#</a></dt>
+<dd><p>Create an OME-Arrow relationship table from edge rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rows</strong> – Relationship rows with parent, child, and relationship type.</p></li>
+<li><p><strong>validate</strong> – Validate the table after construction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Arrow table with OME-Arrow relationship metadata.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.make_shape_table">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">make_shape_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'geoarrow.point'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.linestring'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.polygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.multipolygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.mesh3d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.labelmask'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.pointcloud'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.boundingbox'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('y',</span> <span class="pre">'x')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'pixel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'geometry'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Table</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#make_shape_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.make_shape_table" title="Link to this definition">#</a></dt>
+<dd><p>Create an OME-Arrow shape table from Python row dictionaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rows</strong> – Shape rows, where each row represents one biological object.</p></li>
+<li><p><strong>geometry_encoding</strong> – Registered OME-Arrow geometry encoding name.</p></li>
+<li><p><strong>axes</strong> – Coordinate axis names for geometry, centroid, and bounding boxes.</p></li>
+<li><p><strong>units</strong> – Units aligned to axes. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;pixel&quot;</span></code> for each axis.</p></li>
+<li><p><strong>coordinate_space</strong> – Name of the coordinate space for geometry values.</p></li>
+<li><p><strong>geometry_column</strong> – Name of the logical geometry column.</p></li>
+<li><p><strong>validate</strong> – Validate the table after construction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Arrow table with OME-Arrow shape schema metadata.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.read_shape_parquet">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">read_shape_parquet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">PathLike</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memory_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Table</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#read_shape_parquet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.read_shape_parquet" title="Link to this definition">#</a></dt>
+<dd><p>Read an OME-Arrow shape Parquet table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – Input Parquet path.</p></li>
+<li><p><strong>columns</strong> – Optional column projection for analytical reads.</p></li>
+<li><p><strong>filters</strong> – Optional PyArrow Parquet filters for predicate pushdown.</p></li>
+<li><p><strong>memory_map</strong> – Use memory mapping where supported.</p></li>
+<li><p><strong>validate</strong> – Validate complete shape tables after reading. Projected reads
+that omit required columns still validate schema metadata but skip
+full table validation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Arrow table read from Parquet.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If OME-Arrow shape metadata or complete-table validation
+    fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.relationship_metadata">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">relationship_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#relationship_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.relationship_metadata" title="Link to this definition">#</a></dt>
+<dd><p>Build JSON-serializable schema metadata for object relationships.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.relationship_schema">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">relationship_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Schema</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#relationship_schema"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.relationship_schema" title="Link to this definition">#</a></dt>
+<dd><p>Create an OME-Arrow relationship table schema.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Arrow schema with OME-Arrow relationship metadata attached.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.shape_metadata">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">shape_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'geoarrow.point'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.linestring'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.polygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.multipolygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.mesh3d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.labelmask'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.pointcloud'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.boundingbox'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('y',</span> <span class="pre">'x')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'pixel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'geometry'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#shape_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.shape_metadata" title="Link to this definition">#</a></dt>
+<dd><p>Build JSON-serializable schema metadata for a shape table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry_encoding</strong> – Registered OME-Arrow geometry encoding name.</p></li>
+<li><p><strong>axes</strong> – Coordinate axis names for geometry values.</p></li>
+<li><p><strong>units</strong> – Units aligned to axes. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;pixel&quot;</span></code> for each axis.</p></li>
+<li><p><strong>coordinate_space</strong> – Name of the coordinate space for geometry values.</p></li>
+<li><p><strong>geometry_column</strong> – Name of the logical geometry column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Metadata dictionary stored under <code class="docutils literal notranslate"><span class="pre">OME_ARROW_SHAPES_METADATA_KEY</span></code>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the encoding, axes, or units are invalid.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.shape_schema">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">shape_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry_encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'geoarrow.point'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.linestring'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.polygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'geoarrow.multipolygon'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.mesh3d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.labelmask'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.pointcloud'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ome.boundingbox'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('y',</span> <span class="pre">'x')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'pixel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'geometry'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Field</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Schema</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#shape_schema"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.shape_schema" title="Link to this definition">#</a></dt>
+<dd><p>Create an OME-Arrow shape table schema.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry_encoding</strong> – Registered OME-Arrow geometry encoding name.</p></li>
+<li><p><strong>axes</strong> – Coordinate axis names for geometry, centroid, and bounding boxes.</p></li>
+<li><p><strong>units</strong> – Units aligned to axes. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;pixel&quot;</span></code> for each axis.</p></li>
+<li><p><strong>coordinate_space</strong> – Name of the coordinate space for geometry values.</p></li>
+<li><p><strong>geometry_column</strong> – Name of the logical geometry column.</p></li>
+<li><p><strong>measurement_fields</strong> – Extra Arrow fields for ordinary measurement columns.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Arrow schema with OME-Arrow shape metadata attached.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.validate_relationship_table">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">validate_relationship_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Table</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#validate_relationship_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.validate_relationship_table" title="Link to this definition">#</a></dt>
+<dd><p>Validate an OME-Arrow relationship table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>table</strong> – Arrow table to validate.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If required metadata, columns, IDs, or relationship types fail.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.validate_shape_table">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">validate_shape_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Table</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#validate_shape_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.validate_shape_table" title="Link to this definition">#</a></dt>
+<dd><p>Validate an OME-Arrow shape table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>table</strong> – Arrow table to validate.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If required metadata, columns, encoding, or IDs are invalid.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ome_arrow.shapes.write_shape_parquet">
+<span class="sig-prename descclassname"><span class="pre">ome_arrow.shapes.</span></span><span class="sig-name descname"><span class="pre">write_shape_parquet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">PathLike</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'zstd'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_group_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">65_536</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_dictionary</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/ome_arrow/shapes.html#write_shape_parquet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ome_arrow.shapes.write_shape_parquet" title="Link to this definition">#</a></dt>
+<dd><p>Write an OME-Arrow shape table to Parquet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>table</strong> – OME-Arrow shape table to write.</p></li>
+<li><p><strong>path</strong> – Output Parquet path.</p></li>
+<li><p><strong>compression</strong> – Parquet compression codec, or <code class="docutils literal notranslate"><span class="pre">None</span></code> for uncompressed.</p></li>
+<li><p><strong>row_group_size</strong> – Number of rows per Parquet row group.</p></li>
+<li><p><strong>use_dictionary</strong> – Dictionary-encode eligible columns. This is useful for
+repeated scientific labels such as image IDs, label image IDs, and
+object classes.</p></li>
+<li><p><strong>validate</strong> – Validate the table before writing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If validation fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="module-ome_arrow.tensor">
 <span id="ome-arrow-tensor"></span><h2>ome_arrow.tensor<a class="headerlink" href="#module-ome_arrow.tensor" title="Link to this heading">#</a></h2>
