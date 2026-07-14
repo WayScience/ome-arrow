@@ -12,7 +12,7 @@ The core model is:
 - shape rows reference labels instead of duplicating mask payloads
 - coordinate metadata follows OME axis, unit, and coordinate-space concepts
 
-## The Gap
+## OME-Arrow Shapes provides location-based queries to data
 
 OME has strong, mature conventions for image pixels and label images.
 OME-Zarr and OME-NGFF are a natural fit for dense multiscale arrays, including

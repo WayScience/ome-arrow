@@ -227,15 +227,11 @@ Integer casts clamp by default; pass `clamp=False` to use NumPy casting behavior
 ## Shape tables
 
 OME-Zarr and OME-NGFF are strong fits for dense image pixels and label rasters.
-The gap is object-level analytics: cells, nuclei, ROIs, detections, tracks,
-measurements, and relationships are naturally queried as tables.
+The gap is object-level analytics: cells, nuclei, ROIs, detections, tracks, measurements, and relationships are naturally queried as tables.
 
 OME-Arrow Shapes fills that gap without replacing OME-Zarr.
-Each row is one biological object, geometry is a single logical column, dense
-label masks remain canonical label images, and object rows reference labels with
-`label_image_id` plus `label_value`.
-Measurements remain ordinary Arrow columns for DuckDB, Polars, DataFusion,
-PyArrow, and Parquet workflows.
+Each row is one biological object, geometry is a single logical column, dense label masks remain canonical label images, and object rows reference labels with `label_image_id` plus `label_value`.
+Measurements remain ordinary Arrow columns for DuckDB, Polars, DataFusion, PyArrow, and Parquet workflows.
 
 ```python
 from ome_arrow import make_relationship_table, make_shape_table
