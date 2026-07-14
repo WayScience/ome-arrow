@@ -151,17 +151,18 @@ def _draw_measurement(
     x0, y0, x1, y1 = box
     cx = (x0 + x1) // 2
     cy = (y0 + y1) // 2
+    badge = (cx - 21, cy - 21, cx + 21, cy + 21)
     _rounded_rect(
         draw,
-        (cx - 20, cy - 18, cx + 20, cy + 18),
+        badge,
         fill="#7ea2c5",
         outline="#607f9f",
         radius=7,
     )
-    font = _font(15, bold=True)
+    font = _font(13, bold=True)
     _text_center(
         draw,
-        (cx - 20, cy - 19, cx + 20, cy + 18),
+        badge,
         "12\n34",
         font,
         fill="#fff",
@@ -309,18 +310,18 @@ def main() -> None:
     _text_center(draw, (670, 96, 712, 142), "or", _font(18))
 
     draw.rectangle(
-        (745 * SCALE, 6 * SCALE, 995 * SCALE, 246 * SCALE),
+        (745 * SCALE, 6 * SCALE, 995 * SCALE, 216 * SCALE),
         fill="#ffffff",
         outline="#cfd5db",
         width=6 * SCALE,
     )
-    _text_center(draw, (768, 44, 972, 126), "Your\nschema\nhere!", _font(23))
+    _text_center(draw, (770, 32, 970, 106), "Your\nschema\nhere!", _font(22))
     chip_font = _font(12, bold=True)
     chips = [
-        (770, 155, 828, 181, "images", "#dff2ff", "#2c7fb8"),
-        (836, 155, 892, 181, "labels", "#eaf8dc", "#4e9a33"),
-        (900, 155, 962, 181, "shapes", "#e8efff", "#4569b2"),
-        (804, 192, 930, 218, "measurements", "#edf1f5", "#61707f"),
+        (770, 130, 828, 154, "images", "#dff2ff", "#2c7fb8"),
+        (836, 130, 892, 154, "labels", "#eaf8dc", "#4e9a33"),
+        (900, 130, 962, 154, "shapes", "#e8efff", "#4569b2"),
+        (804, 171, 930, 195, "measurements", "#edf1f5", "#61707f"),
     ]
     for x0, y0, x1, y1, label, fill, outline in chips:
         _rounded_rect(draw, (x0, y0, x1, y1), fill=fill, outline=outline, radius=6)
