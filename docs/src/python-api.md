@@ -7,6 +7,18 @@ ome_arrow
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: OME_ARROW_RELATIONSHIPS_METADATA_KEY,
+                     OME_ARROW_SHAPES_METADATA_KEY,
+                     OMEArrowShapes,
+                     geometry_storage_type,
+                     make_relationship_table,
+                     make_shape_table,
+                     read_shape_parquet,
+                     relationship_schema,
+                     shape_schema,
+                     validate_relationship_table,
+                     validate_shape_table,
+                     write_shape_parquet
 ```
 
 ```{eval-rst}
@@ -42,6 +54,15 @@ ome_arrow.meta
 .. automodule:: ome_arrow.meta
    :members:
    :private-members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+```{eval-rst}
+ome_arrow.shapes
+-------------------
+.. automodule:: ome_arrow.shapes
+   :members:
    :undoc-members:
    :show-inheritance:
 ```
