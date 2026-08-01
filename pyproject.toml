@@ -119,7 +119,7 @@ lint.select = [
   "W",
 ]
 # ignore various rules for all
-lint.per-file-ignores."*" = [ "ANN401", "C901", "PLC0415", "PLR0912", "PLR0913", "PLR0915", "PLR2004" ]
+lint.per-file-ignores."*" = [ "ANN401", "C901", "PLC0415", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004" ]
 # Ignore `F401` (unused imports) for `__init__.py` file
 lint.per-file-ignores."__init__.py" = [ "F401" ]
 # ignore docstring presence checks for docs

@@ -139,14 +139,14 @@ class LazyTensorView:
     def select(
         self,
         *,
-        t: int | slice | Sequence[int] | None | _Unset = _UNSET,
-        z: int | slice | Sequence[int] | None | _Unset = _UNSET,
-        c: int | slice | Sequence[int] | None | _Unset = _UNSET,
-        roi: tuple[int, int, int, int] | None | _Unset = _UNSET,
-        roi3d: tuple[int, int, int, int, int, int] | None | _Unset = _UNSET,
-        roi_nd: tuple[int, ...] | None | _Unset = _UNSET,
-        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | None | _Unset = _UNSET,
-        tile: tuple[int, int] | None | _Unset = _UNSET,
+        t: int | slice | Sequence[int] | _Unset | None = _UNSET,
+        z: int | slice | Sequence[int] | _Unset | None = _UNSET,
+        c: int | slice | Sequence[int] | _Unset | None = _UNSET,
+        roi: tuple[int, int, int, int] | _Unset | None = _UNSET,
+        roi3d: tuple[int, int, int, int, int, int] | _Unset | None = _UNSET,
+        roi_nd: tuple[int, ...] | _Unset | None = _UNSET,
+        roi_type: Literal["2d", "2d_timelapse", "3d", "4d"] | _Unset | None = _UNSET,
+        tile: tuple[int, int] | _Unset | None = _UNSET,
     ) -> "LazyTensorView":
         """Return a new lazy plan with updated index/ROI selections."""
         updates = {}
