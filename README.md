@@ -53,9 +53,7 @@ from ome_arrow import OMEArrow
 
 # Ingest a tif image through a convenient OME Arrow class
 # We can also ingest OME-Zarr or NumPy arrays.
-oa_image = OMEArrow(
-    data="your_image.tif"
-)
+oa_image = OMEArrow(data="your_image.tif")
 
 # Access the OME Arrow struct itself
 # (compatible with Arrow-compliant data storage).
