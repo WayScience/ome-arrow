@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - uses: pre-commit/action@v3.0.1
       # run pre-commit ci lite for automated fixes
-      - uses: pre-commit-ci/lite-action@v1.1.0
+      - uses: pre-commit-ci/lite-action@v1.2.0
         if: ${{ !cancelled() }}
   run_tests:
     strategy:
